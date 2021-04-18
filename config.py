@@ -25,8 +25,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+from alembic.config import Config
+from pathlib import Path
+
+config = Config(Path(__file__).parent / "alembic.ini")
+>>>>>>> d27022fa (new debug mode)
 
 DEBUG = False
+=======
+DEBUG = True
+>>>>>>> 9a6a6367 (new debug mode)
 
 # Configuration variable
 TOKEN = os.getenv("TOKEN")

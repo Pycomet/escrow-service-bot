@@ -50,7 +50,6 @@ def get_agent(trade):
     return None
 
 
-
 def get_received_msg(msg):
     "Delete This Message"
     message_id = msg.message_id
@@ -710,6 +709,7 @@ def pay_funds_to_seller(trade: Trade):
             )
 
         close_trade(trade)
+<<<<<<< HEAD
 
 <<<<<<< HEAD
     else:
@@ -718,6 +718,9 @@ def pay_funds_to_seller(trade: Trade):
 
 >>>>>> > 13883c85(fix payout bug)
    else:
+=======
+    else:
+>>>>>>> 9a6a6367 (new debug mode)
 
         # SEND A MESSAGE TO ADMIN TO PAY MANUALLY
         return None, payout_price

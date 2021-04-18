@@ -27,6 +27,7 @@ app.add_url_rule(
 )
 
 
+
 def run_web():
     if __name__ == "__main__":
         # # db.init_app(app)
@@ -37,7 +38,7 @@ def run_web():
             port=int(os.environ.get("PORT", 5004)),
         )
 
-
+        
 def run_poll():
     webhook_info = bot.get_webhook_info()
     if webhook_info.url:
