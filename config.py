@@ -27,7 +27,7 @@ FORGING_BLOCK_ADDRESS = os.getenv("FORGING_BLOCK_ADDRESS")
 MAIL = os.getenv("MAIL")
 PASS = os.getenv("PASS")
 
-bot = telebot.AsyncTeleBot(TOKEN, threaded=True)
+bot = telebot.TeleBot(TOKEN, threaded=True)
 
 import importdir
 importdir.do("handlers", globals())

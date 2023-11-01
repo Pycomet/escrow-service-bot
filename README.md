@@ -16,7 +16,7 @@
     <img src="images/escrowbot.jpg" alt="Logo" width="200" height="200">
   </a>
 
-  <h2 align="center">Escrow Service Bot</h2>
+  <h2 align="center">Escrow Service Bot (BtcPay)</h2>
 
   <p align="center">
     An awesome bot to ensure fast and secure trades with a hundred percent transparency
@@ -170,7 +170,13 @@ ADMIN_ID=""
 DATABASE_URL=""
 ```
 
-9. You are ready to start the application
+9. Managing database changes with Alembic commands;
+```sh
+- Generated migration: alembic revision --autogenerate -m "initial"
+- Applied migrations: alembic upgrade head
+```
+
+10. You are ready to start the application
 ```sh
 python main.py
 ```

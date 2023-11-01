@@ -3,11 +3,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 
-from config import *
-
 Base = declarative_base()
 engine = create_engine(
-    os.getenv("DATABASE_URL"),
+    "postgresql://escrow_bot_database_user:XN0jOaJ0q64gE4mvixEOeFLmzHqmi1C4@dpg-cl113ais1bgc73dj3m30-a.oregon-postgres.render.com/escrow_bot_database",
     echo=False)
 #connect_args={'check_same_thread': False},
 
