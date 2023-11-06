@@ -38,7 +38,7 @@ def callback_answer(call):
     elif call.data == "withdraw":
         question = bot.send_message(
             call.from_user.id,
-            emoji.emojize(":point_right: Paste the address and amount to make payments into (Bitcoin Wallets Only) - E.g '14Ug4KS3cwvReFqqEmBbb5wJTuGKmtrHJr-0.0034'", use_aliases=True),
+            emoji.emojize(":point_right: Paste the address and amount to make payments into (Bitcoin Wallets Only) - E.g '14Ug4KS3cwvReFqqEmBbb5wJTuGKmtrHJr-0.0034'", ),
         )
         question = question.wait()
         bot.register_next_step_handler(question, pay_withdrawal)
@@ -50,7 +50,7 @@ def callback_answer(call):
                 f"""
     <b>Please contact @Telescrowbotsupport if you run into any technical difficulty</b>
                 """,
-                use_aliases=True
+                
             ),
             parse_mode='HTML',
     )
@@ -109,9 +109,9 @@ def callback_answer(call):
             int(trade.seller),
             emoji.emojize(
                 ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!. Your payment is on it's way!</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
         ##SEND TO BUYER
@@ -119,9 +119,9 @@ def callback_answer(call):
             trade.buyer,
             emoji.emojize(
                 ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
@@ -178,7 +178,7 @@ def callback_answer(call):
             call.from_user.id,
             emoji.emojize(
                 ":warning: What is the ID of the trade ? ",
-                use_aliases=True
+                
             )
         )
         question = question.wait()

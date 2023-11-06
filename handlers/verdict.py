@@ -13,7 +13,7 @@ def start_dispute(msg):
     if msg.from_user.id == ADMIN_ID:
         question = bot.send_message(
             ADMIN_ID,
-            emoji.emojize("What is the Dispute ID :grey_question:", use_aliases=True)
+            emoji.emojize("What is the Dispute ID :grey_question:", )
         )
         question = question.wait()
         bot.register_next_step_handler(question, call_dispute)
@@ -60,10 +60,10 @@ Trade Info;
 
 Give verdict :grey_question:
                 """,
-                use_aliases=True
+                
             ),
             reply_markup=keyboard,
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     else:
@@ -71,7 +71,7 @@ Give verdict :grey_question:
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Dispute Not Found!",
-                use_aliases=True
+                
             )
         )
 
@@ -100,16 +100,16 @@ Ticket ID --> %s
 
 %s
                 """ % (trade.id, trade.dispute[0].id, message),
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     bot.send_message(
         msg.from_user.id,
         emoji.emojize(
             "Who are you assigning payout to :grey_question:",
-            use_aliases=True
+            
         ),
         reply_markup=refunds()
     )

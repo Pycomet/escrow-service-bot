@@ -25,7 +25,7 @@ def rules(msg):
 
 4.  If a party is reported, the other party receives their refund and the guilty party banned from this service.
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )

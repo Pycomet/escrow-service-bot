@@ -24,9 +24,9 @@ def trade_history(msg):
                 """
         <b>NO TRADE HISTORY</b>
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     else:
@@ -46,10 +46,10 @@ Here is a record of all your recent trades
 
 
                 """,
-                use_aliases=True
+                
             ),
             reply_markup=select_trade(),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
 
@@ -84,9 +84,9 @@ def send_all_trades(msg):
 
 <b>Dispute Status --> {sell.is_dispute()}</b>
                 """,
-                    use_aliases=True
+                    
                 ),
-                parse_mode=telegram.ParseMode.HTML,
+                parse_mode="html",
             )
 
     for buy in buys:
@@ -107,9 +107,9 @@ def send_all_trades(msg):
 
 <b>Dispute Status --> {buy.is_dispute()}</b>
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
 
@@ -127,9 +127,9 @@ def user_trade_delete(msg):
             f"""
 <b>{response}</b>
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )
 
 

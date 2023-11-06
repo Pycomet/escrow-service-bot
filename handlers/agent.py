@@ -22,7 +22,7 @@ def start_agent(msg):
             agent.id,
             emoji.emojize(
                 f"Hello Agent {msg.from_user.first_name}",
-                use_aliases=True
+                
             ),
             reply_markup = keyboard
         )
@@ -44,7 +44,7 @@ def pull_agent_address(msg):
         f"""
 <em>BTC Wallet </em> <b>{agent.btc_address}</b>
         """,
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )
 
 
@@ -57,7 +57,7 @@ def pull_agent_trades(msg):
         f"""
     You have a record count of {len(trades)} trades. Keep it up!
         """,
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )
 
 
@@ -85,7 +85,7 @@ def pay_withdrawal(msg):
             Payment on it's way!
             Txid -> <b>{result}</b>
                 """,
-                parse_mode=telegram.ParseMode.HTML,
+                parse_mode="html",
             )
             
         else:
@@ -95,7 +95,7 @@ def pay_withdrawal(msg):
             Payment failed
             Txid -> <b>{result}</b>
                 """,
-                parse_mode=telegram.ParseMode.HTML,
+                parse_mode="html",
             )
 
         

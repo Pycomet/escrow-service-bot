@@ -15,7 +15,7 @@ def delete_request(msg):
         msg.from_user.id,
         emoji.emojize(
             ":warning: What is the ID of the trade ? ",
-            use_aliases=True
+            
         )
     )
     question = question.wait()
@@ -38,7 +38,7 @@ def trade_delete(msg):
             f"""
 <b>{response}</b>
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )

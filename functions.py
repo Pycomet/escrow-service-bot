@@ -28,7 +28,7 @@ def get_user(msg):
     "Returns or creates a new user"
 
     chat = msg.message.chat.id
-    id = msg.from_user.id
+    id = str(msg.from_user.id)
     
     user = session.query(User).filter_by(id=id).first()
     if user:

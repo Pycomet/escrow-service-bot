@@ -16,7 +16,7 @@ def join_request(msg):
         msg.from_user.id,
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
-            use_aliases=True
+            
         )
     )
     question = question.wait()
@@ -67,9 +67,9 @@ You can make your payment to the address below
 :point_right: {receive_wallet}
 
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
             reply_markup=confirm(),
         )
 
@@ -78,9 +78,9 @@ You can make your payment to the address below
             trade.seller,
             emoji.emojize(
                 "<b>Buyer Just Joined Trade!!</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
     elif trade == "Not Permitted":
@@ -89,7 +89,7 @@ You can make your payment to the address below
             msg.from_user.id,
             emoji.emojize(
                 ":warning: You can not be a seller and buyer at the same time!",
-                use_aliases=True
+                
             )
         ) 
 
@@ -98,7 +98,7 @@ You can make your payment to the address below
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Trade Not Found!",
-                use_aliases=True
+                
             )
         )
 

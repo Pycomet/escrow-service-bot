@@ -20,16 +20,16 @@ def getMessage():
 @app.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url='https://telescrowbot.herokuapp.com/' + TOKEN)
-    return "Tele-Escrow Bot Active!", 200
+    bot.set_webhook(url='https://payescrowbot.render.com/' + TOKEN)
+    return "Btcpay-Escrow Bot Active!", 200
 
 
-# print("bot polling...")
-# bot.remove_webhook()
-# bot.polling(none_stop=True)
+print("bot polling...")
+bot.remove_webhook()
+bot.polling(none_stop=True)
 
-if __name__ == "__main__":
-    app.register_blueprint(api_bp)
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+# if __name__ == "__main__":
+#     app.register_blueprint(api_bp)
+#     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
 
 

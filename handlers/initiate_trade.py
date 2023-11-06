@@ -16,7 +16,7 @@ def open_trade(msg):
         msg.chat.id,
         emoji.emojize(
             ":money_bag: To create a new trade today, select which is your local currency of choice... ",
-            use_aliases=True
+            
         ),
         reply_markup=keyboard
     )
@@ -35,7 +35,7 @@ def select_coin(user):
         user.id,
         emoji.emojize(
             ":money_bag: What is your preferred coin for payment ? ",
-            use_aliases=True
+            
         ),
         reply_markup=keyboard
     )
@@ -50,7 +50,7 @@ def trade_price(user):
         user.id,
         emoji.emojize(
             ":money_bag: How much are you expecting to be paid in your local currency? ",
-            use_aliases=True
+            
         )
     )
     question = question.wait()
@@ -73,7 +73,7 @@ def trade_address(msg):
         msg.from_user.id,
         emoji.emojize(
             ":money_bag: Paste the wallet address to which you will recieve payment referenced to the coin you selected above (Confirm the wallet address to make sure it is correct) ",
-            use_aliases=True
+            
         )
     )
     question = question.wait()
@@ -111,7 +111,7 @@ def process_trade(msg):
 
 Share only the trade ID with your customer to allow his/her join the trade. They would receive all the related information when they join.
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )

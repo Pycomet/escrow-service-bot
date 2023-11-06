@@ -16,7 +16,7 @@ class User(Base):
     """
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String(20), primary_key=True)
     chat = Column(String(20))
     verified = Column(Boolean())
 

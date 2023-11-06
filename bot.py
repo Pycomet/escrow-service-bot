@@ -15,7 +15,7 @@ def start_seller(user):
         user.id,
         emoji.emojize(
             "Welcome! :robot: What would you like to do today?",
-            use_aliases=True
+            
         ),
         reply_markup=keyboard
     )
@@ -33,7 +33,7 @@ def start_buyer(user):
         user.id,
         emoji.emojize(
             ":robot: What would you like to do today?",
-            use_aliases=True
+            
         ),
         reply_markup=keyboard
     )
@@ -59,9 +59,9 @@ def validate_pay(msg):
 ------------------------------------                  
 <b>Buyer Payment Confirmed Successfully :white_check_mark: . Please release the goods to the buyer before being paid</b>
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
         # SEND CONFIRMATION TO BUYER
@@ -73,9 +73,9 @@ def validate_pay(msg):
 ------------------------------------       
 <b>Payment Confirmed Sucessfully :white_check_mark: . Seller has been instructed to release the goods to you.</b>
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
             reply_markup=confirm_goods()
         )
 
@@ -90,9 +90,9 @@ def validate_pay(msg):
 ------------------------------------     
 <b>Payment Still Pending! :heavy_exclamation_mark: Please cross check the transaction hash and try again.</b>
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
     # bot.delete_message(msg.chat.id, msg.message_id)
 
@@ -117,9 +117,9 @@ def refund_to_buyer(msg):
             msg.id,
             emoji.emojize(
                 ":warning: Buyer Has Not Made Payments Yet!!",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
 
@@ -145,9 +145,9 @@ def refund_coins(msg):
 <b>Refunds Paid</b> :heavy_check_mark:
 Txid -> {status}
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )
 
 
@@ -175,9 +175,9 @@ def refund_to_seller(msg):
 <b>Paid To Seller</b> :heavy_check_mark:
 Txid -> {status}
                 """,
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     else:
@@ -185,9 +185,9 @@ Txid -> {status}
             msg.id,
             emoji.emojize(
                 ":warning: Buyer Has Not Made Payments Yet!!",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
 
@@ -206,9 +206,9 @@ def close_dispute_trade(msg):
             user,
             emoji.emojize(
                 f"<b>Trade {trade.id} Closed</b> :mailbox_closed: ",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
 

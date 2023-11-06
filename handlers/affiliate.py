@@ -17,7 +17,7 @@ def start_affiliate(msg):
                 """
     :robot: Awaiting authorization from support. Contact @Telescrowbotsupport to pass screening process
                 """,
-                use_aliases=True
+                
             )
         )
         
@@ -40,7 +40,7 @@ def start_affiliate(msg):
                 
     Please reply with the your Group Username :grey_question: (example -> @GetGroupIDRobot)
                 """,
-                use_aliases=True
+                
             )
         )
         question = question.wait()
@@ -72,7 +72,7 @@ def add_addresses(msg):
             msg.from_user.id,
             emoji.emojize(
                 ":+1: Congrats!! You can now add TeleEscrow Service(@tele_escrowbot) to your public group and receive your affiliate charge for trade performed by your members, selecting their roles on the group. Good Luck!!",
-                use_aliases=True
+                
             )
         )
 
@@ -82,7 +82,7 @@ def add_addresses(msg):
             msg.from_user.id,
             emoji.emojize(
                 ":construction: This Group Is Already Registered",
-                use_aliases=True
+                
             )
         )
 
