@@ -1,4 +1,4 @@
-from model import session, User, Trade, Dispute, Affiliate
+from database import session, User, Trade, Dispute, Chat
 
 users = session.query(User).all()
 
@@ -6,4 +6,4 @@ trades = session.query(Trade).all()
 
 disputes = session.query(Dispute).all()
 
-affiliates = session.query(Affiliate).all()
+chats = session.query(Chat).all()

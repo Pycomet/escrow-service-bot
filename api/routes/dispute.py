@@ -1,5 +1,5 @@
 from config import *
-from .sources import users, trades, disputes, affiliates
+from .sources import users, trades, disputes
 
 
 class DisputeList(Resource):

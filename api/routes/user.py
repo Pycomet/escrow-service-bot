@@ -1,6 +1,6 @@
 # User Resource
 from config import *
-from .sources import users, trades, disputes, affiliates
+from .sources import users, trades, disputes
 
 
 class UserList(Resource):
@@ -59,30 +59,22 @@ def get_user_info(id):
     selling = 0
     buying = 0
     disputes_count = 0
-    affiliates_count = 0
 
     # import pdb; pdb.set_trace()
 
     # Get number of trades (buy & sell)
     for i in trades:
-        if str(id) == i.seller:
+        if str(id) == i.seller_id:
             selling += 1
-        elif str(id) == i.buyer:
+        elif str(id) == i.buyer_id:
             buying += 1
         else:
             pass
 
     # Get the total number of disputes
     for j in disputes:
-        if int(id) == j.user:
+        if int(id) == j.user_id:
             disputes_count += 1
-        else:
-            pass
-
-    # Get affiliates
-    for k in affiliates:
-        if int(id) == k.admin:
-            affiliates_count += 1
         else:
             pass
 
@@ -91,8 +83,7 @@ def get_user_info(id):
     # Update dictionary
     info.update({
         "Total Trades": trades_count,
-        "Total Open Dispute Trades": disputes_count,
-        "Affiliate Groups": affiliates_count
+        "Total Open Dispute Trades": disputes_count
     })
     return info
      

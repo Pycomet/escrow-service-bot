@@ -5,8 +5,8 @@ from handlers.rules import rules
 from keyboard import *
 from functions import *
 from bot import *
-from affiliate import *
-from agent import *
+# from affiliate import *
+# from agent import *
 
 from handlers.verdict import *
 
@@ -63,31 +63,15 @@ def callback_answer(call):
     elif call.data == "dollar":
         #create trade
         open_new_trade(call, "USD")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "euro":
-        #create trade
-        open_new_trade(call, "EUR")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-
-    #COIN OPTIONS
-    elif call.data == "btc":
-        add_coin(
-            user=call.from_user,
-            coin="BTC")
         trade_price(call.from_user)
         bot.delete_message(call.message.chat.id, call.message.message_id)
-    
-    elif call.data == "eth":
-        add_coin(
-            user=call.from_user,
-            coin="ETH")
-        trade_price(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+    # elif call.data == "euro":
+    #     #create trade
+    #     open_new_trade(call, "EUR")
+    #     select_coin(call.from_user)
+    #     bot.delete_message(call.message.chat.id, call.message.message_id)
+
 
 
     # PAYMENT VALIDATION

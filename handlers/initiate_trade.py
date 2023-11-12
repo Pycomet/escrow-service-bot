@@ -14,29 +14,7 @@ def open_trade(msg):
 
     bot.send_message(
         msg.chat.id,
-        emoji.emojize(
-            ":money_bag: To create a new trade today, select which is your local currency of choice... ",
-            
-        ),
-        reply_markup=keyboard
-    )
-
-
-
-
-
-def select_coin(user):
-    """
-    Selecting the right coin option for trade
-    """
-    keyboard = coin_menu()
-
-    bot.send_message(
-        user.id,
-        emoji.emojize(
-            ":money_bag: What is your preferred coin for payment ? ",
-            
-        ),
+        "💰 To create a new trade today, select which is your local currency of choice... ",
         reply_markup=keyboard
     )
 
@@ -48,70 +26,67 @@ def trade_price(user):
     """
     question = bot.send_message(
         user.id,
-        emoji.emojize(
-            ":money_bag: How much are you expecting to be paid in your local currency? ",
-            
-        )
+        "💰 How much are you expecting to be paid in your local currency? "
     )
-    question = question.wait()
     
-    bot.register_next_step_handler(question, trade_address)
+    bot.register_next_step_handler(question, creating_trade)
 
-def trade_address(msg):
+def creating_trade(msg):
     """
-    Recieve user input on trade wallet address
+    Recieve user price input on trade
     """
     price = msg.text
+    user = get_user_by_id(msg.from_user.id)
 
-    add_price(
-        user=msg.from_user,
+    trade = add_price(
+        user=user,
         price=float(price)
+    )
+
+    if trade is None:
+        bot.send_message(
+            msg.chat.id,
+            "❌ Unable to find your trade. Please start over"
         )
 
-    #REQUEST WALLET ADDRESS
-    question = bot.send_message(
-        msg.from_user.id,
-        emoji.emojize(
-            ":money_bag: Paste the wallet address to which you will recieve payment referenced to the coin you selected above (Confirm the wallet address to make sure it is correct) ",
-            
-        )
-    )
-    question = question.wait()
+    else:
+        #Get Payment Url
+        payment_url = get_invoice_url(trade=trade)
 
-    bot.register_next_step_handler(question, process_trade)
+        if payment_url is None:
+            bot.send_message(
+                msg.chat.id,
+                "❌ Unable to get payment url. Please try again"
+            )
 
+        else:
+            formatted_text = f"""
+📝 <b>New Escrow Trade Opened (ID - {trade.id})</b> 📝
+--------------------------------------------------
 
+<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Preferred Payment Method:</b> Bitcoin
+<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
 
-def process_trade(msg):
-    """
-    Assigning of trade wallet
-    """
-    wallet = msg.text
+To proceed with the payment, kindly follow the link provided: [Pay Now]({payment_url}).
 
-    add_wallet(
-        user=msg.from_user,
-        address=wallet
-    )
+Ensure that you only share the unique Trade ID with the counterparty. This will allow them to seamlessly join the trade and complete the transaction. All relevant information will be shared upon joining, or they can proceed with the payment through the portal link above.
 
-    trade = get_recent_trade(msg.from_user)
+Thank you for choosing our escrow service. If you have any questions or concerns, feel free to reach out.
+            """
 
-    payment_link = send_invoice(trade)
+            # Create an inline keyboard with a Forward button
+            inline_keyboard = [[types.InlineKeyboardButton("Forward", switch_inline_query="")]]
+            keyboard_markup = types.InlineKeyboardMarkup(inline_keyboard)
 
-    bot.send_message(
-        trade.seller,
-        emoji.emojize(
-            f"""
-:memo: <b>Trade Details</b> :memo:
------------------------
+            # Send the message with the inline keyboard
+            bot.send_message(
+                msg.from_user.id,
+                text=emoji.emojize(formatted_text),
+                parse_mode="html",
+                reply_markup=keyboard_markup,
+            )
 
-   :beginner: <b>ID --> {trade.id}</b>
-   :beginner: <b>Payment Portal--> {payment_link}</b>
-   :beginner: <b>Preferred method of payment --> {trade.coin}</b>
-   :beginner: <b>Created on --> {trade.created_at}</b>
-
-Share only the trade ID with your customer to allow his/her join the trade. They would receive all the related information when they join.
-            """,
-            
-        ),
-        parse_mode="html",
-    )
+            # Send instructions
+            forward_instruction = "Tap and hold on the message above, then choose 'Forward' to send it to your friends."
+            bot.send_message(msg.from_user.id, text=forward_instruction)

@@ -1,6 +1,7 @@
 import os
 from api import api_bp
 from config import *
+from handlers import *
 
 
 app = Flask(__name__)

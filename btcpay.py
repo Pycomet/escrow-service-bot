@@ -1,6 +1,6 @@
 from config import *
 import requests
-
+from database import Trade
 
 class BtcPayAPI(object):
 
@@ -13,7 +13,7 @@ class BtcPayAPI(object):
             'Authorization': f'token {self.api_key}'
         }
 
-    def get_invoice(self, invoice_id: str):
+    def get_invoice_status(self, invoice_id: str):
         "Get a single invoice"
         try:
             result = requests.get(f"{self.url}/api/v1/stores/{self.store_id}/invoices/{invoice_id}", headers=self.header).json()
@@ -23,7 +23,7 @@ class BtcPayAPI(object):
             print(e, "Error")
             return None
 
-    def create_invoice(self, trade):
+    def create_invoice(self, trade: Trade):
         "Create A New Checkout"
         print(trade)
         
@@ -31,8 +31,7 @@ class BtcPayAPI(object):
             # create checkout with trade info
             checkout_payload = {
                 "metadata" : {
-                    "buyer": trade['buyer'],
-                    "seller": trade['seller']
+                    "creator": trade.seller.name
                 },
                 "checkout": {
                     "speedPolicy": "HighSpeed",
@@ -52,7 +51,7 @@ class BtcPayAPI(object):
                     "showQR": None,
                     "showPayments": None,
                 },
-                "amount": trade['price'],
+                "amount": trade.price,
                 "currency": "USD",
             }
 
@@ -61,13 +60,14 @@ class BtcPayAPI(object):
             result = requests.post(f"{self.url}/api/v1/stores/{self.store_id}/invoices", headers=self.header, json=checkout_payload).json()
             self.status = result['status']
             self.invoice_id = result['id']
-            pritn(result)
+            self.checkout_url = result['checkoutLink']
+            print("Invoice ", result)
 
-            return self.status
+            return self.checkout_url, self.invoice_id
         
         except Exception as e:
             print(e, "Error")
-            return None
+            return None, None
 
 
 

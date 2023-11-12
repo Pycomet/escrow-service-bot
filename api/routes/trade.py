@@ -1,6 +1,6 @@
 # User Resource
 from config import *
-from .sources import users, trades, disputes, affiliates
+from .sources import users, trades, disputes
 
 
 class TradeList(Resource):
