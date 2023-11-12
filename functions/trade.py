@@ -74,6 +74,22 @@ def add_invoice_id(trade: Trade, invoice_id: str):
     session.commit()
 
 
+def add_buyer(trade, buyer_id:str):
+    "Add Buyer To Trade"
+    trade.buyer_id = buyer_id
+    trade.updated_at = str(datetime.now())
+    session.add(trade)
+    session.commit()
+
+
+def get_invoice_status(trade: Trade) -> str:
+    "Get Payment Url"
+    status  = client.get_invoice_status(trade.invoice_id)
+    if status is not None:
+        return status
+    return None
+    
+
 def get_invoice_url(trade: Trade) -> str:
     "Get Payment Url"
     url, invoice_id  = client.create_invoice(trade)
@@ -83,3 +99,23 @@ def get_invoice_url(trade: Trade) -> str:
     return None
     
 
+
+def check_trade(user: User, trade_id: str):
+    "Return trade info"
+    trade = session.query(Trade).filter(Trade.id == trade_id).first()
+    
+    if trade == None:
+        return "Not Found"
+
+    elif trade.seller_id != "" and trade.buyer_id != "":
+        return "Both parties already exists"
+
+    elif str(trade.buyer) == trade.seller:
+        return "Not Permitted"
+    
+    else:
+        add_buyer(
+            trade=trade,
+            buyer_id=user.id
+        )
+        return trade

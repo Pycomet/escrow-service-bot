@@ -70,9 +70,8 @@ def agent_menu(balance):
 
 def local_currency_menu():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    a = types.InlineKeyboardButton(text=emoji.emojize(":dollar: US Dollars (USD)", ), callback_data="dollar")
-    # b = types.InlineKeyboardButton(text=emoji.emojize(":euro: Euros (EUR)", ), callback_data="euro")
-    
+    a = types.InlineKeyboardButton(text=emoji.emojize("🇺🇸 US Dollars (USD)", ), callback_data="dollar")
+    # b = types.InlineKeyboardButton(text=emoji.emojize(":euro: Euros (EUR)", ), callback_data="euro")    
     keyboard.add(a)
     return keyboard
 
@@ -88,8 +87,10 @@ def give_verdict():
 
 def confirm():
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    a = types.InlineKeyboardButton(text=emoji.emojize("💰 Confirm Payment", ), callback_data="payment_confirmation")
-    keyboard.add(a)
+    a = types.InlineKeyboardButton(text=emoji.emojize("💸 Make Payment", ), callback_data="payment_confirmation"),
+    # a = types.InlineKeyboardButton(text=emoji.emojize("🔄 Refresh Status", ), callback_data="payment_confirmation")
+    b = types.InlineKeyboardButton(text=emoji.emojize("💰 Confirm Payment", ), callback_data="payment_confirmation")
+    keyboard.add(a,b)
     return keyboard
 
 def confirm_goods():

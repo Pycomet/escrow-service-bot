@@ -4,7 +4,6 @@ from .utils import *
 
 def get_user(msg) -> User:
     "Returns or creates a new user"
-    chat = msg.message.chat.id
     id = str(msg.from_user.id)
     
     user: User = session.query(User).filter(cast(User.id, String) == str(id)).first()

@@ -4,7 +4,7 @@ from functions import *
 
 
 def start_seller(user):
-    """
+    """ 
     This is the handler to start seller options
     """
     keyboard = seller_menu()

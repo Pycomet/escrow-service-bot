@@ -19,8 +19,6 @@ def join_request(msg):
             
         )
     )
-    question = question.wait()
-    
     bot.register_next_step_handler(question, join_trade)
 
 def join_trade(msg):
@@ -29,43 +27,35 @@ def join_trade(msg):
     """
     trade_id = msg.text
 
+    user = get_user(msg)
+
     trade = check_trade(
-        user=msg.from_user,
+        user=user,
         trade_id=trade_id)
 
     if isinstance(trade, str) != True:
         
-        #Amount To Be Paid
-        coin_price = get_coin_price(
-            coin_code=trade.coin,
-            currency_code=trade.currency
-        )
-  
-        agent = get_agent(trade)
-        payment_url = client.get_payment_url(trade, agent)
-
-        receive_wallet = get_receive_address(trade)
+        payment_url = get_invoice_url(trade=trade)
+        status = get_invoice_status(trade=trade)
 
         #SEND TO BUYER########
         bot.send_message(
-            trade.buyer,
+            trade.buyer_id,
             emoji.emojize(
                 f"""
-:memo: <b>{trade.id} Trade Details</b> 
+:memo: <b>Trade {trade.id} Payment Details</b> 
 -----------------------------------
-:beginner: <b>Price --> {trade.price} {trade.currency}</b>
-:beginner: <b>Preferred method of payment --> {trade.coin}</b>
-:beginner: <b>Created on --> {trade.created_at}</b>
-:beginner: <b>Payment Complete --> {trade.payment_status}</b>
+<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Preferred Payment Method:</b> Bitcoin
+<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
+<b>Payment Status:</b> {status}
 
-:point_right: <b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
+
+<b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
 
 You can make your payment to the address below
 
 {payment_url}
-
-:point_right: {receive_wallet}
-
                 """,
                 
             ),
@@ -75,9 +65,9 @@ You can make your payment to the address below
 
         ##SEND ALERT TO SELLER#########
         bot.send_message(
-            trade.seller,
+            trade.seller_id,
             emoji.emojize(
-                "<b>Buyer Just Joined Trade!!</b>",
+                f"<b>{trade.buyer.name}</b> just joined a this trade - {trade.id}</b>",
                 
             ),
             parse_mode="html"
@@ -88,7 +78,17 @@ You can make your payment to the address below
         bot.send_message(
             msg.from_user.id,
             emoji.emojize(
-                ":warning: You can not be a seller and buyer at the same time!",
+                "⚠️ You can not be a seller and buyer at the same time",
+                
+            )
+        ) 
+    
+    elif trade == "Both parties already exists":
+
+        bot.send_message(
+            msg.from_user.id,
+            emoji.emojize(
+                "⚠️ There is already a buyer and seller on this trade!",
                 
             )
         ) 
@@ -97,7 +97,7 @@ You can make your payment to the address below
         bot.send_message(
             msg.from_user.id,
             emoji.emojize(
-                ":warning: Trade Not Found!",
+                f"⚠️ Trade not found! - {trade}",
                 
             )
         )

@@ -87,6 +87,6 @@ Thank you for choosing our escrow service. If you have any questions or concerns
                 reply_markup=keyboard_markup,
             )
 
-            # Send instructions
-            forward_instruction = "Tap and hold on the message above, then choose 'Forward' to send it to your friends."
-            bot.send_message(msg.from_user.id, text=forward_instruction)
+            # # Send instructions
+            # forward_instruction = "Tap and hold on the message above, then choose 'Forward' to send it to your friends."
+            # bot.send_message(msg.from_user.id, text=forward_instruction)

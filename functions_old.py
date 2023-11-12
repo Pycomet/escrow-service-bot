@@ -7,21 +7,6 @@ client = BitcoinApi()
 
 
 
-def send_invoice(trade):
-    """
-    Create invoice and extract url
-    """
-    agent = get_agent(trade)
-    u_id = client.create_invoice(trade, agent)
-
-    trade.invoice = u_id
-    session.add(trade)
-    session.commit()
-
-    url = client.get_payment_url(trade, agent)
-    return url
-
-
     
 def get_agent(trade):
     if trade.agent_id is not None:
@@ -116,34 +101,7 @@ def get_affiliate(id):
 
 
 
-def add_price(user, price):
-    """
-    Update trade instance with price of service
-    """
-    trade = get_recent_trade(user)
-    trade.price = float(price)
-    session.add(trade)
 
-def add_wallet(user, address):
-    """
-    Update trade instance with wallet for seller
-    """
-    trade = get_recent_trade(user)
-    trade.wallet = str(address)
-    trade.updated_at = str(datetime.now())
-    session.add(trade)
-    session.commit()
-
-def add_buyer(trade, buyer):
-    "Add Buyer To Trade"
-    trade.buyer = buyer.id
-    trade.updated_at = str(datetime.now())
-    session.add(trade)
-    session.commit()
-
-def get_receive_address(trade):
-    "Return the receive address"
-    return trade.address
 
 def delete_trade(trade_id):
     "Delete Trade"
@@ -168,25 +126,7 @@ def seller_delete_trade(user_id, trade_id):
         return "Trade Deleted Successfully"
 
 
-def check_trade(user, trade_id):
-    "Return trade info"
 
-    trade = session.query(Trade).filter(Trade.id == trade_id).first()
-    
-    if trade == None:
-
-        return "Not Found"
-
-    elif str(trade.buyer) == trade.seller:
-
-        return "Not Permitted"
-    
-    else:
-        add_buyer(
-            trade=trade,
-            buyer=user
-        )
-        return trade
 
 
 def get_trades(user):
