@@ -103,56 +103,12 @@ def get_affiliate(id):
 
 
 
-def delete_trade(trade_id):
-    "Delete Trade"
-    trade = session.query(Trade).filter(Trade.id == trade_id).delete()
-    
-    if trade == None:
-        return "Not Found!"
-    else:
-        session.commit()
-        return "Complete!"
-
-def seller_delete_trade(user_id, trade_id):
-    "Delete Trade"
-    trade = session.query(Trade).filter_by(id= trade_id).one_or_none()
-
-    if trade is None:
-        return "Trade Not Found"
-    elif trade.seller is not str(user_id): 
-        return "You are not authorized to take this action. Please contact support!"
-    else:
-        session.commit()
-        return "Trade Deleted Successfully"
 
 
 
 
 
-def get_trades(user):
-    "Retrun list of trades the user is in"
-    
-    sells = session.query(Trade).filter(Trade.seller == str(user.id)).all()
-    buys = session.query(Trade).filter(Trade.buyer == user.id).all()
 
-    return sells, buys
-
-def get_trades_report(sells:list, buys:list):
-    "Return aggregated data of trades"
-    purchases = len(buys)
-    sales = len(sells)
-    
-    active_buys = [ i for i in buys if i.is_open == False ]
-    active_sells = [ i for i in sells if i.is_open == False ]
-    active = len(active_buys) + len(active_sells)
-
-    trades = purchases + sales
-
-    r_buys = [ i for i in buys if i.dispute is not [] ]
-    r_sells = [ i for i in sells if i.dispute is not [] ]
-    reports = len(r_buys) + len(r_sells)
-
-    return purchases, sales, trades, active, reports
 
 def confirm_pay(trade):
     "Confirm Payment"

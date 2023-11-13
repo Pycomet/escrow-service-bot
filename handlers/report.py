@@ -17,7 +17,7 @@ def report_request(msg):
             
         )
     )
-    question = question.wait()
+    
     
     bot.register_next_step_handler(question, report_trade)
 
@@ -40,7 +40,7 @@ def report_trade(msg):
             ),
             parse_mode="html",
         )
-        question = question.wait()
+        
 
         bot.register_next_step_handler(question, trade_complaint)
 

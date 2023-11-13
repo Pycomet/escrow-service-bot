@@ -15,7 +15,7 @@ def start_dispute(msg):
             ADMIN_ID,
             emoji.emojize("What is the Dispute ID :grey_question:", )
         )
-        question = question.wait()
+        
         bot.register_next_step_handler(question, call_dispute)
         
     else:

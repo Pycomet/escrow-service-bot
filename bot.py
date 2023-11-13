@@ -109,7 +109,6 @@ def refund_to_buyer(msg):
             trade.buyer,
             f"A refund was requested for your funds on trade {trade.id}. Please paste a wallet address to receive in {trade.coin}"
         )
-        question = question.wait()
         bot.register_next_step_handler(question, refund_coins)
 
     else:

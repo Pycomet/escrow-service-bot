@@ -18,7 +18,7 @@ def delete_request(msg):
             
         )
     )
-    question = question.wait()
+    
     bot.register_next_step_handler(question, trade_delete)
 
 

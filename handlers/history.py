@@ -8,8 +8,10 @@ def trade_history(msg):
     """
     Return all the trades the user is involved in
     """
-    user = msg.from_user
-    sells, buys = get_trades(user)
+
+    bot.send_chat_action(msg.from_user.id, "typing")
+    user = get_user(msg)
+    sells, buys = get_trades(msg.from_user.id)
 
     purchases, sales, trades, active, reports = get_trades_report(sells, buys)
 
@@ -33,9 +35,8 @@ def trade_history(msg):
         
         bot.send_message(
             user.id,
-            emoji.emojize(
                 f"""
-<b>Trade Reports</b> :book:
+<b>Trade Reports</b> 📚
 Here is a record of all your recent trades
 
 👉 <b>Active trades                 {active}</b>
@@ -43,11 +44,7 @@ Here is a record of all your recent trades
 👉 <b>Trades as buyer             {purchases}</b>
 👉 <b>Trades as seller             {sales}</b>
 👉 <b>Reported trades             {reports}</b>
-
-
                 """,
-                
-            ),
             reply_markup=select_trade(),
             parse_mode="html",
         )
@@ -62,55 +59,21 @@ def send_all_trades(msg):
     """
     Return all the trades the user is involved in
     """
-    user = msg.from_user
-    sells, buys = get_trades(user)
+    bot.send_chat_action(msg.from_user.id, "typing")
+    user = get_user(msg)
+    sells, buys = get_trades(user.id)
 
+    all_trades = sells + buys
 
-    for sell in sells:
-
-        bot.send_message(
-            user.id,
-            emoji.emojize(
-                f"""
-<b>SELLER ROLE</b> :man:
+    bot.send_message(
+        user.id,
+        f"""
+<b>All Trades IDs - ({len(all_trades)})</b>
 ------------------
-<b>ID --> {sell.id}</b>
-<b>Price --> {sell.price} {sell.currency}</b>
-<b>Preferred method of payment --> {sell.coin}</b>
-<b>Created on --> {sell.created_at}</b>
-<b>Payment Complete --> {sell.payment_status}</b>
-<b>Trade still open --> {sell.is_open}</b>
-<b>Affiliate ID --> {sell.agent_id}</b>
-
-<b>Dispute Status --> {sell.is_dispute()}</b>
-                """,
-                    
-                ),
-                parse_mode="html",
-            )
-
-    for buy in buys:
-
-        bot.send_message(
-            user.id,
-            emoji.emojize(
-                f"""
-<b>BUYER ROLE</b> :man:
-------------------
-<b>ID --> {buy.id}</b>
-<b>Price --> {buy.price} {buy.currency}</b>
-<b>Preferred method of payment --> {buy.coin}</b>
-<b>Created on --> {buy.created_at}</b>
-<b>Payment Complete --> {buy.payment_status}</b>
-<b>Trade still open --> {buy.is_open}</b>
-<b>Affiliate ID --> {buy.agent_id}</b>
-
-<b>Dispute Status --> {buy.is_dispute()}</b>
-                """,
-                
-            ),
-            parse_mode="html",
-        )
+{', '.join([f"<b>{trade.id} ({'Seller' if trade.seller_id == user.id else 'Buyer'})</b>" for trade in all_trades])}
+        """,
+        parse_mode="html",
+    )
 
 
 
@@ -120,7 +83,6 @@ def user_trade_delete(msg):
 
     response = seller_delete_trade(user.id, trade_id)
     
-
     bot.send_message(
         user.id,
         emoji.emojize(

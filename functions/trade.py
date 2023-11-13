@@ -70,6 +70,7 @@ def add_invoice_id(trade: Trade, invoice_id: str):
     Update trade instance with price of service
     """
     trade.invoice_id = invoice_id
+    trade.updated_at = str(datetime.now())
     session.add(trade)
     session.commit()
 
@@ -78,6 +79,7 @@ def add_buyer(trade, buyer_id:str):
     "Add Buyer To Trade"
     trade.buyer_id = buyer_id
     trade.updated_at = str(datetime.now())
+    trade.is_active = True
     session.add(trade)
     session.commit()
 
@@ -102,7 +104,7 @@ def get_invoice_url(trade: Trade) -> str:
 
 def check_trade(user: User, trade_id: str):
     "Return trade info"
-    trade = session.query(Trade).filter(Trade.id == trade_id).first()
+    trade = session.query(Trade).filter(cast(Trade.id, String) == trade_id).first()
     
     if trade == None:
         return "Not Found"
@@ -119,3 +121,61 @@ def check_trade(user: User, trade_id: str):
             buyer_id=user.id
         )
         return trade
+
+
+def get_trades(user_id: str):
+    "Retrun list of trades the user is in"
+    
+    sells = session.query(Trade).filter(cast(Trade.seller_id, String) == str(user_id)).all()
+    buys = session.query(Trade).filter(cast(Trade.buyer_id, String)== str(user_id)).all()
+
+    return sells, buys
+
+
+
+def get_trades_report(sells:list, buys:list):
+    "Return aggregated data of trades"
+    purchases = len(buys)
+    sales = len(sells)
+    
+    active_buys = [ i for i in buys if i.is_active == True ]
+    active_sells = [ i for i in sells if i.is_active == True ]
+    active = len(active_buys) + len(active_sells)
+
+    trades = purchases + sales
+
+    r_buys = [ i for i in buys if i.dispute is not [] ]
+    r_sells = [ i for i in sells if i.dispute is not [] ]
+    reports = len(r_buys) + len(r_sells)
+
+    return purchases, sales, trades, active, reports
+
+
+def delete_trade(trade_id: str):
+    "Delete Trade"
+    trade = session.query(Trade).filter(cast(Trade.id, String) == trade_id).delete()
+    
+    if trade == None:
+        return "Not Found!"
+    else:
+        session.commit()
+        return "Complete!"
+
+
+
+def seller_delete_trade(user_id, trade_id):
+    "Delete Trade"
+    trade = session.query(Trade).filter_by(id= trade_id).one_or_none()
+
+    if trade is None:
+        return "Trade Not Found"
+
+    elif trade.is_active == True:
+        return "You are not authorized to close an active trade, the close the deal first."
+
+    elif trade.seller_id == str(user_id) and trade.is_active == False: 
+        delete_trade(trade.id)
+        return "Trade Deleted Successfully"
+    
+    else:
+        return "You are not authorized to take this action. Please contact support!"

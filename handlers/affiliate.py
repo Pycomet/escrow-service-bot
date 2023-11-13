@@ -43,7 +43,7 @@ def start_affiliate(msg):
                 
             )
         )
-        question = question.wait()
+        
         bot.register_next_step_handler(question, add_addresses)
 
 

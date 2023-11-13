@@ -85,11 +85,11 @@ def give_verdict():
     keyboard.add(a,b)
     return keyboard
 
-def confirm():
+def confirm(payment_url: str):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    a = types.InlineKeyboardButton(text=emoji.emojize("💸 Make Payment", ), callback_data="payment_confirmation"),
+    a = types.InlineKeyboardButton(text="💸 Make Payment", url=payment_url),
     # a = types.InlineKeyboardButton(text=emoji.emojize("🔄 Refresh Status", ), callback_data="payment_confirmation")
-    b = types.InlineKeyboardButton(text=emoji.emojize("💰 Confirm Payment", ), callback_data="payment_confirmation")
+    b = types.InlineKeyboardButton(text="💰 Confirm Payment", callback_data="payment_confirmation")
     keyboard.add(a,b)
     return keyboard
 
@@ -111,7 +111,7 @@ def refunds():
 
 def select_trade():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    a = types.InlineKeyboardButton(text=emoji.emojize("View Trades", ), callback_data="view_all_trades")
-    b = types.InlineKeyboardButton(text=emoji.emojize("Delete Trade", ), callback_data="delete_trade")
+    a = types.InlineKeyboardButton(text=emoji.emojize("View Trades IDs", ), callback_data="view_all_trades")
+    b = types.InlineKeyboardButton(text=emoji.emojize("Delete A Trade", ), callback_data="delete_trade")
     keyboard.add(a, b)
     return keyboard

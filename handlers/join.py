@@ -50,17 +50,13 @@ def join_trade(msg):
 <b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
 <b>Payment Status:</b> {status}
 
-
 <b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
 
-You can make your payment to the address below
-
-{payment_url}
-                """,
-                
+You can go to payment portal by clicking the button below.
+                """
             ),
             parse_mode="html",
-            reply_markup=confirm(),
+            reply_markup=confirm(payment_url),
         )
 
         ##SEND ALERT TO SELLER#########

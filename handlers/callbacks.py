@@ -40,7 +40,7 @@ def callback_answer(call):
             call.from_user.id,
             emoji.emojize(":point_right: Paste the address and amount to make payments into (Bitcoin Wallets Only) - E.g '14Ug4KS3cwvReFqqEmBbb5wJTuGKmtrHJr-0.0034'", ),
         )
-        question = question.wait()
+        
         bot.register_next_step_handler(question, pay_withdrawal)
 
     elif call.data == "help":
@@ -128,7 +128,7 @@ def callback_answer(call):
             call.from_user.id,
             "What is your final decision to the trade? "
         )
-        question = question.wait()
+        
         bot.register_next_step_handler(question, pass_verdict)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
@@ -165,7 +165,6 @@ def callback_answer(call):
                 
             )
         )
-        question = question.wait()
         bot.register_next_step_handler(question, user_trade_delete)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
