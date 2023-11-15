@@ -4,9 +4,9 @@ import requests
 class BitcoinApi(object):
 
     def __init__(self):
-        self.email = MAIL
-        self.password = PASS
-        self.token = FORGING_BLOCK_TOKEN
+        self.email = ""
+        self.password = ""
+        self.token = ""
         self.xpub = ""
         self.mnemonic = ""
 
@@ -103,8 +103,8 @@ class BitcoinApi(object):
         try:
             if agent is None:
                 payload = {
-                    'trade': FORGING_BLOCK_TRADE,
-                    'token': FORGING_BLOCK_TOKEN,
+                    'trade': "",
+                    'token': "",
                     'amount': int(price),
                     'currency': trade.currency.lower()
                 }
@@ -131,8 +131,8 @@ class BitcoinApi(object):
         try:
             if agent is None:
                 payload = {
-                    'trade': FORGING_BLOCK_TRADE,
-                    'token': FORGING_BLOCK_TOKEN,
+                    'trade': "",
+                    'token': "",
                     'invoice': trade.invoice
                 }
             else:
@@ -152,8 +152,8 @@ class BitcoinApi(object):
         try:
             if agent is None:
                 payload = {
-                    'trade': FORGING_BLOCK_TRADE,
-                    'token': FORGING_BLOCK_TOKEN,
+                    'trade': "",
+                    'token': "",
                     'invoice': trade.invoice
                 }
             else:

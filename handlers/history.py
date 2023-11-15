@@ -77,23 +77,5 @@ def send_all_trades(msg):
 
 
 
-def user_trade_delete(msg):
-    user = msg.from_user
-    trade_id = msg.text
-
-    response = seller_delete_trade(user.id, trade_id)
-    
-    bot.send_message(
-        user.id,
-        emoji.emojize(
-            f"""
-<b>{response}</b>
-            """,
-            
-        ),
-        parse_mode="html",
-    )
-
-
 
 

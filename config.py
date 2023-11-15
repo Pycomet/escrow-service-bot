@@ -20,24 +20,14 @@ load_dotenv()
 # Configuration variable
 TOKEN = os.getenv("TOKEN")
 
+WEBHOOK_MODE = os.getenv("WEBHOOK_MODE")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
-
-ADMIN = os.getenv("ADMIN")
-SERVER_URL = os.getenv("SERVER_URL")
-
-
-FORGING_BLOCK_TOKEN = os.getenv("FORGING_BLOCK_TOKEN")
-FORGING_BLOCK_STORE = os.getenv("FORGING_BLOCK_STORE")
-FORGING_BLOCK_TRADE = os.getenv("FORGING_BLOCK_TRADE")
-FORGING_BLOCK_ADDRESS = os.getenv("FORGING_BLOCK_ADDRESS")
-
 
 BTCPAY_URL = os.getenv("BTCPAY_URL")
 BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY")
 BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
-
-MAIL = os.getenv("MAIL")
-PASS = os.getenv("PASS")
 
 bot = telebot.TeleBot(TOKEN, threaded=True)
 

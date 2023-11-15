@@ -11,6 +11,8 @@ def get_user(msg) -> User:
         return user
     else:
         user = User(id=id, name=msg.from_user.first_name, wallet="", chat=chat, verified=True, created_at=datetime.now())
+
+        bot.send_message(ADMIN_ID, f"New user registered to escrow bot - @{msg.from_user.username}")
         session.add(user)
         session.commit()
         return user

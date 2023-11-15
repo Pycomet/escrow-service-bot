@@ -1,5 +1,4 @@
 from config import *
-from handlers.history import *
 from handlers.initiate_trade import *
 from handlers.rules import rules
 from keyboard import *
@@ -9,6 +8,7 @@ from bot import *
 # from agent import *
 
 from handlers.verdict import *
+from handlers.delete_trade import *
 
 # Callback Handlers
 @bot.callback_query_handler(func=lambda call: True)
@@ -165,7 +165,7 @@ def callback_answer(call):
                 
             )
         )
-        bot.register_next_step_handler(question, user_trade_delete)
+        bot.register_next_step_handler(question, trade_delete)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
     else:
