@@ -10,12 +10,19 @@ trade = ""
 def start_dispute(msg):
     "Starts The Ticket Review Session"
 
-    question = bot.send_message(
-        ADMIN_ID,
-        emoji.emojize("What is the Dispute ID :grey_question:", use_aliases=True)
-    )
-    question = question.wait()
-    bot.register_next_step_handler(question, call_dispute)
+    if msg.from_user.id == ADMIN_ID:
+        question = bot.send_message(
+            ADMIN_ID,
+            emoji.emojize("What is the Dispute ID :grey_question:", )
+        )
+        
+        bot.register_next_step_handler(question, call_dispute)
+        
+    else:
+        bot.reply_to(
+            msg,
+            "You are not authorised for this command"
+        )
 
 
 
@@ -28,9 +35,8 @@ def call_dispute(msg):
     dispute = get_dispute_by_id(dispute_id)
     keyboard = give_verdict()
 
-    trade = dispute.trade
-
-    if dispute != "No Dispute":
+    if dispute != None:
+        trade = dispute.trade
 
         bot.send_message(
             msg.from_user.id,
@@ -54,10 +60,10 @@ Trade Info;
 
 Give verdict :grey_question:
                 """,
-                use_aliases=True
+                
             ),
             reply_markup=keyboard,
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     else:
@@ -65,7 +71,7 @@ Give verdict :grey_question:
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Dispute Not Found!",
-                use_aliases=True
+                
             )
         )
 
@@ -94,16 +100,16 @@ Ticket ID --> %s
 
 %s
                 """ % (trade.id, trade.dispute[0].id, message),
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
     bot.send_message(
         msg.from_user.id,
         emoji.emojize(
             "Who are you assigning payout to :grey_question:",
-            use_aliases=True
+            
         ),
         reply_markup=refunds()
     )

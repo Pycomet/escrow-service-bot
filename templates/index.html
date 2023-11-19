@@ -11,9 +11,13 @@
         <br>
         <div id="root"></div>
     </div>
-    <script src="{{ url_for('static', filename='bower_components/react/react.production.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='bower_components/react/react-dom.production.min.js') }}"></script>
+    <!-- <script src="./static/bower_components/react/react.production.min.js"></script>
+    <script src="./static/bower_components/react/react-dom.production.min.js"></script> -->
+
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
     <script src="http://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/JSXTransformer.js"></script>
-    <script type="text/jsx" src="{{ url_for('static', filename='components/table.jsx') }}"></script>
+    <script type="text/jsx" src="{{ url_for('static', filename='components/index.jsx') }}"></script>
+    <!-- <script type="text/jsx" src="{{ url_for('static', filename='components/dashboard.jsx') }}"></script> -->
 </body>
 </html>

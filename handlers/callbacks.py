@@ -1,10 +1,14 @@
 from config import *
+from handlers.initiate_trade import *
+from handlers.rules import rules
 from keyboard import *
 from functions import *
 from bot import *
-from affiliate import *
+# from affiliate import *
+# from agent import *
 
 from handlers.verdict import *
+from handlers.delete_trade import *
 
 # Callback Handlers
 @bot.callback_query_handler(func=lambda call: True)
@@ -27,95 +31,53 @@ def callback_answer(call):
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
+    #AGENT ACTIONS
+    elif call.data == "deposit":
+        pull_agent_address(call)
+
+    elif call.data == "withdraw":
+        question = bot.send_message(
+            call.from_user.id,
+            emoji.emojize(":point_right: Paste the address and amount to make payments into (Bitcoin Wallets Only) - E.g '14Ug4KS3cwvReFqqEmBbb5wJTuGKmtrHJr-0.0034'", ),
+        )
+        
+        bot.register_next_step_handler(question, pay_withdrawal)
+
+    elif call.data == "help":
+        bot.send_message(
+            call.from_user.id,
+            emoji.emojize(
+                f"""
+    <b>Please contact @Telescrowbotsupport if you run into any technical difficulty</b>
+                """,
+                
+            ),
+            parse_mode='HTML',
+    )
+
+    elif call.data == "agent_trades":
+        pull_agent_trades(call)
+
+
     #CURRENCY OPTIONS
     elif call.data == "dollar":
         #create trade
         open_new_trade(call, "USD")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "euro":
-        #create trade
-        open_new_trade(call, "EUR")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "pound":
-        #create trade
-        open_new_trade(call, "GBP")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "c_dollar":
-        #create trade
-        open_new_trade(call, "CAD")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "yen":
-        #create trade
-        open_new_trade(call, "JPY")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-    
-    elif call.data == "swiss":
-        #create trade
-        open_new_trade(call, "CHF")
-        select_coin(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-
-
-    #COIN OPTIONS
-    elif call.data == "btc":
-        add_coin(
-            user=call.from_user,
-            coin="BTC")
-        trade_price(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-    
-    elif call.data == "eth":
-        add_coin(
-            user=call.from_user,
-            coin="ETH")
         trade_price(call.from_user)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
-    elif call.data == "ltc":
-        add_coin(
-            user=call.from_user,
-            coin="LTC")
-        trade_price(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "xrp":
-        add_coin(
-            user=call.from_user,
-            coin="XRP")
-        trade_price(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-    elif call.data == "bch":
-        add_coin(
-            user=call.from_user,
-            coin="BCH")
-        trade_price(call.from_user)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
+    # elif call.data == "euro":
+    #     #create trade
+    #     open_new_trade(call, "EUR")
+    #     select_coin(call.from_user)
+    #     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
     # PAYMENT VALIDATION
     elif call.data == "payment_confirmation":
-        #Check payment confirmation
-        question = bot.send_message(
-            call.from_user.id,
-            emoji.emojize(":point_right: Paste the transaction hash for confirmation below", use_aliases=True),
-        )
-        question = question.wait()
-        bot.register_next_step_handler(question, validate_pay)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+        validate_pay(call)
+        # bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
@@ -123,16 +85,17 @@ def callback_answer(call):
     elif call.data == "goods_received":
         ### Pay The Seller
         trade = get_recent_trade(call.from_user)
-        pay_funds_to_seller(trade)
+        status, _ = pay_funds_to_seller(trade)
 
+        print(status)
         ##SEND TO SELLER
         bot.send_message(
-            trade.seller,
+            int(trade.seller),
             emoji.emojize(
                 ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!. Your payment is on it's way!</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML
+            parse_mode="html"
         )
 
         ##SEND TO BUYER
@@ -140,9 +103,9 @@ def callback_answer(call):
             trade.buyer,
             emoji.emojize(
                 ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
@@ -165,7 +128,7 @@ def callback_answer(call):
             call.from_user.id,
             "What is your final decision to the trade? "
         )
-        question = question.wait()
+        
         bot.register_next_step_handler(question, pass_verdict)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
@@ -184,6 +147,25 @@ def callback_answer(call):
 
     elif call.data == "close_trade":
         close_dispute_trade(call.from_user)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
+
+
+    elif call.data == "view_all_trades":
+        send_all_trades(call)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
+    elif call.data == "delete_trade":
+        question = bot.send_message(
+            call.from_user.id,
+            emoji.emojize(
+                ":warning: What is the ID of the trade ? ",
+                
+            )
+        )
+        bot.register_next_step_handler(question, trade_delete)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
     else:

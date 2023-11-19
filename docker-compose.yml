@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  queen:
+    build:
+      context: .
+    ports:
+      - "5004:5004"
+    command: python main.py

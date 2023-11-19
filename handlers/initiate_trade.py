@@ -13,13 +13,81 @@ def open_trade(msg):
     bot.delete_message(chat.id, id)
 
     bot.send_message(
-        msg.from_user.id,
-        emoji.emojize(
-            ":money_bag: To create a new trade today, select which is your local currency of choice... ",
-            use_aliases=True
-        ),
+        msg.chat.id,
+        "💰 To create a new trade today, select which is your local currency of choice... ",
         reply_markup=keyboard
     )
 
 
+##############TRADE CREATION
+def trade_price(user):
+    """
+    Receive user input on trade price
+    """
+    question = bot.send_message(
+        user.id,
+        "💰 How much are you expecting to be paid in your local currency? "
+    )
+    
+    bot.register_next_step_handler(question, creating_trade)
 
+def creating_trade(msg):
+    """
+    Recieve user price input on trade
+    """
+    price = msg.text
+    user = get_user_by_id(msg.from_user.id)
+
+    trade = add_price(
+        user=user,
+        price=float(price)
+    )
+
+    if trade is None:
+        bot.send_message(
+            msg.chat.id,
+            "❌ Unable to find your trade. Please start over"
+        )
+
+    else:
+        #Get Payment Url
+        payment_url = get_invoice_url(trade=trade)
+
+        if payment_url is None:
+            bot.send_message(
+                msg.chat.id,
+                "❌ Unable to get payment url. Please try again"
+            )
+
+        else:
+            formatted_text = f"""
+📝 <b>New Escrow Trade Opened (ID - {trade.id})</b> 📝
+--------------------------------------------------
+
+<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Preferred Payment Method:</b> Bitcoin
+<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
+
+To proceed with the payment, kindly follow the link provided: [Pay Now]({payment_url}).
+
+Ensure that you only share the unique Trade ID with the counterparty. This will allow them to seamlessly join the trade and complete the transaction. All relevant information will be shared upon joining, or they can proceed with the payment through the portal link above.
+
+Thank you for choosing our escrow service. If you have any questions or concerns, feel free to reach out.
+            """
+
+            # Create an inline keyboard with a Forward button
+            inline_keyboard = [[types.InlineKeyboardButton("Forward", switch_inline_query="")]]
+            keyboard_markup = types.InlineKeyboardMarkup(inline_keyboard)
+
+            # Send the message with the inline keyboard
+            bot.send_message(
+                msg.from_user.id,
+                text=emoji.emojize(formatted_text),
+                parse_mode="html",
+                reply_markup=keyboard_markup,
+                allow_sending_without_reply=True,
+            )
+
+            # # Send instructions
+            # forward_instruction = "Tap and hold on the message above, then choose 'Forward' to send it to your friends."
+            # bot.send_message(msg.from_user.id, text=forward_instruction)

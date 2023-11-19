@@ -15,7 +15,7 @@ def rules(msg):
         msg.from_user.id,
         emoji.emojize(
             f"""
-:scroll: <b>ESCROW SERVICE RULES</b> :scroll:
+:scroll: <b>TELE ESCROW SERVICE RULES</b> :scroll:
 ----------------------------------------
 1.  Trades can only be created by a seller.
 
@@ -25,7 +25,7 @@ def rules(msg):
 
 4.  If a party is reported, the other party receives their refund and the guilty party banned from this service.
             """,
-            use_aliases=True
+            
         ),
-        parse_mode=telegram.ParseMode.HTML,
+        parse_mode="html",
     )

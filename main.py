@@ -1,5 +1,7 @@
-from config import *
 import os
+from api import api_bp
+from config import *
+from handlers import *
 
 
 app = Flask(__name__)
@@ -19,20 +21,29 @@ def getMessage():
 @app.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url='https://escrowbbot.herokuapp.com/' + TOKEN)
-    return "Escrow Service Bot Active!", 200
+    bot.set_webhook(url=WEBHOOK_URL + '/' + TOKEN)
+    return "Btcpay-Escrow Bot Active!", 200
 
 
+def run_web():
+    if __name__ == "__main__":
+        app.register_blueprint(api_bp)
+        app.run(
+            host="0.0.0.0",
+            threaded=True,
+            port=int(os.environ.get('PORT', 5004)),
+        )
 
 
-if __name__ == "__main__":
-    if DEBUG == True:
-        print("bot polling...")
-        bot.remove_webhook()
-        bot.polling(none_stop=True)
-    else:
-        app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+def run_poll():
+    webhook_info = bot.get_webhook_info()
+    if webhook_info.url:
+        bot.delete_webhook()
+    bot.infinity_polling()
+    print("Bot polling!")
 
 
-
-    
+if WEBHOOK_MODE == "False":
+    run_poll()
+else:
+    run_web()

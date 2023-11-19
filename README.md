@@ -16,7 +16,7 @@
     <img src="images/escrowbot.jpg" alt="Logo" width="200" height="200">
   </a>
 
-  <h2 align="center">Escrow Service Bot Software</h2>
+  <h2 align="center">Escrow Service Bot (BtcPay)</h2>
 
   <p align="center">
     An awesome bot to ensure fast and secure trades with a hundred percent transparency
@@ -72,7 +72,7 @@
 
 In the world we live in now, business is mostly done on the internet and customers are more unwilling to buy products from sellers they do not trust or have no personal reference to. Knowing they could be mislead or scammed of their money with no trace for refunds.
 
-This is a growing problem and my [Escrow Service Bot](https://github.com/Pycomet/escrow-service-bot) is aimed at eradicating the problem, thereby giving large trade group owners and sellers more business. And, also giving buyers the confidence to purchase goods without risk involved.
+This is a growing problem and my [escrow Service Bot](https://github.com/Pycomet/escrow-service-bot) is aimed at eradicating the problem, thereby giving large trade group owners and sellers more business. And, also giving buyers the confidence to purchase goods without risk involved.
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
@@ -90,7 +90,7 @@ All payments are being made directly to the respective parties, either through B
 - Japanese Yen (JPY)
 - The Swiss Franc (CHF)
 
-With an affiliate program being part of the structure, administrators of different Telegram Group platforms are also able to use the [Escrow Service Bot](https://github.com/Pycomet/escrow-service-bot) in conducting save and fast business transactions within their groups smoothly, with each transaction being completed secured and easily traceable. Also, each registered group admin is entitled to a charge on every trade carried out by the group members.
+With an affiliate program being part of the structure, administrators of different Telegram Group platforms are also able to use the [escrow Service Bot](https://github.com/Pycomet/escrow-service-bot) in conducting save and fast business transactions within their groups smoothly, with each transaction being completed secured and easily traceable. Also, each registered group admin is entitled to a charge on every trade carried out by the group members.
 
 
 ### Ideal Users
@@ -114,7 +114,7 @@ This section should list any frameworks/APIs used to build this project applicat
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This section covers how you can get the Escrow Service Bot up and running locally with your own credentials in no time. All you need are the following.
+This section covers how you can get the escrow Service Bot up and running locally with your own credentials in no time. All you need are the following.
 
 ### Prerequisites
 
@@ -173,7 +173,13 @@ ADMIN_ID=""
 DATABASE_URL=""
 ```
 
-9. You are ready to start the application
+9. Managing database changes with Alembic commands;
+```sh
+- Generated migration: alembic revision --autogenerate -m "initial"
+- Applied migrations: alembic upgrade head
+```
+
+10. You are ready to start the application
 ```sh
 python main.py
 ```
@@ -192,13 +198,13 @@ _Please refer to this article to know more about this project and how the bot is
 
 See the [open issues](https://github.com/Pycomet/escrow-service-bot/issues) for a list of proposed features (and known issues). Here is the shortlisted prospects;
 
-- More Country Currencies (Added Successfully!)
-
-- More Crytocurrencies for trading (For example; Ripplecoin and others) (Added Successfully!)
-
 - User account rating based on previous trades
 
-- Website to showcase more details information on the bot along with a dashboard to monitor trades
+- Website to showcase more details information on the bot along with a dashboard to monitor trades (F.A.Q and more)
+
+- Add a button for canceling trades from the buyer's trade memo
+
+- Bot dashboard
 
 <!-- CONTRIBUTING -->
 ## Contributing

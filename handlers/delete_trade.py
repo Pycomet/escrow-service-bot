@@ -15,10 +15,10 @@ def delete_request(msg):
         msg.from_user.id,
         emoji.emojize(
             ":warning: What is the ID of the trade ? ",
-            use_aliases=True
+            
         )
     )
-    question = question.wait()
+    
     bot.register_next_step_handler(question, trade_delete)
 
 
@@ -26,11 +26,19 @@ def trade_delete(msg):
     """
     Deleting the trade
     """
+    user = msg.from_user
     trade_id = msg.text
 
-    status = delete_trade(trade_id)
+    response = seller_delete_trade(user.id, trade_id)
+    
 
     bot.send_message(
-        msg.from_user.id,
-        f"Deleting Trade {trade_id} {status}"
+        user.id,
+        emoji.emojize(
+            f"""
+<b>{response}</b>
+            """,
+            
+        ),
+        parse_mode="html",
     )

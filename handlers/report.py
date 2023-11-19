@@ -14,10 +14,10 @@ def report_request(msg):
         msg.from_user.id,
         emoji.emojize(
             "What is the ID of the trade you wish to report :grey_question:",
-            use_aliases=True
+            
         )
     )
-    question = question.wait()
+    
     
     bot.register_next_step_handler(question, report_trade)
 
@@ -36,11 +36,11 @@ def report_trade(msg):
             msg.from_user.id,
             emoji.emojize(
                 f"What is your complaint on <b>Trade -> {msg.text}</b> :grey_question:",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
-        question = question.wait()
+        
 
         bot.register_next_step_handler(question, trade_complaint)
 
@@ -49,7 +49,7 @@ def report_trade(msg):
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Trade Not Found!",
-                use_aliases=True
+                
             )
         )
     
@@ -68,7 +68,7 @@ def trade_complaint(msg):
 
     trade = dispute.trade
 
-    users = [trade.seller, trade.buyer, int(ADMIN_ID)]  
+    users = [trade.seller, trade.buyer, ADMIN_ID]  
 
     for user in users:
 
@@ -76,9 +76,9 @@ def trade_complaint(msg):
             user,
             emoji.emojize(
                 f":ticket: <b>New Dispute Ticket Created -- {dispute.id}</b>",
-                use_aliases=True
+                
             ),
-            parse_mode=telegram.ParseMode.HTML,
+            parse_mode="html",
         )
 
 
@@ -86,6 +86,6 @@ def trade_complaint(msg):
         msg,
         emoji.emojize(
             ":ticket: Your complaint has been mailed to the administrator. Please await further instructions regarding this trade",
-            use_aliases=True
+            
         )
     )

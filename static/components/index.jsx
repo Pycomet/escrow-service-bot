@@ -1,32 +1,29 @@
-
-// const Dashboard = require("./components/dashboard");
-
-// const Table = required("./components/table")
-
-// import Dashboard from './components/dashboard'
+// import Dashboard from './dashboard';
 
 // class App extends React.Component {
 
-//     render() {
+//     render() { 
 //         return (
 //             <section>
 //                 <p>React Component Is Active 🤯</p>
 //             </section>
 //         );
 //     }
+
 // };
 
+const { useEffect, useState } = React;
+
 function App() {
-    const [errors, setErrors] = useState(true);
+    const [errors, setErrors] = useState(false);
     const [users, setUsers] = useState({});
-    const apiUrl = `https://0.0.0.0:5000/api/v1/users`;
 
     async function fetchData() {
-        const res = await fetch(apiUrl);
+        const res = await fetch(`https://0.0.0.0:5000/api/v1/users`);
         res
           .json()
-          .then(res => setUsers(res))
-          .catch(() => setErrors(false));
+          .then(res => setUsers(res.json()))
+          .catch(() => setErrors(true));
     };
 
     useEffect(() => {
@@ -34,10 +31,9 @@ function App() {
     });
     
     console.log(users);
+    console.log(errors)
     return (
         <section>
-            {/* <h1>{users}</h1>
-            <p>React Component Is Active 🤯</p> */}
             {
                 errors ?
                 <p>Big Error</p> :
@@ -47,7 +43,6 @@ function App() {
     );
 }
 
-ReactDOM.render(
-    <App />,
-    document.getElementById('root')
-);
+
+ReactDOM.render(<App />, document.getElementById('root'));
+  
