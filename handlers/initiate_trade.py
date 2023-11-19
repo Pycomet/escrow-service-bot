@@ -2,7 +2,7 @@ from config import *
 from keyboard import *
 from functions import *
 
-@bot.message_handler(regexp="^Initiate")
+@bot.message_handler(regexp="^Open New Trade")
 def open_trade(msg):
     """
     This opens a new trade with seller actions
@@ -12,8 +12,10 @@ def open_trade(msg):
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
 
+    user = get_user_by_id(msg.from_user.id)
+
     bot.send_message(
-        msg.chat.id,
+        user.chat,
         "💰 To create a new trade today, select which is your local currency of choice... ",
         reply_markup=keyboard
     )
