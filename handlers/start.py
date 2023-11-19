@@ -11,6 +11,8 @@ def start(msg):
     user = get_user(msg)
     keyboard = main_menu(msg)
 
+    # import pdb; pdb.set_trace()
+
     bot.send_photo(
         msg.chat.id,
         photo="https://ibb.co/DLQ8yys",
