@@ -17,6 +17,8 @@ import cryptocompare
 from dotenv import load_dotenv
 load_dotenv()
 
+DEBUG = False
+
 # Configuration variable
 TOKEN = os.getenv("TOKEN")
 
