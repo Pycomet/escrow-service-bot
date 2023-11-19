@@ -14,7 +14,7 @@ def start(msg):
     # import pdb; pdb.set_trace()
 
     bot.send_photo(
-        msg.chat.id,
+        msg.from_user.id,
         photo="https://ibb.co/DLQ8yys",
         caption=emoji.emojize(
             f"""
