@@ -6,6 +6,8 @@ env
 alembic.ini
 
 
+./alembic.ini
+
 
 # Website
 web

@@ -17,6 +17,11 @@ import cryptocompare
 from dotenv import load_dotenv
 load_dotenv()
 
+from alembic.config import Config
+from pathlib import Path
+
+config = Config(Path(__file__).parent / "alembic.ini")
+
 DEBUG = False
 
 # Configuration variable
