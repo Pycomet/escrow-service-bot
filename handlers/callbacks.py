@@ -1,6 +1,7 @@
 from config import *
 from handlers.initiate_trade import *
-from handlers.rules import rules
+from handlers.rules import *
+from handlers import *
 from keyboard import *
 from functions import *
 from bot import *
@@ -17,14 +18,12 @@ def callback_answer(call):
     Button Response
     """
 
-    # FIRST OPTIONS
-    if call.data == "seller":
-        start_seller(call)
+    if call.data == "start_trade":
+        start_trade_menu(call)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
-    elif call.data == "buyer":
-        start_buyer(call)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+    elif call.data == "rules":
+        rules(call)
 
     elif call.data == "affiliate":
         start_affiliate(call)

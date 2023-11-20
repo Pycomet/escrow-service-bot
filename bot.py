@@ -3,41 +3,6 @@ from keyboard import *
 from functions import *
 
 
-def start_seller(user):
-    """ 
-    This is the handler to start seller options
-    """
-    keyboard = seller_menu()
-
-    user = get_user(msg=user)
-
-    bot.send_message(
-        user.id,
-        emoji.emojize(
-            "Welcome! :robot: What would you like to do today?",
-            
-        ),
-        reply_markup=keyboard
-    )
-
-
-def start_buyer(user):
-    """
-    This is the handler to start buyer options
-    """
-    keyboard = buyer_menu()
-
-    user = get_user(msg=user)
-
-    bot.send_message(
-        user.id,
-        emoji.emojize(
-            ":robot: What would you like to do today?",
-            
-        ),
-        reply_markup=keyboard
-    )
-
 
 # APPROVING PAYMENTS
 def validate_pay(msg):

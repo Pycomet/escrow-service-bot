@@ -8,14 +8,18 @@ def rules(msg):
     List of Rules
     """
 
-    chat, id = get_received_msg(msg)
-    bot.delete_message(chat.id, id)
+    user = get_user(msg)
+    try:
+        message_id = get_msg_id(msg)
+        bot.delete_message(user.chat, message_id)
+    except:
+        pass
 
     bot.send_message(
-        msg.from_user.id,
+        user.id,
         emoji.emojize(
             f"""
-:scroll: <b>TELE ESCROW SERVICE RULES</b> :scroll:
+:scroll: <b>TELEGRAM ESCROW BOT SERVICE RULES</b> :scroll:
 ----------------------------------------
 1.  Trades can only be created by a seller.
 

@@ -3,7 +3,7 @@ from keyboard import *
 from functions import *
 
 
-@bot.message_handler(regexp="^Join")
+@bot.message_handler(regexp="^Join A Trade")
 def join_request(msg):
     """
     Lets a user receive trade information by ID
@@ -11,9 +11,10 @@ def join_request(msg):
 
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
+    user = get_user(msg)
 
     question = bot.send_message(
-        msg.from_user.id,
+        user.chat,
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
             
@@ -72,7 +73,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Not Permitted":
 
         bot.send_message(
-            msg.from_user.id,
+            user.chat,
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
                 
@@ -82,7 +83,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Both parties already exists":
 
         bot.send_message(
-            msg.from_user.id,
+            user.chat,
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
                 
@@ -91,7 +92,7 @@ You can go to payment portal by clicking the button below.
 
     else:
         bot.send_message(
-            msg.from_user.id,
+            user.chat,
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
                 

@@ -4,18 +4,15 @@ from config import *
 def main_menu(msg):
     "Return Main Menu Keyboard"
 
-    keyboard = types.InlineKeyboardMarkup(row_width=2)
-    a = types.InlineKeyboardButton(text=emoji.emojize("I am a Seller :man:", ), callback_data="seller")
-    b = types.InlineKeyboardButton(text=emoji.emojize("I am a Buyer :man:", ), callback_data="buyer")
-    c = types.InlineKeyboardButton(text=emoji.emojize(":man: Using this service on my group :man:", ), callback_data="affiliate")
-
-    # d = types.InlineKeyboardButton(text=emoji.emojize("Join A Trade :man:", ), url="https://t.me/tele_escrowbot?message=start")
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    a = types.InlineKeyboardButton(text="Get Started ➡️", callback_data="start_trade")
+    b = types.InlineKeyboardButton(text="Terms & Rules 📚", callback_data="rules")
+    c = types.InlineKeyboardButton(text=emoji.emojize("Join A Trade :man:", ), url="https://t.me/tele_escrowbot?message=start")
 
     if msg.chat.type == "private":
-        keyboard.add(a,b,c)
+        keyboard.add(a,b)
     else:
-        # keyboard.add(d)
-        pass
+        keyboard.add(c,b)
     
     return keyboard
 
@@ -27,6 +24,20 @@ def group_menu():
     keyboard.add(a)
     return keyboard
 
+
+
+def trade_menu():
+    "Return Join Or Sell"
+    keyboard = types.ReplyKeyboardMarkup(row_width=2)
+    a = types.KeyboardButton("Open New Trade 📒")
+    b = types.KeyboardButton("Join A Trade 📝")
+    c = types.KeyboardButton("Trade History 📚")
+    d = types.KeyboardButton("Rules 📜")
+    e = types.KeyboardButton("Community 🌐")
+    f = types.KeyboardButton("FAQs ❓")
+
+    keyboard.add(a,b,c,d,e,f)
+    return keyboard
 
 
 def seller_menu():
