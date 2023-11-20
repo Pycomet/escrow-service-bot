@@ -33,3 +33,43 @@ def rules(msg):
         ),
         parse_mode="html",
     )
+
+
+
+
+
+@bot.message_handler(regexp="^Community")
+def community(msg):
+    """
+    List of Community 
+    """
+
+    user = get_user(msg)
+    try:
+        message_id = get_msg_id(msg)
+        bot.delete_message(user.chat, message_id)
+    except:
+        pass
+
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    a = types.InlineKeyboardButton(
+        text="🌟 Bot Reviews", url="https://t.me/tele_escrowbot?message=start"
+    )
+    b = types.InlineKeyboardButton(
+        text="🔄 Bot Updates", url="https://t.me/tele_escrowbot?message=start"
+    )
+    keyboard.add(a, b)
+
+    bot.send_message(
+        user.id,
+        f"""
+    🌐 <b>Explore Our Community!</b> 🌐
+
+Stay updated 🔄 with the latest news updates and read what others are saying about us
+        """,
+        reply_markup=keyboard,
+        parse_mode="html"
+    )
+
+
+

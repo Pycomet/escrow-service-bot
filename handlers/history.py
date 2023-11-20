@@ -51,10 +51,6 @@ Here is a record of all your recent trades
 
 
 
-
-
-
-
 def send_all_trades(msg):
     """
     Return all the trades the user is involved in

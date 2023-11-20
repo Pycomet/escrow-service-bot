@@ -46,6 +46,7 @@ class Trade(Base):
 
     buyer_id = Column(String(20), ForeignKey("users.id"))
     buyer = relationship("User", uselist=False, primaryjoin="Trade.buyer_id == User.id")
+    terms = Column(String(300))
 
     price = Column(Integer())
     currency = Column(String(20))
