@@ -36,7 +36,7 @@ BTCPAY_URL = os.getenv("BTCPAY_URL")
 BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY")
 BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 
-bot = telebot.TeleBot(TOKEN, threaded=True)
+bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=5)
 
 
 Base = declarative_base()
