@@ -12,19 +12,27 @@ def dashboard():
     return render_template('index.html')
 
 
-@app.route('/' + TOKEN, methods=['POST', 'GET'])
-def getMessage():
-    json_string = request.get_data().decode('utf-8')
-    update = telebot.types.Update.de_json(json_string)
-    bot.process_new_updates([update])
-    return "!", 200
+# @app.route('/' + TOKEN, methods=['POST', 'GET'])
+# def getMessage():
+#     json_string = request.get_data().decode('utf-8')
+#     update = telebot.types.Update.de_json(json_string)
+#     bot.process_new_updates([update])
+#     return "!", 200
+
+
+@app.route("/" + TOKEN, methods=["POST", "GET"])
+def checkWebhook():
+    bot.process_new_updates(
+        [telebot.types.Update.de_json(request.stream.read().decode("utf-8"))]
+    )
+    return "Your bot application is still active!", 200
 
 
 @app.route("/")
 def webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL + '/' + TOKEN)
-    return "Btcpay-Escrow Bot Active!", 200
+    bot.set_webhook(url=WEBHOOK_URL + "/" + TOKEN)
+    return "Btcpay-Escrow Bot running!", 200
 
 
 def run_web():
