@@ -63,7 +63,8 @@ def callback_answer(call):
     elif call.data == "dollar":
         #create trade
         open_new_trade(call, "USD")
-        trade_price(call.from_user)
+
+        trade_terms(call)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
     # elif call.data == "euro":
