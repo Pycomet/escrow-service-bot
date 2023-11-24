@@ -9,6 +9,7 @@ from bot import *
 # from agent import *
 
 from handlers.verdict import *
+from handlers.history import *
 from handlers.delete_trade import *
 
 # Callback Handlers
@@ -151,7 +152,7 @@ def callback_answer(call):
 
 
 
-    elif call.data == "view_all_trades":
+    elif call.data == "all_trades":
         send_all_trades(call)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
