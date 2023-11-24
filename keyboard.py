@@ -122,7 +122,7 @@ def refunds():
 
 def select_trade():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    a = types.InlineKeyboardButton(text=emoji.emojize("View Trades IDs", ), callback_data="view_all_trades")
+    a = types.InlineKeyboardButton(text=emoji.emojize("View Trades IDs", ), callback_data="all_trades")
     b = types.InlineKeyboardButton(text=emoji.emojize("Delete A Trade", ), callback_data="delete_trade")
     keyboard.add(a, b)
     return keyboard

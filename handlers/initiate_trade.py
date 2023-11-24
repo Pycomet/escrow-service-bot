@@ -22,16 +22,48 @@ def open_trade(msg):
 
 
 ##############TRADE CREATION
-def trade_price(user):
+def trade_terms(msg):
+    """
+    Terms of trade
+    """
+    user = get_user(msg)
+
+    question = bot.send_message(
+        user.id,
+        "📝 What are the terms for the escrow contract you are about to create ?"
+    )
+
+    bot.register_next_step_handler(question, trade_price)
+
+
+def trade_price(msg):
     """
     Receive user input on trade price
     """
-    question = bot.send_message(
-        user.id,
-        "💰 How much are you expecting to be paid in your local currency? "
+    # import pdb; pdb.set_trace()
+    terms = msg.text
+    user = get_user_by_id(msg.from_user.id)
+
+    trade = add_terms(
+        user=user,
+        terms=str(terms)
     )
-    
-    bot.register_next_step_handler(question, creating_trade)
+
+    if trade is None:
+        bot.send_message(
+            msg.chat.id,
+            "❌ Unable to find your trade. Please start over"
+        )
+    else:
+
+        question = bot.send_message(
+            user.id,
+            "💰 How much are you expecting to be paid in your local currency? "
+        )
+        
+        bot.register_next_step_handler(question, creating_trade)
+
+
 
 def creating_trade(msg):
     """
@@ -65,6 +97,7 @@ def creating_trade(msg):
             formatted_text = f"""
 📝 <b>New Escrow Trade Opened (ID - {trade.id})</b> 📝
 --------------------------------------------------
+<b>Terms Of Contract:</b> {trade.terms}
 
 <b>Transaction Amount:</b> {trade.price} {trade.currency}
 <b>Preferred Payment Method:</b> Bitcoin

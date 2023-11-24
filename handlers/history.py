@@ -55,6 +55,8 @@ def send_all_trades(msg):
     """
     Return all the trades the user is involved in
     """
+    # import pdb;
+    # pdb.set_trace()
     bot.send_chat_action(msg.from_user.id, "typing")
     user = get_user(msg)
     sells, buys = get_trades(user.id)
@@ -64,7 +66,7 @@ def send_all_trades(msg):
     bot.send_message(
         user.id,
         f"""
-<b>All Trades IDs - ({len(all_trades)})</b>
+<b>All ({len(all_trades)}) Trades IDs </b>
 ------------------
 {', '.join([f"<b>{trade.id} ({'Seller' if trade.seller_id == user.id else 'Buyer'})</b>" for trade in all_trades])}
         """,

@@ -2,7 +2,7 @@ from config import *
 from database import User, Trade, Chat, session
 from .utils import generate_id
 from .user import get_user
-from btcpay import BtcPayAPI
+from payments import BtcPayAPI
 
 client = BtcPayAPI()
 
@@ -64,6 +64,19 @@ def add_price(user: User, price: int) -> Trade | None:
     # Else return None
     return None
 
+def add_terms(user: User, terms: str) -> Trade | None:
+    """
+    Update terms of contract
+    """
+    trade = get_most_recent_trade(user)
+    if trade is not None:
+        trade.terms = str(terms)
+        session.add(trade)
+        return trade
+    
+    # Else return None
+    return None
+
 
 def add_invoice_id(trade: Trade, invoice_id: str):
     """
@@ -105,14 +118,14 @@ def get_invoice_url(trade: Trade) -> str:
 def check_trade(user: User, trade_id: str):
     "Return trade info"
     trade = session.query(Trade).filter(cast(Trade.id, String) == trade_id).first()
-    
+
     if trade == None:
         return "Not Found"
 
-    elif trade.seller_id != "" and trade.buyer_id != "":
+    elif trade.buyer_id != None:
         return "Both parties already exists"
 
-    elif str(trade.buyer) == trade.seller:
+    elif str(trade.seller.id) == str(user.id):
         return "Not Permitted"
     
     else:
