@@ -8,11 +8,11 @@ def start(msg):
     Starting the escrow service bot
     """
     bot.send_chat_action(msg.from_user.id, "typing")
-    user = get_user(msg)
+    # user = get_user(msg)
     keyboard = main_menu(msg)
 
     bot.send_photo(
-        user.id,
+        msg.from_user.id,
         photo="https://ibb.co/DLQ8yys",
         caption=emoji.emojize(
             f"""
