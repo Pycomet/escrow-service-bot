@@ -21,6 +21,7 @@ def get_user(msg) -> User:
             bot.send_message(str(ADMIN_ID), f"New user registered to escrow bot - @{msg.from_user.username}")
             session.add(user)
             session.commit()
+            session.close()
             return user
 
         except Exception as e:
