@@ -100,5 +100,18 @@ class Dispute(Base):
 
 
 Session = sessionmaker(bind=engine, autoflush=False)
-session = Session()
-session.close()
+# session = Session()
+# session.close()
+
+try:
+    with Session() as session:
+        # Your database operations
+        session.close()
+except PendingRollbackError:
+    session.rollback()
+    print("Rolling back due to PendingRollbackError.")
+except Exception as e:
+    session.rollback()
+    print(f"Error: {e}")
+    # Handle the error or re-raise if needed
+    raise e

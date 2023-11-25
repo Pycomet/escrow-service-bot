@@ -36,15 +36,14 @@ BTCPAY_URL = os.getenv("BTCPAY_URL")
 BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY")
 BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 
-bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=5)
+bot = telebot.TeleBot(TOKEN)
 
 
 Base = declarative_base()
 engine = create_engine(
     os.getenv("DATABASE_URL"),
-    echo=False)
-
-# import importdir
-# importdir.do("handlers", globals())
-
-# from handlers import *
+    pool_size=20,
+    pool_pre_ping=True,
+    echo=False,
+    connect_args={"connect_timeout": 10}
+)
