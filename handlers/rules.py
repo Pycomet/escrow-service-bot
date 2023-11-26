@@ -8,15 +8,15 @@ def rules(msg):
     List of Rules
     """
 
-    user = get_user(msg)
-    try:
-        message_id = get_msg_id(msg)
-        bot.delete_message(user.chat, message_id)
-    except:
-        pass
+    # user = get_user(msg)
+    # try:
+    #     message_id = get_msg_id(msg)
+    #     bot.delete_message(user.chat, message_id)
+    # except:
+    #     pass
 
     bot.send_message(
-        user.id,
+        msg.from_user.id,
         emoji.emojize(
             f"""
 :scroll: <b>TELEGRAM ESCROW BOT SERVICE RULES</b> :scroll:
@@ -44,16 +44,16 @@ def community(msg):
     List of Community 
     """
 
-    user = get_user(msg)
-    try:
-        message_id = get_msg_id(msg)
-        bot.delete_message(user.chat, message_id)
-    except:
-        pass
+    # user = get_user(msg)
+    # try:
+    #     message_id = get_msg_id(msg)
+    #     bot.delete_message(user.chat, message_id)
+    # except:
+    #     pass
 
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     a = types.InlineKeyboardButton(
-        text="🌟 Bot Reviews", url="https://t.me/tele_escrowbot?message=start"
+        text="🌟 Bot Reviews", url="https://t.me/trusted_escrow_bot_reviews"
     )
     b = types.InlineKeyboardButton(
         text="🔄 Bot Updates", url="https://t.me/tele_escrowbot?message=start"
@@ -61,7 +61,7 @@ def community(msg):
     keyboard.add(a, b)
 
     bot.send_message(
-        user.id,
+        msg.from_user.id,
         f"""
     🌐 <b>Explore Our Community!</b> 🌐
 

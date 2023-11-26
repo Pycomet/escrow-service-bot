@@ -77,3 +77,50 @@ def send_all_trades(msg):
 
 
 
+def send_trade(msg):
+    "Returns A Specific Trade Information"
+
+    question = bot.send_message(
+        msg.from_user.id,
+        emoji.emojize(
+            ":warning: What is the ID of the trade ? ",
+            
+        )
+    )
+    
+    bot.register_next_step_handler(question, view_trade)
+
+
+
+def view_trade(msg):
+    user = msg.from_user
+    trade_id = msg.text
+
+    try:
+        trade = get_trade(trade_id)
+        status = get_invoice_status(trade=trade)
+
+        bot.send_message(
+            msg.from_user.id,
+            emoji.emojize(
+                f"""
+:memo: <b>Trade {trade.id} Payment Details</b> 
+-----------------------------------
+<b>Terms Of Contract:</b> {trade.terms}
+
+<b>Buyer ID: </b> {trade.buyer_id}
+<b>Seller ID: </b> {trade.seller_id}
+
+<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Preferred Payment Method:</b> Bitcoin
+<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
+<b>Payment Status:</b> {status}
+            """),
+            parse_mode="html"
+        )
+
+    except Exception as e:
+        bot.send_message(
+            msg.from_user.id,
+            "Trade Not Found"
+        )

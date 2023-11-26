@@ -157,6 +157,9 @@ def callback_answer(call):
         send_all_trades(call)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
+    elif call.data == "view_trade":
+        send_trade(call)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
 
     elif call.data == "delete_trade":
         question = bot.send_message(

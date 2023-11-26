@@ -34,6 +34,7 @@ def join_trade(msg):
         user=user,
         trade_id=trade_id)
 
+
     if isinstance(trade, str) != True:
         
         payment_url = get_invoice_url(trade=trade)
@@ -46,6 +47,8 @@ def join_trade(msg):
                 f"""
 :memo: <b>Trade {trade.id} Payment Details</b> 
 -----------------------------------
+<b>Terms Of Contract:</b> {trade.terms}
+
 <b>Transaction Amount:</b> {trade.price} {trade.currency}
 <b>Preferred Payment Method:</b> Bitcoin
 <b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}

@@ -50,6 +50,14 @@ def get_most_recent_trade(user: User) -> Trade | None:
     return None
 
 
+def get_trade(id: str) -> Trade or None:
+    trade: Trade = session.query(Trade).filter(cast(Trade.id, String) == id).first()
+    if trade:
+        return trade
+    else:
+        return None
+
+
 
 def add_price(user: User, price: int) -> Trade | None:
     """

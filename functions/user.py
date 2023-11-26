@@ -15,21 +15,13 @@ def get_user(msg) -> User:
     if user:
         return user
     else:
-        try:
-            user = User(id=id, name=msg.from_user.first_name, wallet="", chat=chat.id, verified=True, created_at=datetime.now())
+        user = User(id=id, name=msg.from_user.first_name, wallet="", chat=chat.id, verified=True, created_at=datetime.now())
 
-            bot.send_message(str(ADMIN_ID), f"New user registered to escrow bot - @{msg.from_user.username}")
-            session.add(user)
-            session.commit()
-            return user
-
-        except Exception as e:
-            session.rollback()
-            print(f"Error in get_user: {e}")
-            # Handle the error or re-raise if needed
-            raise e
-        finally:
-            session.close()
+        bot.send_message(str(ADMIN_ID), f"New user registered to escrow bot - @{msg.from_user.username}")
+        session.add(user)
+        session.commit()
+        session.close()
+        return user
 
 
 def get_msg_id(msg) -> int:

@@ -119,8 +119,7 @@ Thank you for choosing our escrow service. If you have any questions or concerns
                 msg.from_user.id,
                 text=emoji.emojize(formatted_text),
                 parse_mode="html",
-                reply_markup=keyboard_markup,
-                allow_sending_without_reply=True,
+                reply_markup=keyboard_markup
             )
 
             # # Send instructions
