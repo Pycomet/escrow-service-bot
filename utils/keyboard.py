@@ -90,8 +90,8 @@ def local_currency_menu():
 
 def give_verdict():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
-    a = types.InlineKeyboardButton(text=emoji.emojize("Yes :+1:", ), callback_data="verdict")
-    b = types.InlineKeyboardButton(text=emoji.emojize("No :-1:", ), callback_data="2")
+    a = types.InlineKeyboardButton(text="Approve Transaction 👍", callback_data="verdict")
+    b = types.InlineKeyboardButton(text="Write Complaint 🚫", callback_data="2")
     
     keyboard.add(a,b)
     return keyboard
@@ -127,3 +127,16 @@ def select_trade():
     c = types.InlineKeyboardButton(text="Preview Trade", callback_data="view_trade")
     keyboard.add(a, b,c)
     return keyboard
+
+
+
+def review_menu():
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    a = types.InlineKeyboardButton(text=emoji.emojize("🌟 Leave Your Review"), callback_data="review")
+    keyboard.add(a)
+    return keyboard
+
+
+    a = types.InlineKeyboardButton(text="Approve Transaction 👍", callback_data="approve_transaction")
+    b = types.InlineKeyboardButton(text="Write Complaint 🚫", callback_data="write_complaint")
+    review_keyboard = types.InlineKeyboardMarkup(row_width=1).add(a,b)

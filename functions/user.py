@@ -23,6 +23,19 @@ def get_user(msg) -> User:
         session.close()
         return user
 
+def set_wallet(user: User, wallet: str) -> None:
+    "Update user's wallet address on database"
+    try:
+        user.wallet = wallet
+        session.add(user)
+        session.commit()
+        session.close()
+    except Exception as e:
+        print("Error", e)
+    
+    return None
+
+    
 
 def get_msg_id(msg) -> int:
     "Returns the message id"

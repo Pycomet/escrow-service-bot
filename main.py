@@ -11,7 +11,6 @@ app = Flask(__name__)
 def checkWebhook():
     json_string = request.get_data().decode('utf-8')
     update = telebot.types.Update.de_json(json_string)
-    print(update)
     bot.process_new_updates([update])
     return "Your bot application is still active!", 200
 
@@ -21,6 +20,9 @@ def webhook():
     bot.remove_webhook()
     bot.set_webhook(url=WEBHOOK_URL + "/" + TOKEN)
     return "Btcpay-Escrow Bot running!", 200
+
+
+app.add_url_rule('/pay', 'process_payment', lambda: process_merchant_webhook(bot), methods=['POST', 'GET'])
 
 
 def run_web():

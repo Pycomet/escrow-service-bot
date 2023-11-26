@@ -1,7 +1,7 @@
 
 ####ADMIN JUDGEMENT ON TRADE
 from config import *
-from keyboard import *
+from utils import *
 from functions import *
 
 trade = ""
@@ -13,7 +13,7 @@ def start_dispute(msg):
     if msg.from_user.id == ADMIN_ID:
         question = bot.send_message(
             ADMIN_ID,
-            emoji.emojize("What is the Dispute ID :grey_question:", )
+            "What is the Dispute ID !"
         )
         
         bot.register_next_step_handler(question, call_dispute)

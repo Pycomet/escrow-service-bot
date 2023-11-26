@@ -2,7 +2,7 @@ from config import *
 from handlers.initiate_trade import *
 from handlers.rules import *
 from handlers import *
-from keyboard import *
+from utils import *
 from functions import *
 from bot import *
 # from affiliate import *
@@ -11,6 +11,7 @@ from bot import *
 from handlers.verdict import *
 from handlers.history import *
 from handlers.delete_trade import *
+from handlers.review import *
 
 # Callback Handlers
 @bot.callback_query_handler(func=lambda call: True)
@@ -67,11 +68,6 @@ def callback_answer(call):
         trade_terms(call)
         bot.delete_message(call.message.chat.id, call.message.message_id)
 
-    # elif call.data == "euro":
-    #     #create trade
-    #     open_new_trade(call, "EUR")
-    #     select_coin(call.from_user)
-    #     bot.delete_message(call.message.chat.id, call.message.message_id)
 
 
 
@@ -79,60 +75,6 @@ def callback_answer(call):
     elif call.data == "payment_confirmation":
         validate_pay(call)
         # bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-
-
-    elif call.data == "goods_received":
-        ### Pay The Seller
-        trade = get_recent_trade(call.from_user)
-        status, _ = pay_funds_to_seller(trade)
-
-        print(status)
-        ##SEND TO SELLER
-        bot.send_message(
-            int(trade.seller),
-            emoji.emojize(
-                ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!. Your payment is on it's way!</b>",
-                
-            ),
-            parse_mode="html"
-        )
-
-        ##SEND TO BUYER
-        bot.send_message(
-            trade.buyer,
-            emoji.emojize(
-                ":star: <b>TRANSACTION COMPLETE AND TRADE CLOSE!!</b>",
-                
-            ),
-            parse_mode="html",
-        )
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-
-
-
-    elif call.data == "goods_not_received":
-        #### Open Dispute
-        bot.send_message(
-            call.from_user.id,
-            "Please contact the seller to send you the goods right away. If seller refuses, report the trade from the menu",
-        )
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
-
-    elif call.data == "verdict":
-        #Pass Verdict
-        question = bot.send_message(
-            call.from_user.id,
-            "What is your final decision to the trade? "
-        )
-        
-        bot.register_next_step_handler(question, pass_verdict)
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-
 
 
 
@@ -152,6 +94,7 @@ def callback_answer(call):
 
 
 
+    # TRADE MANAGER RESPONSE
 
     elif call.data == "all_trades":
         send_all_trades(call)
@@ -171,6 +114,13 @@ def callback_answer(call):
         )
         bot.register_next_step_handler(question, trade_delete)
         bot.delete_message(call.message.chat.id, call.message.message_id)
+
+
+
+
+    elif call.data == "review":
+        review(call)
+
 
     else:
         pass

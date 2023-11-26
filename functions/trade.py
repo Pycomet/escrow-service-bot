@@ -59,6 +59,17 @@ def get_trade(id: str) -> Trade or None:
 
 
 
+def get_trade_by_invoice_id(id: str) -> Trade or None:
+    trade: Trade = session.query(Trade).filter(cast(Trade.invoice_id, String) == id).first()
+    if trade:
+        return trade
+    else:
+        return None
+
+
+
+
+
 def add_price(user: User, price: int) -> Trade | None:
     """
     Update trade instance with price of service
@@ -200,3 +211,31 @@ def seller_delete_trade(user_id, trade_id):
     
     else:
         return "You are not authorized to take this action. Please contact support!"
+
+
+
+
+
+
+# WEBHOOK FUNCTIONS TO HANDLE TRANSACTION RESPONSE FROM BTCPAY SERVER #
+def handle_invoice_paid(invoice_id: str) -> bool:
+    "Handle Invoice Paid/ Settled"
+    trade = get_trade_by_invoice_id(invoice_id)
+    if trade is not None:
+        trade.is_paid = True
+        session.add(trade)
+        session.commit()
+        return True
+    return False
+
+
+def handle_invoice_expired(invoice_id: str) -> bool:
+    "Handles Invoice Payment Url Being Expired"
+    trade = get_trade_by_invoice_id(invoice_id)
+    if trade is not None:
+        trade.is_paid = False
+        trade.is_active = False
+        session.add(trade)
+        session.commit()
+        return True
+    return False

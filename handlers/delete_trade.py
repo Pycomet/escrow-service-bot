@@ -1,5 +1,5 @@
 from config import *
-from keyboard import *
+from utils import *
 from functions import *
 
 
@@ -14,8 +14,7 @@ def delete_request(msg):
     question = bot.send_message(
         msg.from_user.id,
         emoji.emojize(
-            ":warning: What is the ID of the trade ? ",
-            
+            ":warning: What is the ID of the trade ? ",   
         )
     )
     

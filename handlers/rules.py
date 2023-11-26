@@ -1,7 +1,8 @@
 from config import *
-from keyboard import *
+from utils import *
 from functions import *
 
+@bot.message_handler(commands=['rules'])
 @bot.message_handler(regexp="^Rules")
 def rules(msg):
     """
