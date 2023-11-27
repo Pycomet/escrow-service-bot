@@ -13,6 +13,7 @@ enum-compat==0.0.3
 Flask==1.1.2
 Flask-RESTful==0.3.8
 future==0.18.2
+pymongo==4.3.3
 idna==2.9
 itsdangerous==1.1.0
 Jinja2==2.11.3
