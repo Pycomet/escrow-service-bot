@@ -2,22 +2,25 @@ from config import *
 import requests
 from database import Trade
 
-class BtcPayAPI(object):
 
+class BtcPayAPI(object):
     def __init__(self):
         self.url = BTCPAY_URL
         self.api_key = BTCPAY_API_KEY
         self.store_id = BTCPAY_STORE_ID
         self.header = {
-            'Content-Type': 'application/json',
-            'Authorization': f'token {self.api_key}'
+            "Content-Type": "application/json",
+            "Authorization": f"token {self.api_key}",
         }
 
     def get_invoice_status(self, invoice_id: str):
         "Get a single invoice"
         try:
-            result = requests.get(f"{self.url}/api/v1/stores/{self.store_id}/invoices/{invoice_id}", headers=self.header).json()
-            return result['status']
+            result = requests.get(
+                f"{self.url}/api/v1/stores/{self.store_id}/invoices/{invoice_id}",
+                headers=self.header,
+            ).json()
+            return result["status"]
 
         except Exception as e:
             print(e, "Error")
@@ -26,13 +29,11 @@ class BtcPayAPI(object):
     def create_invoice(self, trade: Trade):
         "Create A New Checkout"
         print(trade)
-        
+
         try:
             # create checkout with trade info
             checkout_payload = {
-                "metadata" : {
-                    "creator": trade.seller.name
-                },
+                "metadata": {"creator": trade.seller.name},
                 "checkout": {
                     "speedPolicy": "HighSpeed",
                     "paymentMethods": ["BTC"],
@@ -57,19 +58,21 @@ class BtcPayAPI(object):
 
             print(self.url)
 
-            result = requests.post(f"{self.url}/api/v1/stores/{self.store_id}/invoices", headers=self.header, json=checkout_payload).json()
-            self.status = result['status']
-            self.invoice_id = result['id']
-            self.checkout_url = result['checkoutLink']
+            result = requests.post(
+                f"{self.url}/api/v1/stores/{self.store_id}/invoices",
+                headers=self.header,
+                json=checkout_payload,
+            ).json()
+            self.status = result["status"]
+            self.invoice_id = result["id"]
+            self.checkout_url = result["checkoutLink"]
             print("Invoice ", result)
 
             return self.checkout_url, self.invoice_id
-        
+
         except Exception as e:
             print(e, "Error")
             return None, None
-
-
 
 
 # api = BtcPayAPI()

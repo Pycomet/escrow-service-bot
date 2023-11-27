@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator db {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+model User {
+  id         String   @id @default(uuid()) @map("_id")
+  name       String
+  wallet     String
+  verified   Boolean
+  created_at DateTime @default(now())
+
+  seller   Trade[]   @relation("Seller")
+  buyer    Trade[]   @relation("Buyer")
+  disputes Dispute[] @relation("User")
+
+  admin Chat[] @relation("ChatAdmin")
+  chats Chat[] @relation("ChatParticipants")
+}
+
+model Chat {
+  id           String   @id @default(uuid()) @map("_id")
+  name         String
+  admin_id     String
+  created_at   DateTime @default(now())
+  admin        User     @relation(name: "ChatAdmin", fields: [admin_id], references: [id])
+  participants User[]   @relation(name: "ChatParticipants")
+}
+
+model Trade {
+  id         String   @id @default(uuid()) @map("_id")
+  seller_id  String
+  buyer_id   String
+  terms      String
+  price      Int
+  currency   String
+  invoice_id String
+  is_active  Boolean  @default(false)
+  is_paid    Boolean
+  chat_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  dispute_id String?
+
+  seller  User     @relation(name: "Seller", fields: [seller_id], references: [id])
+  buyer   User     @relation(name: "Buyer", fields: [buyer_id], references: [id])
+  dispute Dispute? @relation(fields: [dispute_id], references: [id])
+
+  disputes Dispute[] @relation("Trade")
+}
+
+model Dispute {
+  id          String   @id @default(uuid()) @map("_id")
+  user_id     String
+  trade_id    String   @unique
+  complaint   String
+  is_resolved Boolean
+  created_at  DateTime @default(now())
+
+  user  User    @relation(name: "User", fields: [user_id], references: [id])
+  trade Trade   @relation(name: "Trade", fields: [trade_id], references: [id])
+  Trade Trade[]
+}

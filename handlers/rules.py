@@ -2,7 +2,8 @@ from config import *
 from utils import *
 from functions import *
 
-@bot.message_handler(commands=['rules'])
+
+@bot.message_handler(commands=["rules"])
 @bot.message_handler(regexp="^Rules")
 def rules(msg):
     """
@@ -30,19 +31,15 @@ def rules(msg):
 
 4.  If a party is reported, the other party receives their refund and the guilty party banned from this service.
             """,
-            
         ),
         parse_mode="html",
     )
 
 
-
-
-
 @bot.message_handler(regexp="^Community")
 def community(msg):
     """
-    List of Community 
+    List of Community
     """
 
     # user = get_user(msg)
@@ -69,8 +66,5 @@ def community(msg):
 Stay updated 🔄 with the latest news updates and read what others are saying about us
         """,
         reply_markup=keyboard,
-        parse_mode="html"
+        parse_mode="html",
     )
-
-
-

@@ -1,9 +1,12 @@
 from config import *
-from database import User, session
+from database import User
 from .utils import *
+from prisma.models import User
 
-def get_user(msg) -> User:
+
+async def get_user(msg) -> User:
     "Returns or creates a new user"
+    await prisma.connect()
     id = str(msg.from_user.id)
 
     try:
@@ -11,31 +14,36 @@ def get_user(msg) -> User:
     except:
         chat = msg.message.chat
 
-    user: User = session.query(User).filter(cast(User.id, String) == str(id)).first()
+
+    # Query for the user
+    user = await prisma.user.find_first(where={"id": str(id)})
+
     if user:
-        return user
-    else:
-        user = User(id=id, name=msg.from_user.first_name, wallet="", chat=chat.id, verified=True, created_at=datetime.now())
-
-        bot.send_message(str(ADMIN_ID), f"New user registered to escrow bot - @{msg.from_user.username}")
-        session.add(user)
-        session.commit()
-        session.close()
+        await prisma.disconnect()
         return user
 
-def set_wallet(user: User, wallet: str) -> None:
-    "Update user's wallet address on database"
-    try:
-        user.wallet = wallet
-        session.add(user)
-        session.commit()
-        session.close()
-    except Exception as e:
-        print("Error", e)
-    
-    return None
+    # If user not found, create a new user
+    new_user = await prisma.user.create(
+            {
+                "id": str(id),
+                "name": msg.from_user.first_name,
+                "wallet": "",
+                "chats": {"connect": {"id": str(chat.id), "name": chat.title or chat.first_name, "admin_id": str(id)}},
+                "verified": True,
+                "created_at": datetime.now()
+            }
+        )
+    print(new_user)
 
-    
+    bot.send_message(
+        ADMIN_ID,
+        f"New user registered to escrow bot - @{new_user.name}",
+    )
+    await prisma.disconnect()
+    return new_user
+
+
+
 
 def get_msg_id(msg) -> int:
     "Returns the message id"
@@ -45,9 +53,11 @@ def get_msg_id(msg) -> int:
         return msg.id
 
 
-def get_user_by_id(id: str) -> User:
+async def get_user_by_id(id: str) -> User:
     "Returns or creates a new user"
-    user: User = session.query(User).filter(cast(User.id, String) == str(id)).first()
+    # Query for the user
+    user = await prisma.user.find_first(where={"id": str(id)})
+
     if user:
         return user
     else:

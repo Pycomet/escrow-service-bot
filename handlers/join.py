@@ -17,10 +17,10 @@ def join_request(msg):
         user.chat,
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
-            
-        )
+        ),
     )
     bot.register_next_step_handler(question, join_trade)
+
 
 def join_trade(msg):
     """
@@ -30,17 +30,14 @@ def join_trade(msg):
 
     user = get_user(msg)
 
-    trade = check_trade(
-        user=user,
-        trade_id=trade_id)
-
+    trade: Trade = check_trade(user=user, trade_id=trade_id)
 
     if isinstance(trade, str) != True:
-        
+
         payment_url = get_invoice_url(trade=trade)
         status = get_invoice_status(trade=trade)
 
-        #SEND TO BUYER########
+        # SEND TO BUYER########
         bot.send_message(
             trade.buyer_id,
             emoji.emojize(
@@ -68,9 +65,8 @@ You can go to payment portal by clicking the button below.
             trade.seller_id,
             emoji.emojize(
                 f"<b>{trade.buyer.name}</b> just joined a this trade - {trade.id}</b>",
-                
             ),
-            parse_mode="html"
+            parse_mode="html",
         )
 
     elif trade == "Not Permitted":
@@ -79,26 +75,22 @@ You can go to payment portal by clicking the button below.
             user.chat,
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
-                
-            )
-        ) 
-    
+            ),
+        )
+
     elif trade == "Both parties already exists":
 
         bot.send_message(
             user.chat,
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
-                
-            )
-        ) 
+            ),
+        )
 
     else:
         bot.send_message(
             user.chat,
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
-                
-            )
+            ),
         )
-

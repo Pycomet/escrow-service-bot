@@ -12,12 +12,10 @@ def trade_history(msg):
     bot.send_chat_action(msg.from_user.id, "typing")
     user = get_user(msg)
     sells, buys = get_trades(msg.from_user.id)
-
     purchases, sales, trades, active, reports = get_trades_report(sells, buys)
 
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
-
 
     if sells == [] and buys == []:
         bot.send_message(
@@ -26,16 +24,15 @@ def trade_history(msg):
                 """
         <b>NO TRADE HISTORY</b>
                 """,
-                
             ),
             parse_mode="html",
         )
 
     else:
-        
+
         bot.send_message(
             user.id,
-                f"""
+            f"""
 <b>Trade Reports</b> 📚
 Here is a record of all your recent trades
 
@@ -48,7 +45,6 @@ Here is a record of all your recent trades
             reply_markup=select_trade(),
             parse_mode="html",
         )
-
 
 
 def send_all_trades(msg):
@@ -74,9 +70,6 @@ def send_all_trades(msg):
     )
 
 
-
-
-
 def send_trade(msg):
     "Returns A Specific Trade Information"
 
@@ -84,12 +77,10 @@ def send_trade(msg):
         msg.from_user.id,
         emoji.emojize(
             ":warning: What is the ID of the trade ? ",
-            
-        )
+        ),
     )
-    
-    bot.register_next_step_handler(question, view_trade)
 
+    bot.register_next_step_handler(question, view_trade)
 
 
 def view_trade(msg):
@@ -115,12 +106,10 @@ def view_trade(msg):
 <b>Preferred Payment Method:</b> Bitcoin
 <b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
 <b>Payment Status:</b> {status}
-            """),
-            parse_mode="html"
+            """
+            ),
+            parse_mode="html",
         )
 
     except Exception as e:
-        bot.send_message(
-            msg.from_user.id,
-            "Trade Not Found"
-        )
+        bot.send_message(msg.from_user.id, "Trade Not Found")

@@ -1,5 +1,6 @@
 from config import *
 
+
 def get_received_msg(msg):
     "Delete This Message"
     message_id = msg.message_id
@@ -10,7 +11,7 @@ def get_received_msg(msg):
 def generate_id():
     "Return unique id"
     u_id = ""
-    
+
     lower_case = string.ascii_lowercase
     upper_case = string.ascii_uppercase
     digits = string.digits

@@ -2,6 +2,7 @@ from config import *
 from utils import *
 from functions import *
 
+
 @bot.message_handler(regexp="^Open New Trade")
 def open_trade(msg):
     """
@@ -17,7 +18,7 @@ def open_trade(msg):
     bot.send_message(
         user.chat,
         "💰 To create a new trade today, select which is your local currency of choice... ",
-        reply_markup=keyboard
+        reply_markup=keyboard,
     )
 
 
@@ -30,7 +31,7 @@ def trade_terms(msg):
 
     question = bot.send_message(
         user.id,
-        "📝 What are the terms for the escrow contract you are about to create ?"
+        "📝 What are the terms for the escrow contract you are about to create ?",
     )
 
     bot.register_next_step_handler(question, trade_price)
@@ -44,25 +45,17 @@ def trade_price(msg):
     terms = msg.text
     user = get_user_by_id(msg.from_user.id)
 
-    trade = add_terms(
-        user=user,
-        terms=str(terms)
-    )
+    trade = add_terms(user=user, terms=str(terms))
 
     if trade is None:
-        bot.send_message(
-            msg.chat.id,
-            "❌ Unable to find your trade. Please start over"
-        )
+        bot.send_message(msg.chat.id, "❌ Unable to find your trade. Please start over")
     else:
 
         question = bot.send_message(
-            user.id,
-            "💰 How much are you expecting to be paid in your local currency? "
+            user.id, "💰 How much are you expecting to be paid in your local currency? "
         )
-        
-        bot.register_next_step_handler(question, creating_trade)
 
+        bot.register_next_step_handler(question, creating_trade)
 
 
 def creating_trade(msg):
@@ -72,25 +65,18 @@ def creating_trade(msg):
     price = msg.text
     user = get_user_by_id(msg.from_user.id)
 
-    trade = add_price(
-        user=user,
-        price=float(price)
-    )
+    trade = add_price(user=user, price=float(price))
 
     if trade is None:
-        bot.send_message(
-            msg.chat.id,
-            "❌ Unable to find your trade. Please start over"
-        )
+        bot.send_message(msg.chat.id, "❌ Unable to find your trade. Please start over")
 
     else:
-        #Get Payment Url
+        # Get Payment Url
         payment_url = get_invoice_url(trade=trade)
 
         if payment_url is None:
             bot.send_message(
-                msg.chat.id,
-                "❌ Unable to get payment url. Please try again"
+                msg.chat.id, "❌ Unable to get payment url. Please try again"
             )
 
         else:
@@ -111,7 +97,9 @@ Thank you for choosing our escrow service. If you have any questions or concerns
             """
 
             # Create an inline keyboard with a Forward button
-            inline_keyboard = [[types.InlineKeyboardButton("Forward", switch_inline_query="")]]
+            inline_keyboard = [
+                [types.InlineKeyboardButton("Forward", switch_inline_query="")]
+            ]
             keyboard_markup = types.InlineKeyboardMarkup(inline_keyboard)
 
             # Send the message with the inline keyboard
@@ -119,7 +107,7 @@ Thank you for choosing our escrow service. If you have any questions or concerns
                 msg.from_user.id,
                 text=emoji.emojize(formatted_text),
                 parse_mode="html",
-                reply_markup=keyboard_markup
+                reply_markup=keyboard_markup,
             )
 
             # # Send instructions

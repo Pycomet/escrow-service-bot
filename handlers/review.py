@@ -2,7 +2,8 @@ from config import *
 from utils import *
 from functions import *
 
-@bot.message_handler(commands=['review'])
+
+@bot.message_handler(commands=["review"])
 def review(msg):
     """
     Write review
@@ -15,11 +16,10 @@ def review(msg):
             
 Any feedback or suggestions for improvement would be greatly appreciated!
         """,
-        parse_mode="html"
+        parse_mode="html",
     )
-    
-    bot.register_next_step_handler(question, get_review)
 
+    bot.register_next_step_handler(question, get_review)
 
 
 def get_review(msg):
@@ -34,12 +34,11 @@ def get_review(msg):
 
 {msg.text}
         """,
-        parse_mode="html"
+        parse_mode="html",
     )
 
     bot.send_message(
         msg.from_user.id,
         "Thank you for your review! Your review would be made visible to the entire community on our review channel.",
-        parse_mode="html"
+        parse_mode="html",
     )
-   

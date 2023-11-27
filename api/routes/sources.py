@@ -1,9 +1,10 @@
-from database import session, User, Trade, Dispute, Chat
+from config import *
+from database import User, Trade, Dispute, Chat
 
-users = session.query(User).all()
 
-trades = session.query(Trade).all()
+with app.app_context():
 
-disputes = session.query(Dispute).all()
-
-chats = session.query(Chat).all()
+    users = prisma.user.find_many()
+    trades = prisma.trade.find_many()
+    disputes = prisma.dispute.find_many()
+    chats = prisma.chat.find_many()

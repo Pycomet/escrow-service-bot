@@ -3,7 +3,7 @@ from utils import *
 from functions import *
 
 
-@bot.message_handler(commands=['wallet'])
+@bot.message_handler(commands=["wallet"])
 def user_wallet(msg):
     """
     Returns the user's wallet address
@@ -12,15 +12,11 @@ def user_wallet(msg):
     user = get_user(msg)
 
     bot.send_message(
-        user.id,
-        f"Your wallet address is: <b>{user.wallet}</b>",
-        parse_mode="html"
+        user.id, f"Your wallet address is: <b>{user.wallet}</b>", parse_mode="html"
     )
 
 
-
-
-@bot.message_handler(commands=['editwallet'])
+@bot.message_handler(commands=["editwallet"])
 def update_user_wallet(msg):
     """
     Updates the user's wallet address
@@ -47,11 +43,5 @@ def update_wallet(msg):
     set_wallet(user, address)
 
     bot.send_message(
-        msg.from_user.id,
-        "✅ Wallet updated successfully",
-        reply_markup=trade_menu()
+        msg.from_user.id, "✅ Wallet updated successfully", reply_markup=trade_menu()
     )
-
-
-
-

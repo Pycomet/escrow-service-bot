@@ -1,4 +1,3 @@
-
 ####ADMIN JUDGEMENT ON TRADE
 from config import *
 from utils import *
@@ -6,24 +5,18 @@ from functions import *
 
 trade = ""
 
-@bot.message_handler(commands=['disputes'])
+
+@bot.message_handler(commands=["disputes"])
 def start_dispute(msg):
     "Starts The Ticket Review Session"
 
     if msg.from_user.id == ADMIN_ID:
-        question = bot.send_message(
-            ADMIN_ID,
-            "What is the Dispute ID !"
-        )
-        
-        bot.register_next_step_handler(question, call_dispute)
-        
-    else:
-        bot.reply_to(
-            msg,
-            "You are not authorised for this command"
-        )
+        question = bot.send_message(ADMIN_ID, "What is the Dispute ID !")
 
+        bot.register_next_step_handler(question, call_dispute)
+
+    else:
+        bot.reply_to(msg, "You are not authorised for this command")
 
 
 def call_dispute(msg):
@@ -60,7 +53,6 @@ Trade Info;
 
 Give verdict :grey_question:
                 """,
-                
             ),
             reply_markup=keyboard,
             parse_mode="html",
@@ -71,11 +63,8 @@ Give verdict :grey_question:
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Dispute Not Found!",
-                
-            )
+            ),
         )
-
-
 
 
 def pass_verdict(msg):
@@ -99,8 +88,8 @@ def pass_verdict(msg):
 Ticket ID --> %s
 
 %s
-                """ % (trade.id, trade.dispute[0].id, message),
-                
+                """
+                % (trade.id, trade.dispute[0].id, message),
             ),
             parse_mode="html",
         )
@@ -109,7 +98,6 @@ Ticket ID --> %s
         msg.from_user.id,
         emoji.emojize(
             "Who are you assigning payout to :grey_question:",
-            
         ),
-        reply_markup=refunds()
+        reply_markup=refunds(),
     )

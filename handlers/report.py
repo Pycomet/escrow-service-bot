@@ -2,7 +2,8 @@ from config import *
 from utils import *
 from functions import *
 
-@bot.message_handler(commands=['report'])
+
+@bot.message_handler(commands=["report"])
 @bot.message_handler(regexp="^Report")
 def report_request(msg):
     """
@@ -10,17 +11,16 @@ def report_request(msg):
     """
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
-    
+
     question = bot.send_message(
         msg.from_user.id,
         emoji.emojize(
             "What is the ID of the trade you wish to report :grey_question:",
-            
-        )
+        ),
     )
-    
-    
+
     bot.register_next_step_handler(question, report_trade)
+
 
 def report_trade(msg):
     """
@@ -37,11 +37,9 @@ def report_trade(msg):
             msg.from_user.id,
             emoji.emojize(
                 f"What is your complaint on <b>Trade -> {msg.text}</b> :grey_question:",
-                
             ),
             parse_mode="html",
         )
-        
 
         bot.register_next_step_handler(question, trade_complaint)
 
@@ -50,10 +48,9 @@ def report_trade(msg):
             msg.from_user.id,
             emoji.emojize(
                 ":warning: Trade Not Found!",
-                
-            )
+            ),
         )
-    
+
 
 def trade_complaint(msg):
     """
@@ -63,13 +60,13 @@ def trade_complaint(msg):
     dispute = get_dispute(msg.from_user.id)
 
     add_complaint(
-        dispute = dispute,
-        text = msg.text,
+        dispute=dispute,
+        text=msg.text,
     )
 
     trade = dispute.trade
 
-    users = [trade.seller, trade.buyer, ADMIN_ID]  
+    users = [trade.seller, trade.buyer, ADMIN_ID]
 
     for user in users:
 
@@ -77,16 +74,13 @@ def trade_complaint(msg):
             user,
             emoji.emojize(
                 f":ticket: <b>New Dispute Ticket Created -- {dispute.id}</b>",
-                
             ),
             parse_mode="html",
         )
-
 
     bot.reply_to(
         msg,
         emoji.emojize(
             ":ticket: Your complaint has been mailed to the administrator. Please await further instructions regarding this trade",
-            
-        )
+        ),
     )

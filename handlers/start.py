@@ -2,14 +2,17 @@ from config import *
 from utils import *
 from functions import *
 
-@bot.message_handler(commands=['start', 'escrow'])
+
+@bot.message_handler(commands=["start", "escrow"])
 def start(msg):
     """
     Starting the escrow service bot
     """
     bot.send_chat_action(msg.from_user.id, "typing")
-    # user = get_user(msg)
+    user: User = asyncio.run_coroutine_threadsafe(get_user(msg), asyncio.new_event_loop())
     keyboard = main_menu(msg)
+
+    import pdb; pdb.set_trace()
 
     bot.send_photo(
         msg.from_user.id,
@@ -24,10 +27,8 @@ Your funds are save with me and will be refunded to you if the other party refus
             """
         ),
         reply_markup=keyboard,
-        parse_mode="html"
+        parse_mode="html",
     )
-
-
 
 
 def start_trade_menu(msg):
@@ -35,14 +36,11 @@ def start_trade_menu(msg):
     This is the handler to start trade seller or buyer options
     """
     keyboard = trade_menu()
-    user = get_user(msg)
+    user = asyncio.run_coroutine_threadsafe(get_user(msg), asyncio.new_event_loop())
 
     bot.send_message(
         user.id,
         "<b>Welcome! Please select an option from the menu below?</>",
         reply_markup=keyboard,
-        parse_mode="html"
+        parse_mode="html",
     )
-
-
-

@@ -4,12 +4,9 @@ from config import *
 from handlers import *
 
 
-app = Flask(__name__)
-    
-
 @app.route("/" + TOKEN, methods=["POST"])
 def checkWebhook():
-    json_string = request.get_data().decode('utf-8')
+    json_string = request.get_data().decode("utf-8")
     update = telebot.types.Update.de_json(json_string)
     bot.process_new_updates([update])
     return "Your bot application is still active!", 200
@@ -22,16 +19,22 @@ def webhook():
     return "Btcpay-Escrow Bot running!", 200
 
 
-app.add_url_rule('/pay', 'process_payment', lambda: process_merchant_webhook(bot), methods=['POST', 'GET'])
+app.add_url_rule(
+    "/pay",
+    "process_payment",
+    lambda: process_merchant_webhook(bot),
+    methods=["POST", "GET"],
+)
 
 
 def run_web():
     if __name__ == "__main__":
+        # # db.init_app(app)
         # app.register_blueprint(api_bp)
         app.run(
             host="0.0.0.0",
             threaded=True,
-            port=int(os.environ.get('PORT', 5004)),
+            port=int(os.environ.get("PORT", 5004)),
         )
 
 

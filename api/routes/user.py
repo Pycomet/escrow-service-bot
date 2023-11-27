@@ -4,21 +4,16 @@ from .sources import users, trades, disputes
 
 
 class UserList(Resource):
-
     def get(self):
         count = len(users)
         user_list = [i.id for i in users]
 
-        result = {
-            "Total Count": count
-        }
+        result = {"Total Count": count}
 
         for i in users:
             offset = users.index(i) + 1
 
-            result.update({
-                offset: i.id
-            })
+            result.update({offset: i.id})
         return result, 200
 
     def post(self):
@@ -27,29 +22,22 @@ class UserList(Resource):
 
 
 class User(Resource):
-
     def get(self, user_id):
         for user in users:
             if user.id == int(user_id):
-                result = {
-                    'Chat Id': user.chat
-                }
+                result = {"Chat Id": user.chat}
 
                 # update result with user info
                 data = get_user_info(user_id)
                 result.update(data)
 
                 return result, 200
-            
+
         return "User Not Found!", 404
 
-    
     def post(self):
         payload = request.get_json()
         return f"You are not allowed to create users through the API", 500
-
-
-
 
 
 def get_user_info(id):
@@ -79,11 +67,9 @@ def get_user_info(id):
             pass
 
     trades_count = selling + buying
-    
+
     # Update dictionary
-    info.update({
-        "Total Trades": trades_count,
-        "Total Open Dispute Trades": disputes_count
-    })
+    info.update(
+        {"Total Trades": trades_count, "Total Open Dispute Trades": disputes_count}
+    )
     return info
-     
