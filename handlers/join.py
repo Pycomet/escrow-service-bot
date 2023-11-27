@@ -14,7 +14,7 @@ def join_request(msg):
     user = UserClient.get_user(msg)
 
     question = bot.send_message(
-        str(user['chat']),
+        str(user["chat"]),
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
         ),
@@ -39,7 +39,7 @@ def join_trade(msg):
 
         # SEND TO BUYER########
         bot.send_message(
-            trade['buyer_id'],
+            trade["buyer_id"],
             emoji.emojize(
                 f"""
 :memo: <b>Trade {trade.id} Payment Details</b> 
@@ -62,7 +62,7 @@ You can go to payment portal by clicking the button below.
 
         ##SEND ALERT TO SELLER#########
         bot.send_message(
-            trade['seller_id'],
+            trade["seller_id"],
             emoji.emojize(
                 f"<b>{trade.buyer.name}</b> just joined a this trade - {trade.id}</b>",
             ),
@@ -72,7 +72,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Not Permitted":
 
         bot.send_message(
-            str(user['chat']),
+            str(user["chat"]),
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
             ),
@@ -81,7 +81,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Both parties already exists":
 
         bot.send_message(
-            str(user['chat']),
+            str(user["chat"]),
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
             ),
@@ -89,7 +89,7 @@ You can go to payment portal by clicking the button below.
 
     else:
         bot.send_message(
-            str(user['chat']),
+            str(user["chat"]),
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
             ),

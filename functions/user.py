@@ -61,7 +61,6 @@ class UserClient:
         else:
             return None
 
-
     @staticmethod
     def set_wallet(user_id: str, address: str):
         # import pdb; pdb.set_trace()

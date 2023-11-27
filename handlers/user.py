@@ -12,7 +12,9 @@ def user_wallet(msg):
     user = UserClient.get_user(msg)
 
     bot.send_message(
-        user['_id'], f"Your wallet address is: <b>{user['wallet']}</b>", parse_mode="html"
+        user["_id"],
+        f"Your wallet address is: <b>{user['wallet']}</b>",
+        parse_mode="html",
     )
 
 
@@ -25,7 +27,7 @@ def update_user_wallet(msg):
     user = UserClient.get_user(msg)
 
     bot.send_message(
-        user['_id'],
+        user["_id"],
         "Please type in your new wallet address ?",
         # reply_markup=types.ReplyKeyboardRemove()
     )
@@ -40,7 +42,7 @@ def update_wallet(msg):
     address = msg.text
     user = UserClient.get_user(msg)
 
-    UserClient.set_wallet(user['_id'], address)
+    UserClient.set_wallet(user["_id"], address)
 
     bot.send_message(
         msg.from_user.id, "✅ Wallet updated successfully", reply_markup=trade_menu()

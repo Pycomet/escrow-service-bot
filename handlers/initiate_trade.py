@@ -16,7 +16,7 @@ def open_trade(msg):
     user = UserClient.get_user_by_id(msg.from_user.id)
 
     bot.send_message(
-        user['_id'],
+        user["_id"],
         "💰 To create a new trade today, select which is your local currency of choice... ",
         reply_markup=keyboard,
     )
@@ -30,7 +30,7 @@ def trade_terms(msg):
     user = UserClient.get_user(msg)
 
     question = bot.send_message(
-        user['_id'],
+        user["_id"],
         "📝 What are the terms for the escrow contract you are about to create ?",
     )
 
@@ -52,7 +52,8 @@ def trade_price(msg):
     else:
 
         question = bot.send_message(
-            user['_id'], "💰 How much are you expecting to be paid in your local currency? "
+            user["_id"],
+            "💰 How much are you expecting to be paid in your local currency? ",
         )
 
         bot.register_next_step_handler(question, creating_trade)

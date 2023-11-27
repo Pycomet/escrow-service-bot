@@ -11,9 +11,9 @@ def start_affiliate(msg):
 
     #  WRTIE A PROCESS TO CHECK ADMIN AND SEND REQUEST TO PROCESS WITH USER
     username = msg.from_user.username
-    if user['_id'] != ADMIN_ID or user['verified'] == False:
+    if user["_id"] != ADMIN_ID or user["verified"] == False:
         bot.send_message(
-            user['_id'],
+            user["_id"],
             emoji.emojize(
                 """
     :robot: Awaiting authorization from support. Contact @Telescrowbotsupport to pass screening process
@@ -32,7 +32,7 @@ def start_affiliate(msg):
     else:
 
         question = bot.send_message(
-            user['_id'],
+            user["_id"],
             emoji.emojize(
                 """
     :robot: To use escrow service on your group, I would need the following information.

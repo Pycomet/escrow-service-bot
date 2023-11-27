@@ -12,14 +12,16 @@ def trade_history(msg):
     bot.send_chat_action(msg.from_user.id, "typing")
     user = UserClient.get_user(msg)
     sells, buys = TradeClient.get_trades(msg.from_user.id)
-    purchases, sales, trades, active, reports = TradeClient.get_trades_report(sells, buys)
+    purchases, sales, trades, active, reports = TradeClient.get_trades_report(
+        sells, buys
+    )
 
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
 
     if sells == [] and buys == []:
         bot.send_message(
-            user['_id'],
+            user["_id"],
             emoji.emojize(
                 """
         <b>NO TRADE HISTORY</b>
@@ -31,7 +33,7 @@ def trade_history(msg):
     else:
 
         bot.send_message(
-            user['_id'],
+            user["_id"],
             f"""
 <b>Trade Reports</b> 📚
 Here is a record of all your recent trades
@@ -55,12 +57,12 @@ def send_all_trades(msg):
     # pdb.set_trace()
     bot.send_chat_action(msg.from_user.id, "typing")
     user = UserClient.get_user(msg)
-    sells, buys = TradeClient.get_trades(user['_id'])
+    sells, buys = TradeClient.get_trades(user["_id"])
 
     all_trades = sells + buys
 
     bot.send_message(
-        user['_id'],
+        user["_id"],
         f"""
 <b>All ({len(all_trades)}) Trades IDs </b>
 ------------------

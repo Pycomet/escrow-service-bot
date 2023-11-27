@@ -28,10 +28,10 @@ def trade_delete(msg):
     user = msg.from_user
     trade_id = msg.text
 
-    response = TradeClient.seller_delete_trade(user['_id'], trade_id)
+    response = TradeClient.seller_delete_trade(user["_id"], trade_id)
 
     bot.send_message(
-        user['_id'],
+        user["_id"],
         emoji.emojize(
             f"""
 <b>{response}</b>

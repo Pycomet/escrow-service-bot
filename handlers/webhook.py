@@ -15,7 +15,7 @@ def handle_invoice_paid_webhook(data):
         "Upon approval, the payment will be released to you."
     )
     bot.send_message(
-        trade['seller_id'],
+        trade["seller_id"],
         seller_notification,
         parse_mode="html",
         reply_markup=review_menu(),
@@ -29,7 +29,10 @@ def handle_invoice_paid_webhook(data):
     )
 
     bot.send_message(
-        trade['buyer_id'], approval_message, reply_markup=give_verdict(), parse_mode="html"
+        trade["buyer_id"],
+        approval_message,
+        reply_markup=give_verdict(),
+        parse_mode="html",
     )
 
     completion_message = (
@@ -82,12 +85,12 @@ def handle_payment_received_webhook(data):
 def handle_invoice_expired_webhook(data):
     "Close trade when the payment url has expired (Send message to both parties)"
     trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
-    TradeClient.handle_invoice_expired(trade['invoice_id'])
+    TradeClient.handle_invoice_expired(trade["invoice_id"])
 
-    if trade['buyer_id'] != None:
+    if trade["buyer_id"] != None:
         # Notify the buyer that the trade has expired and is now closed
         bot.send_message(
-            trade['buyer_id'],
+            trade["buyer_id"],
             f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the seller or our support team. Thank you for using our platform.",
             reply_markup=review_menu(),
             parse_mode="html",
@@ -95,7 +98,7 @@ def handle_invoice_expired_webhook(data):
 
     # Notify the seller that the trade has expired and is now closed
     bot.send_message(
-        trade['seller_id'],
+        trade["seller_id"],
         f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the buyer or our support team. Thank you for using our platform.",
         reply_markup=review_menu(),
         parse_mode="html",

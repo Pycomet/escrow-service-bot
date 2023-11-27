@@ -117,7 +117,7 @@ class TradeClient:
     @staticmethod
     def get_invoice_url(trade: TradeType) -> str:
         "Get Payment Url"
-        active_trade: TradeType = db.trades.find_one({"_id": trade['_id']})
+        active_trade: TradeType = db.trades.find_one({"_id": trade["_id"]})
         url, invoice_id = client.create_invoice(active_trade)
         if url is not None:
             TradeClient.add_invoice_id(trade, str(invoice_id))
