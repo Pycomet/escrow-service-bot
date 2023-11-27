@@ -1,10 +1,8 @@
 aniso8601==8.1.1
 blockchain==1.4.4
 certifi==2020.4.5.1
-cffi==1.14.0
 chardet==3.0.4
 click==7.1.1
-coinbase==2.1.0
 cryptocompare==0.7.0
 cryptography==3.3.2
 decorator==4.4.2
