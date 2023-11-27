@@ -13,10 +13,10 @@ def open_trade(msg):
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
 
-    user = get_user_by_id(msg.from_user.id)
+    user = UserClient.get_user_by_id(msg.from_user.id)
 
     bot.send_message(
-        user.chat,
+        user['_id'],
         "💰 To create a new trade today, select which is your local currency of choice... ",
         reply_markup=keyboard,
     )
@@ -27,10 +27,10 @@ def trade_terms(msg):
     """
     Terms of trade
     """
-    user = get_user(msg)
+    user = UserClient.get_user(msg)
 
     question = bot.send_message(
-        user.id,
+        user['_id'],
         "📝 What are the terms for the escrow contract you are about to create ?",
     )
 
@@ -43,16 +43,16 @@ def trade_price(msg):
     """
     # import pdb; pdb.set_trace()
     terms = msg.text
-    user = get_user_by_id(msg.from_user.id)
+    user = UserClient.get_user_by_id(msg.from_user.id)
 
-    trade = add_terms(user=user, terms=str(terms))
+    trade = TradeClient.add_terms(user=user, terms=str(terms))
 
     if trade is None:
         bot.send_message(msg.chat.id, "❌ Unable to find your trade. Please start over")
     else:
 
         question = bot.send_message(
-            user.id, "💰 How much are you expecting to be paid in your local currency? "
+            user['_id'], "💰 How much are you expecting to be paid in your local currency? "
         )
 
         bot.register_next_step_handler(question, creating_trade)
@@ -63,16 +63,17 @@ def creating_trade(msg):
     Recieve user price input on trade
     """
     price = msg.text
-    user = get_user_by_id(msg.from_user.id)
+    user = UserClient.get_user_by_id(msg.from_user.id)
 
-    trade = add_price(user=user, price=float(price))
+    trade = TradeClient.add_price(user=user, price=float(price))
 
     if trade is None:
         bot.send_message(msg.chat.id, "❌ Unable to find your trade. Please start over")
 
     else:
         # Get Payment Url
-        payment_url = get_invoice_url(trade=trade)
+        payment_url = TradeClient.get_invoice_url(trade=trade)
+        trade = TradeClient.get_most_recent_trade(user)
 
         if payment_url is None:
             bot.send_message(
@@ -81,13 +82,13 @@ def creating_trade(msg):
 
         else:
             formatted_text = f"""
-📝 <b>New Escrow Trade Opened (ID - {trade.id})</b> 📝
+📝 <b>New Escrow Trade Opened (ID - {trade['_id']})</b> 📝
 --------------------------------------------------
-<b>Terms Of Contract:</b> {trade.terms}
+<b>Terms Of Contract:</b> {trade['terms']}
 
-<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
 <b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
+<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
 
 To proceed with the payment, kindly follow the link provided: [Pay Now]({payment_url}).
 

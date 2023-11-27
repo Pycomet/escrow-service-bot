@@ -10,16 +10,16 @@ def trade_history(msg):
     """
 
     bot.send_chat_action(msg.from_user.id, "typing")
-    user = get_user(msg)
-    sells, buys = get_trades(msg.from_user.id)
-    purchases, sales, trades, active, reports = get_trades_report(sells, buys)
+    user = UserClient.get_user(msg)
+    sells, buys = TradeClient.get_trades(msg.from_user.id)
+    purchases, sales, trades, active, reports = TradeClient.get_trades_report(sells, buys)
 
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
 
     if sells == [] and buys == []:
         bot.send_message(
-            user.id,
+            user['_id'],
             emoji.emojize(
                 """
         <b>NO TRADE HISTORY</b>
@@ -31,7 +31,7 @@ def trade_history(msg):
     else:
 
         bot.send_message(
-            user.id,
+            user['_id'],
             f"""
 <b>Trade Reports</b> 📚
 Here is a record of all your recent trades
@@ -54,17 +54,17 @@ def send_all_trades(msg):
     # import pdb;
     # pdb.set_trace()
     bot.send_chat_action(msg.from_user.id, "typing")
-    user = get_user(msg)
-    sells, buys = get_trades(user.id)
+    user = UserClient.get_user(msg)
+    sells, buys = TradeClient.get_trades(user['_id'])
 
     all_trades = sells + buys
 
     bot.send_message(
-        user.id,
+        user['_id'],
         f"""
 <b>All ({len(all_trades)}) Trades IDs </b>
 ------------------
-{', '.join([f"<b>{trade.id} ({'Seller' if trade.seller_id == user.id else 'Buyer'})</b>" for trade in all_trades])}
+{', '.join([f"<b>{trade.id} ({'Seller' if trade.seller_id == user['_id'] else 'Buyer'})</b>" for trade in all_trades])}
         """,
         parse_mode="html",
     )
@@ -88,8 +88,8 @@ def view_trade(msg):
     trade_id = msg.text
 
     try:
-        trade = get_trade(trade_id)
-        status = get_invoice_status(trade=trade)
+        trade = TradeClient.get_trade(trade_id)
+        status = TradeClient.get_invoice_status(trade=trade)
 
         bot.send_message(
             msg.from_user.id,

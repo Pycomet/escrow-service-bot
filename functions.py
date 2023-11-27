@@ -77,7 +77,7 @@ def get_recent_trade(user):
     """
     Return a trade matching a seller
     """
-    trades = db.session.query(Trade).filter(Trade.seller == user.id)
+    trades = db.session.query(Trade).filter(Trade.seller == user['_id'])
     if trades.count() != 0:
         dates = [trade.updated_at for trade in trades]
         position = dates.index(max(dates))
@@ -85,7 +85,7 @@ def get_recent_trade(user):
         return trades[position]
 
     else:
-        trades = db.session.query(Trade).filter(Trade.buyer == user.id)
+        trades = db.session.query(Trade).filter(Trade.buyer == user['_id'])
 
         dates = [trade.updated_at for trade in trades]
         position = dates.index(max(dates))
@@ -163,7 +163,7 @@ def open_new_trade(user, currency):
 
     trade = Trade(
         id=generate_id(),
-        seller=user.id,
+        seller=user['_id'],
         currency=currency,
         payment_status=False,
         created_at=str(datetime.now()),
@@ -282,8 +282,8 @@ def check_trade(user, trade_id):
 def get_trades(user):
     "Retrun list of trades the user is in"
 
-    sells = db.session.query(Trade).filter(Trade.seller == user.id).all()
-    buys = db.session.query(Trade).filter(Trade.buyer == user.id).all()
+    sells = db.session.query(Trade).filter(Trade.seller == user['_id']).all()
+    buys = db.session.query(Trade).filter(Trade.buyer == user['_id']).all()
 
     return sells, buys
 
@@ -559,21 +559,21 @@ def create_dispute(user, trade):
 
     dispute = Dispute(
         id=generate_id(),
-        user=user.id,
+        user=user['_id'],
         created_on=str(datetime.now()),
         trade=trade,
     )
     trade.dispute.append(dispute)
 
-    if user.id == trade.seller and user.id == trade.buyer:
+    if user['_id'] == trade.seller and user['_id'] == trade.buyer:
         dispute.is_buyer = True
         dispute.is_seller = True
 
-    elif user.id != trade.seller and user.id == trade.buyer:
+    elif user['_id'] != trade.seller and user['_id'] == trade.buyer:
         dispute.is_buyer = True
         dispute.is_seller = False
 
-    elif user.id == trade.seller and user.id != trade.buyer:
+    elif user['_id'] == trade.seller and user['_id'] != trade.buyer:
         dispute.is_buyer = False
         dispute.is_seller = True
 

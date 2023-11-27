@@ -9,13 +9,11 @@ def start(msg):
     Starting the escrow service bot
     """
     bot.send_chat_action(msg.from_user.id, "typing")
-    user: User = asyncio.run_coroutine_threadsafe(get_user(msg), asyncio.new_event_loop())
+    user: UserType = UserClient.get_user(msg)
     keyboard = main_menu(msg)
 
-    import pdb; pdb.set_trace()
-
     bot.send_photo(
-        msg.from_user.id,
+        user["_id"],
         photo="https://ibb.co/DLQ8yys",
         caption=emoji.emojize(
             f"""
@@ -36,10 +34,10 @@ def start_trade_menu(msg):
     This is the handler to start trade seller or buyer options
     """
     keyboard = trade_menu()
-    user = asyncio.run_coroutine_threadsafe(get_user(msg), asyncio.new_event_loop())
+    user: UserType = UserClient.get_user(msg)
 
     bot.send_message(
-        user.id,
+        user["_id"],
         "<b>Welcome! Please select an option from the menu below?</>",
         reply_markup=keyboard,
         parse_mode="html",

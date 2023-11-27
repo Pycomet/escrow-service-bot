@@ -1,6 +1,6 @@
 from config import *
 import requests
-from database import Trade
+from database import TradeType
 
 
 class BtcPayAPI(object):
@@ -26,14 +26,14 @@ class BtcPayAPI(object):
             print(e, "Error")
             return None
 
-    def create_invoice(self, trade: Trade):
+    def create_invoice(self, trade: TradeType):
         "Create A New Checkout"
         print(trade)
 
         try:
             # create checkout with trade info
             checkout_payload = {
-                "metadata": {"creator": trade.seller.name},
+                "metadata": {"creator": trade["seller_id"]},
                 "checkout": {
                     "speedPolicy": "HighSpeed",
                     "paymentMethods": ["BTC"],
@@ -52,7 +52,7 @@ class BtcPayAPI(object):
                     "showQR": None,
                     "showPayments": None,
                 },
-                "amount": trade.price,
+                "amount": trade["price"],
                 "currency": "USD",
             }
 

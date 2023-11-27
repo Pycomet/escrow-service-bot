@@ -24,8 +24,8 @@ class UserList(Resource):
 class User(Resource):
     def get(self, user_id):
         for user in users:
-            if user.id == int(user_id):
-                result = {"Chat Id": user.chat}
+            if user['_id'] == int(user_id):
+                result = {"Chat Id": str(user['chat'])}
 
                 # update result with user info
                 data = get_user_info(user_id)

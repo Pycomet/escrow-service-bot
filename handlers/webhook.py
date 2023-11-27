@@ -6,7 +6,7 @@ from utils import *
 def handle_invoice_paid_webhook(data):
     "Response to when the invoice has been paid"
     trade = get_trade_by_invoice_id(data["invoiceId"])
-    handle_invoice_paid(trade.invoice_id)
+    TradeClient.handle_invoice_paid(trade.invoice_id)
 
     # Notify the seller to fulfill their agreed terms and wait for the buyer's approval
     seller_notification = (
@@ -15,7 +15,7 @@ def handle_invoice_paid_webhook(data):
         "Upon approval, the payment will be released to you."
     )
     bot.send_message(
-        trade.seller_id,
+        trade['seller_id'],
         seller_notification,
         parse_mode="html",
         reply_markup=review_menu(),
@@ -29,11 +29,11 @@ def handle_invoice_paid_webhook(data):
     )
 
     bot.send_message(
-        trade.buyer_id, approval_message, reply_markup=give_verdict(), parse_mode="html"
+        trade['buyer_id'], approval_message, reply_markup=give_verdict(), parse_mode="html"
     )
 
     completion_message = (
-        f"🎉 New Trade Completed! <b>{trade.id}</b> \n\n"
+        f"🎉 New Trade Completed! <b>{trade['_id']}</b> \n\n"
         "✅ The trade has been successfully completed. Buyers and sellers have been notified.\n"
         "Thank you for using our platform!"
     )
@@ -72,31 +72,31 @@ def handle_invoice_paid_webhook(data):
 
 def handle_payment_received_webhook(data):
     "Give alert message on new trade alert"
-    trade = get_trade_by_invoice_id(data["invoiceId"])
+    trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
     bot.send_message(
         ADMIN_ID,
-        f"New payment received <b>{data['payment']['value']}</b> for Trade {trade.id}",
+        f"New payment received <b>{data['payment']['value']}</b> for Trade {trade['_id']}",
     )
 
 
 def handle_invoice_expired_webhook(data):
     "Close trade when the payment url has expired (Send message to both parties)"
-    trade = get_trade_by_invoice_id(data["invoiceId"])
-    handle_invoice_expired(trade.invoice_id)
+    trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
+    TradeClient.handle_invoice_expired(trade['invoice_id'])
 
-    if trade.buyer_id != None:
+    if trade['buyer_id'] != None:
         # Notify the buyer that the trade has expired and is now closed
         bot.send_message(
-            trade.buyer_id,
-            f"📪 Trade <b>({trade.id})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the seller or our support team. Thank you for using our platform.",
+            trade['buyer_id'],
+            f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the seller or our support team. Thank you for using our platform.",
             reply_markup=review_menu(),
             parse_mode="html",
         )
 
     # Notify the seller that the trade has expired and is now closed
     bot.send_message(
-        trade.seller_id,
-        f"📪 Trade <b>({trade.id})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the buyer or our support team. Thank you for using our platform.",
+        trade['seller_id'],
+        f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the buyer or our support team. Thank you for using our platform.",
         reply_markup=review_menu(),
         parse_mode="html",
     )

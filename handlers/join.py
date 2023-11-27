@@ -11,10 +11,10 @@ def join_request(msg):
 
     chat, id = get_received_msg(msg)
     bot.delete_message(chat.id, id)
-    user = get_user(msg)
+    user = UserClient.get_user(msg)
 
     question = bot.send_message(
-        user.chat,
+        str(user['chat']),
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
         ),
@@ -28,27 +28,27 @@ def join_trade(msg):
     """
     trade_id = msg.text
 
-    user = get_user(msg)
+    user = UserClient.get_user(msg)
 
-    trade: Trade = check_trade(user=user, trade_id=trade_id)
+    trade: Trade = TradeClient.check_trade(user=user, trade_id=trade_id)
 
     if isinstance(trade, str) != True:
 
-        payment_url = get_invoice_url(trade=trade)
-        status = get_invoice_status(trade=trade)
+        payment_url = TradeClient.get_invoice_url(trade=trade)
+        status = TradeClient.get_invoice_status(trade=trade)
 
         # SEND TO BUYER########
         bot.send_message(
-            trade.buyer_id,
+            trade['buyer_id'],
             emoji.emojize(
                 f"""
 :memo: <b>Trade {trade.id} Payment Details</b> 
 -----------------------------------
-<b>Terms Of Contract:</b> {trade.terms}
+<b>Terms Of Contract:</b> {trade['terms']}
 
-<b>Transaction Amount:</b> {trade.price} {trade.currency}
+<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
 <b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
+<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
 <b>Payment Status:</b> {status}
 
 <b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
@@ -62,7 +62,7 @@ You can go to payment portal by clicking the button below.
 
         ##SEND ALERT TO SELLER#########
         bot.send_message(
-            trade.seller_id,
+            trade['seller_id'],
             emoji.emojize(
                 f"<b>{trade.buyer.name}</b> just joined a this trade - {trade.id}</b>",
             ),
@@ -72,7 +72,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Not Permitted":
 
         bot.send_message(
-            user.chat,
+            str(user['chat']),
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
             ),
@@ -81,7 +81,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Both parties already exists":
 
         bot.send_message(
-            user.chat,
+            str(user['chat']),
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
             ),
@@ -89,7 +89,7 @@ You can go to payment portal by clicking the button below.
 
     else:
         bot.send_message(
-            user.chat,
+            str(user['chat']),
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
             ),
