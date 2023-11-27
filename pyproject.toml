@@ -1,6 +1,0 @@
-[tool.pyright]
-include = [
-    "main.py",
-]
-
-typeCheckingMode = "strict"
