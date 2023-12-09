@@ -14,7 +14,7 @@ def join_request(msg):
     user = UserClient.get_user(msg)
 
     question = bot.send_message(
-        str(user["chat"]),
+        msg.chat.id,
         emoji.emojize(
             "What is the ID of the trade you wish to join ? ",
         ),
@@ -30,7 +30,10 @@ def join_trade(msg):
 
     user = UserClient.get_user(msg)
 
-    trade: Trade = TradeClient.check_trade(user=user, trade_id=trade_id)
+    trade: TradeType = TradeClient.check_trade(user=user, trade_id=trade_id)
+    print(trade)
+
+    # import pdb; pdb.set_trace()
 
     if isinstance(trade, str) != True:
 
@@ -42,7 +45,7 @@ def join_trade(msg):
             trade["buyer_id"],
             emoji.emojize(
                 f"""
-:memo: <b>Trade {trade.id} Payment Details</b> 
+:memo: <b>Trade {trade['_id']} Payment Details</b> 
 -----------------------------------
 <b>Terms Of Contract:</b> {trade['terms']}
 
@@ -64,7 +67,7 @@ You can go to payment portal by clicking the button below.
         bot.send_message(
             trade["seller_id"],
             emoji.emojize(
-                f"<b>{trade.buyer.name}</b> just joined a this trade - {trade.id}</b>",
+                f"<b>{trade['buyer_id']}</b> just joined a this trade - {trade['_id']}</b>",
             ),
             parse_mode="html",
         )
@@ -72,7 +75,11 @@ You can go to payment portal by clicking the button below.
     elif trade == "Not Permitted":
 
         bot.send_message(
+<<<<<<< HEAD
             str(user["chat"]),
+=======
+            msg.from_user.id,
+>>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
             ),
@@ -81,7 +88,11 @@ You can go to payment portal by clicking the button below.
     elif trade == "Both parties already exists":
 
         bot.send_message(
+<<<<<<< HEAD
             str(user["chat"]),
+=======
+            msg.from_user.id,
+>>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
             ),
@@ -89,7 +100,11 @@ You can go to payment portal by clicking the button below.
 
     else:
         bot.send_message(
+<<<<<<< HEAD
             str(user["chat"]),
+=======
+            msg.from_user.id,
+>>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
             ),

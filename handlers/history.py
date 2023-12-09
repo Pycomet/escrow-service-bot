@@ -101,7 +101,7 @@ def view_trade(msg):
 -----------------------------------
 <b>Terms Of Contract:</b> {trade.terms}
 
-<b>Buyer ID: </b> {trade.buyer_id}
+<b>Buyer ID: </b> {trade['buyer_id']}
 <b>Seller ID: </b> {trade.seller_id}
 
 <b>Transaction Amount:</b> {trade.price} {trade.currency}
