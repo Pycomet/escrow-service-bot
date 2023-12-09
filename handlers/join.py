@@ -75,11 +75,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Not Permitted":
 
         bot.send_message(
-<<<<<<< HEAD
             str(user["chat"]),
-=======
-            msg.from_user.id,
->>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 "⚠️ You can not be a seller and buyer at the same time",
             ),
@@ -88,11 +84,7 @@ You can go to payment portal by clicking the button below.
     elif trade == "Both parties already exists":
 
         bot.send_message(
-<<<<<<< HEAD
             str(user["chat"]),
-=======
-            msg.from_user.id,
->>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 "⚠️ There is already a buyer and seller on this trade!",
             ),
@@ -100,11 +92,7 @@ You can go to payment portal by clicking the button below.
 
     else:
         bot.send_message(
-<<<<<<< HEAD
             str(user["chat"]),
-=======
-            msg.from_user.id,
->>>>>>> 82a6cee1 (fix bug)
             emoji.emojize(
                 f"⚠️ Trade not found! - {trade}",
             ),
