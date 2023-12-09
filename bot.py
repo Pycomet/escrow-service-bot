@@ -6,20 +6,19 @@ from functions import *
 # APPROVING PAYMENTS
 def validate_pay(msg):
     "Receives the transaction hash for checking"
-    trade = get_recent_trade(msg.from_user)
+    user = UserClient.get_user(msg)
+    trade: TradeType = TradeClient.get_most_recent_trade(user)
+    status = TradeClient.get_invoice_status(trade=trade)
+    print("Status", status)
 
-    # trade_hash = msg.text
-
-    status = check_payment(trade)
-
-    if status == "Approved":
+    if status.lower() == "approved" or status.lower() == "completed":
 
         # SEND CONFIRMATION TO SELLER
         bot.send_message(
-            trade.seller,
+            trade['seller_id'],
             emoji.emojize(
                 f"""
-:memo: <b>TRADE ID - {trade.id}</b> :memo:
+:memo: <b>TRADE ID - {trade['_id']}</b> :memo:
 ------------------------------------                  
 <b>Buyer Payment Confirmed Successfully :white_check_mark: . Please release the goods to the buyer before being paid</b>
                 """,
@@ -29,7 +28,7 @@ def validate_pay(msg):
 
         # SEND CONFIRMATION TO BUYER
         bot.send_message(
-            trade.buyer,
+            msg.from_user.id,
             emoji.emojize(
                 f"""
 :memo: <b>TRADE ID - {trade.id}</b> :memo:
@@ -45,10 +44,10 @@ def validate_pay(msg):
 
         # SEND ALERT TO SELLER
         bot.send_message(
-            trade.buyer,
+            msg.from_user.id,
             emoji.emojize(
                 f"""
-:memo: <b>TRADE ID - {trade.id}</b> :memo:
+:memo: <b>TRADE {trade['_id']} - {status.upper()}</b> :memo:
 ------------------------------------     
 <b>Payment Still Pending! :heavy_exclamation_mark: Please cross check the transaction hash and try again.</b>
                 """,
@@ -63,8 +62,9 @@ def validate_pay(msg):
 
 def refund_to_buyer(msg):
     "Refund Coins Back To Buyer"
-    trade = get_recent_trade(msg)
-
+    user = UserClient.get_user(msg)
+    trade: TradeType = TradeClient.get_most_recent_trade(user)
+    
     if trade.payment_status == True:
 
         question = bot.send_message(
