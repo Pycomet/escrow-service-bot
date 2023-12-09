@@ -179,7 +179,7 @@ def give_verdict():
 
 def confirm(payment_url: str):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
-    a = (types.InlineKeyboardButton(text="💸 Make Payment", url=payment_url),)
+    a = types.InlineKeyboardButton(text="💸 Make Payment", url=payment_url)
     # a = types.InlineKeyboardButton(text=emoji.emojize("🔄 Refresh Status", ), callback_data="payment_confirmation")
     b = types.InlineKeyboardButton(
         text="💰 Confirm Payment", callback_data="payment_confirmation"

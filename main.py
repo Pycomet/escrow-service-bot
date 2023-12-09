@@ -12,7 +12,7 @@ def checkWebhook():
     return "Your bot application is still active!", 200
 
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def webhook():
     bot.remove_webhook()
     bot.set_webhook(url=WEBHOOK_URL + "/" + TOKEN)

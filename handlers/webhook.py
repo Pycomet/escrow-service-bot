@@ -50,7 +50,7 @@ def handle_invoice_paid_webhook(data):
 
     # # Notify the buyer that the trade has been successfully completed
     # bot.send_message(
-    #     trade.buyer_id,
+    #     trade['buyer_id'],
     #     f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
     #     "Thank you for your payment. If you have any further questions or need assistance, feel free to reach out. "
     #     "We appreciate your business!",
