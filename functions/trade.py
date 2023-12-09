@@ -23,7 +23,7 @@ class TradeClient:
         trade: TradeType = {
             "_id": generate_id(),
             "seller_id": user["_id"],
-            "buyer_id": None,
+            "buyer_id": "",
             "currency": currency,
             "is_active": False,
             "is_paid": False,
@@ -134,8 +134,8 @@ class TradeClient:
         if trade == None:
             return "Not Found"
 
-        elif trade['buyer_id'] != None:
-            return "Both parties already exists"
+        # elif trade['buyer_id'] != "":
+        #     return "Both parties already exists"
 
         elif str(trade["seller_id"]) == str(user["_id"]):
             return "Not Permitted"

@@ -40,6 +40,9 @@ def join_trade(msg):
         payment_url = TradeClient.get_invoice_url(trade=trade)
         status = TradeClient.get_invoice_status(trade=trade)
 
+        print(trade)
+        # import pdb; pdb.set_trace()
+
         # SEND TO BUYER########
         bot.send_message(
             trade["buyer_id"],
@@ -67,7 +70,7 @@ You can go to payment portal by clicking the button below.
         bot.send_message(
             trade["seller_id"],
             emoji.emojize(
-                f"<b>{trade['buyer_id']}</b> just joined a this trade - {trade['_id']}</b>",
+                f"⚠️{trade['buyer_id']} has just joined a this trade - {trade['_id']}",
             ),
             parse_mode="html",
         )
