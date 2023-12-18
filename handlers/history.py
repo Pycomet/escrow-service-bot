@@ -11,7 +11,7 @@ def trade_history(msg):
 
     bot.send_chat_action(msg.from_user.id, "typing")
     user = UserClient.get_user(msg)
-    sells, buys = TradeClient.get_trades(msg.from_user.id)
+    sells, buys = TradeClient.get_trades(str(msg.from_user.id))
     purchases, sales, trades, active, reports = TradeClient.get_trades_report(
         sells, buys
     )
@@ -66,7 +66,7 @@ def send_all_trades(msg):
         f"""
 <b>All ({len(all_trades)}) Trades IDs </b>
 ------------------
-{', '.join([f"<b>{trade.id} ({'Seller' if trade.seller_id == user['_id'] else 'Buyer'})</b>" for trade in all_trades])}
+{', '.join([f"<b>{trade['_id']} ({'Seller' if trade['seller_id'] == user['_id'] else 'Buyer'})</b>" for trade in all_trades])}
         """,
         parse_mode="html",
     )
@@ -95,23 +95,10 @@ def view_trade(msg):
 
         bot.send_message(
             msg.from_user.id,
-            emoji.emojize(
-                f"""
-:memo: <b>Trade {trade.id} Payment Details</b> 
------------------------------------
-<b>Terms Of Contract:</b> {trade.terms}
-
-<b>Buyer ID: </b> {trade['buyer_id']}
-<b>Seller ID: </b> {trade.seller_id}
-
-<b>Transaction Amount:</b> {trade.price} {trade.currency}
-<b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade.created_at, "%Y-%m-%d %H:%M:%S")}
-<b>Payment Status:</b> {status}
-            """
-            ),
+            Messages.trade_details(trade, status),
             parse_mode="html",
         )
 
     except Exception as e:
+        print(e)
         bot.send_message(msg.from_user.id, "Trade Not Found")

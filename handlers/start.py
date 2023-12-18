@@ -15,15 +15,7 @@ def start(msg):
     bot.send_photo(
         user["_id"],
         photo="https://ibb.co/DLQ8yys",
-        caption=emoji.emojize(
-            f"""
-    :circus_tent: <b>Welcome to the Telegram Escrow Service {msg.from_user.first_name} </b>
-    
-My purpose is to create a save trade environment for both seller and buyer subject to my rules.
-
-Your funds are save with me and will be refunded to you if the other party refuses to comply with the rules.
-            """
-        ),
+        caption=Messages.welcome(msg.from_user.first_name),
         reply_markup=keyboard,
         parse_mode="html",
     )
@@ -38,7 +30,7 @@ def start_trade_menu(msg):
 
     bot.send_message(
         user["_id"],
-        "<b>Welcome! Please select an option from the menu below?</>",
+        "<b>Welcome! Please select an option from the menu below?</b>",
         reply_markup=keyboard,
         parse_mode="html",
     )

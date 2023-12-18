@@ -119,10 +119,14 @@ class TradeClient:
     def get_invoice_url(trade: TradeType) -> str:
         "Get Payment Url"
         active_trade: TradeType = db.trades.find_one({"_id": trade["_id"]})
-        url, invoice_id = client.create_invoice(active_trade)
-        if url is not None:
-            TradeClient.add_invoice_id(trade, str(invoice_id))
-            return url
+        
+        if active_trade['invoice_id'] is "":
+            url, invoice_id = client.create_invoice(active_trade)
+            if url is not None:
+                TradeClient.add_invoice_id(trade, str(invoice_id))
+                return url
+        else:
+            return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
         return None
 
     @staticmethod
@@ -164,11 +168,15 @@ class TradeClient:
 
         trades = purchases + sales
 
-        r_buys = [i for i in buys if i["dispute"] != []]
-        r_sells = [i for i in sells if i["dispute"] != []]
-        reports = len(r_buys) + len(r_sells)
+        # r_buys = [i for i in buys if i["dispute"] != []]
+        # r_sells = [i for i in sells if i["dispute"] != []]
+        # reports = len(r_buys) + len(r_sells)
+        reports = []
+        for trade in buys + sells:
+            trade_report = db.disputes.find({ "trade_id": trade["_id"] })
+            [reports.append(i) for i in trade_report]
 
-        return purchases, sales, trades, active, reports
+        return purchases, sales, trades, active, len(reports)
 
     @staticmethod
     def delete_trade(trade_id: str):

@@ -28,7 +28,6 @@ class BtcPayAPI(object):
 
     def create_invoice(self, trade: TradeType):
         "Create A New Checkout"
-        print(trade)
 
         try:
             # create checkout with trade info
@@ -38,7 +37,7 @@ class BtcPayAPI(object):
                     "speedPolicy": "HighSpeed",
                     "paymentMethods": ["BTC"],
                     "defaultPaymentMethod": "BTC",
-                    "expirationMinutes": 90,
+                    "expirationMinutes": 60,
                     "monitoringMinutes": 90,
                     "paymentTolerance": 0,
                     "redirectURL": f"{WEBHOOK_URL}/paid",
@@ -55,8 +54,6 @@ class BtcPayAPI(object):
                 "amount": trade["price"],
                 "currency": "USD",
             }
-
-            print(self.url)
 
             result = requests.post(
                 f"{self.url}/api/v1/stores/{self.store_id}/invoices",

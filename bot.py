@@ -18,9 +18,11 @@ def validate_pay(msg):
             trade['seller_id'],
             emoji.emojize(
                 f"""
-:memo: <b>TRADE ID - {trade['_id']}</b> :memo:
+📝 <b>Trade ID - {trade['_id']}</b> 📝
 ------------------------------------                  
-<b>Buyer Payment Confirmed Successfully :white_check_mark: . Please release the goods to the buyer before being paid</b>
+Buyer's Payment Confirmed Successfully ☑️ 
+
+Please release <b>{trade['terms']}</b>, before you can receive payment.
                 """,
             ),
             parse_mode="html",
@@ -31,9 +33,11 @@ def validate_pay(msg):
             msg.from_user.id,
             emoji.emojize(
                 f"""
-:memo: <b>TRADE ID - {trade.id}</b> :memo:
+📝 <b>Trade ID - {trade['_id']}</b> 📝
 ------------------------------------       
-<b>Payment Confirmed Sucessfully :white_check_mark: . Seller has been instructed to release the goods to you.</b>
+Payment Confirmed Sucessfully ☑️ 
+
+Seller has been instructed to release the goods to you.
                 """,
             ),
             parse_mode="html",
@@ -47,9 +51,9 @@ def validate_pay(msg):
             msg.from_user.id,
             emoji.emojize(
                 f"""
-:memo: <b>TRADE {trade['_id']} - {status.upper()}</b> :memo:
+📝 <b>Trade {trade['_id']} - {status}</b> 📝
 ------------------------------------     
-<b>Payment Still Pending! :heavy_exclamation_mark: Please cross check the transaction hash and try again.</b>
+Payment Is Still Pending ❗
                 """,
             ),
             parse_mode="html",
@@ -99,7 +103,7 @@ def refund_coins(msg):
         ADMIN_ID,
         emoji.emojize(
             """
-<b>Refunds Paid</b> :heavy_check_mark:
+<b>Refunds Paid</b> ☑️
 Txid -> {status}
             """,
         ),

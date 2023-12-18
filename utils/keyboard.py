@@ -6,7 +6,7 @@ def main_menu(msg):
 
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     a = types.InlineKeyboardButton(text="Get Started ➡️", callback_data="start_trade")
-    b = types.InlineKeyboardButton(text="Terms & Rules 📚", callback_data="rules")
+    b = types.InlineKeyboardButton(text="Terms & Rules 📚", url="https://telegra.ph/Terms--Rules-of-Escrow-Service-Bot-12-17")
     c = types.InlineKeyboardButton(
         text=emoji.emojize(
             "Join A Trade :man:",
@@ -30,7 +30,7 @@ def group_menu():
         text=emoji.emojize(
             "Join A Trade :man:",
         ),
-        url="https://t.me/tele_escrowbot?message=start",
+        url="https://t.me/trusted_escrow_bot?message=start",
     )
     keyboard.add(a)
     return keyboard

@@ -40,30 +40,12 @@ def join_trade(msg):
         payment_url = TradeClient.get_invoice_url(trade=trade)
         status = TradeClient.get_invoice_status(trade=trade)
 
-        print(trade)
-        # import pdb; pdb.set_trace()
-
         # SEND TO BUYER########
         bot.send_message(
             trade["buyer_id"],
-            emoji.emojize(
-                f"""
-:memo: <b>Trade {trade['_id']} Payment Details</b> 
------------------------------------
-<b>Terms Of Contract:</b> {trade['terms']}
-
-<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
-<b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
-<b>Payment Status:</b> {status}
-
-<b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
-
-You can go to payment portal by clicking the button below.
-                """
-            ),
+            Messages.trade_joined(trade, status),
             parse_mode="html",
-            reply_markup=confirm(payment_url),
+            reply_markup=confirm(payment_url) if status is not "Expired" else None,
         )
 
         ##SEND ALERT TO SELLER#########
