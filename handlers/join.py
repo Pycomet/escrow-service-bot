@@ -1,84 +1,136 @@
 from config import *
 from utils import *
 from functions import *
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 
-@bot.message_handler(regexp="^Join A Trade")
-def join_request(msg):
-    """
-    Lets a user receive trade information by ID
-    """
-
-    chat, id = get_received_msg(msg)
-    bot.delete_message(chat.id, id)
-    user = UserClient.get_user(msg)
-
-    question = bot.send_message(
-        msg.chat.id,
-        emoji.emojize(
-            "What is the ID of the trade you wish to join ? ",
-        ),
+async def join_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /join command"""
+    await update.message.reply_text(
+        "🔍 Please enter the Trade ID you want to join:",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+        ]])
     )
-    bot.register_next_step_handler(question, join_trade)
+    
+    # Set state to wait for trade ID
+    context.user_data["waiting_for_trade_id"] = True
 
 
-def join_trade(msg):
-    """
-    Validate Buyer To Trade ID
-    """
-    trade_id = msg.text
-
-    user = UserClient.get_user(msg)
-
-    trade: TradeType = TradeClient.check_trade(user=user, trade_id=trade_id)
-    print(trade)
-
-    # import pdb; pdb.set_trace()
-
-    if isinstance(trade, str) != True:
-
-        payment_url = TradeClient.get_invoice_url(trade=trade)
-        status = TradeClient.get_invoice_status(trade=trade)
-
-        # SEND TO BUYER########
-        bot.send_message(
-            trade["buyer_id"],
-            Messages.trade_joined(trade, status),
-            parse_mode="html",
-            reply_markup=confirm(payment_url) if status is not "Expired" else None,
+async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the trade ID input"""
+    if not context.user_data.get("waiting_for_trade_id"):
+        return
+    
+    trade_id = update.message.text
+    user_id = update.effective_user.id
+    
+    # Clear state
+    context.user_data.pop("waiting_for_trade_id", None)
+    
+    # Get trade details
+    trade = get_trade_by_id(trade_id)
+    if not trade:
+        await update.message.reply_text(
+            "❌ Trade not found. Please check the ID and try again.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
         )
-
-        ##SEND ALERT TO SELLER#########
-        bot.send_message(
-            trade["seller_id"],
-            emoji.emojize(
-                f"⚠️{trade['buyer_id']} has just joined a this trade - {trade['_id']}",
-            ),
-            parse_mode="html",
+        return
+    
+    # Check if trade is available for joining
+    if trade["status"] != "pending":
+        await update.message.reply_text(
+            f"❌ This trade is no longer available for joining (Status: {trade['status']}).",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
         )
-
-    elif trade == "Not Permitted":
-
-        bot.send_message(
-            str(user["chat"]),
-            emoji.emojize(
-                "⚠️ You can not be a seller and buyer at the same time",
-            ),
+        return
+    
+    # Check if user is already involved in the trade
+    if trade["seller_id"] == user_id or trade["buyer_id"] == user_id:
+        await update.message.reply_text(
+            "❌ You are already involved in this trade.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
         )
+        return
+    
+    # Store trade ID in context for later use
+    context.user_data["join_trade_id"] = trade_id
+    
+    # Show trade details and confirmation
+    details = (
+        f"📋 <b>Trade Details</b>\n\n"
+        f"ID: <code>{trade['_id']}</code>\n"
+        f"Amount: {trade['amount']} {trade['currency']}\n"
+        f"Created: {trade['created_at']}\n\n"
+    )
+    
+    if trade.get("description"):
+        details += f"Description: {trade['description']}\n\n"
+    
+    details += "Would you like to join this trade as a buyer?"
+    
+    await update.message.reply_text(
+        details,
+        parse_mode="html",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Yes, Join Trade", callback_data=f"confirm_join_{trade_id}")],
+            [InlineKeyboardButton("❌ No, Cancel", callback_data="menu")]
+        ])
+    )
 
-    elif trade == "Both parties already exists":
 
-        bot.send_message(
-            str(user["chat"]),
-            emoji.emojize(
-                "⚠️ There is already a buyer and seller on this trade!",
-            ),
-        )
+async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle join-related callback queries"""
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    
+    if data.startswith("confirm_join_"):
+        trade_id = data.replace("confirm_join_", "")
+        user_id = query.from_user.id
+        
+        # Join the trade
+        if join_trade(trade_id, user_id):
+            # Notify seller
+            trade = get_trade_by_id(trade_id)
+            await context.bot.send_message(
+                chat_id=trade["seller_id"],
+                text=f"✅ A new buyer has joined your trade #{trade_id}.",
+                parse_mode="html"
+            )
+            
+            # Confirm to buyer
+            await query.edit_message_text(
+                f"✅ You have successfully joined trade #{trade_id}.\n\n"
+                "Please proceed with the payment to complete the trade.",
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("💳 Make Payment", callback_data=f"pay_{trade_id}"),
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        else:
+            await query.edit_message_text(
+                "❌ Failed to join trade. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
-    else:
-        bot.send_message(
-            str(user["chat"]),
-            emoji.emojize(
-                f"⚠️ Trade not found! - {trade}",
-            ),
-        )
+
+def register_handlers(application):
+    """Register handlers for the join module"""
+    application.add_handler(CommandHandler("join", join_handler))
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+        handle_trade_id
+    ))
+    application.add_handler(CallbackQueryHandler(handle_join_callback, pattern="^confirm_join_"))

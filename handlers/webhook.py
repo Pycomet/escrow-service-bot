@@ -1,9 +1,11 @@
 from config import *
 from functions import *
 from utils import *
+from telegram import Bot
+from quart import request
 
 
-def handle_invoice_paid_webhook(data):
+async def handle_invoice_paid_webhook(data, bot: Bot):
     "Response to when the invoice has been paid"
     trade = get_trade_by_invoice_id(data["invoiceId"])
     TradeClient.handle_invoice_paid(trade.invoice_id)
@@ -14,9 +16,9 @@ def handle_invoice_paid_webhook(data):
         "Please fulfill your agreed terms, and once done, request the buyer to approve the transaction on the bot. "
         "Upon approval, the payment will be released to you."
     )
-    bot.send_message(
-        trade["seller_id"],
-        seller_notification,
+    await bot.send_message(
+        chat_id=trade["seller_id"],
+        text=seller_notification,
         parse_mode="html",
         reply_markup=review_menu(),
     )
@@ -28,9 +30,9 @@ def handle_invoice_paid_webhook(data):
         "Your payment will be released to the seller upon approval."
     )
 
-    bot.send_message(
-        trade["buyer_id"],
-        approval_message,
+    await bot.send_message(
+        chat_id=trade["buyer_id"],
+        text=approval_message,
         reply_markup=give_verdict(),
         parse_mode="html",
     )
@@ -41,17 +43,17 @@ def handle_invoice_paid_webhook(data):
         "Thank you for using our platform!"
     )
 
-    bot.send_message(
-        "@trusted_escrow_bot_reviews",
-        completion_message,
+    await bot.send_message(
+        chat_id="@trusted_escrow_bot_reviews",
+        text=completion_message,
         parse_mode="html",
         disable_web_page_preview=True,
     )
 
     # # Notify the buyer that the trade has been successfully completed
-    # bot.send_message(
-    #     trade['buyer_id'],
-    #     f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
+    # await bot.send_message(
+    #     chat_id=trade['buyer_id'],
+    #     text=f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
     #     "Thank you for your payment. If you have any further questions or need assistance, feel free to reach out. "
     #     "We appreciate your business!",
     #     reply_markup=review_menu(),
@@ -59,9 +61,9 @@ def handle_invoice_paid_webhook(data):
     # )
 
     # # Notify the seller that the trade has been successfully completed
-    # bot.send_message(
-    #     trade.seller_id,
-    #     f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
+    # await bot.send_message(
+    #     chat_id=trade.seller_id,
+    #     text=f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
     #     f"Payment of {trade.currency} {trade.amount} has been received. "
     #     "If you have any further questions or need assistance, feel free to reach out. "
     #     "We appreciate your business!",
@@ -73,59 +75,57 @@ def handle_invoice_paid_webhook(data):
     return True
 
 
-def handle_payment_received_webhook(data):
+async def handle_payment_received_webhook(data, bot: Bot):
     "Give alert message on new trade alert"
     trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
-    bot.send_message(
-        ADMIN_ID,
-        f"New payment received <b>{data['payment']['value']}</b> for Trade {trade['_id']}",
+    await bot.send_message(
+        chat_id=ADMIN_ID,
+        text=f"New payment received <b>{data['payment']['value']}</b> for Trade {trade['_id']}",
+        parse_mode="html"
     )
 
 
-def handle_invoice_expired_webhook(data):
+async def handle_invoice_expired_webhook(data, bot: Bot):
     "Close trade when the payment url has expired (Send message to both parties)"
     trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
     TradeClient.handle_invoice_expired(trade["invoice_id"])
 
     if trade["buyer_id"] != None:
         # Notify the buyer that the trade has expired and is now closed
-        bot.send_message(
-            trade["buyer_id"],
-            f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the seller or our support team. Thank you for using our platform.",
+        await bot.send_message(
+            chat_id=trade["buyer_id"],
+            text=f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the seller or our support team. Thank you for using our platform.",
             reply_markup=review_menu(),
             parse_mode="html",
         )
 
     # Notify the seller that the trade has expired and is now closed
-    bot.send_message(
-        trade["seller_id"],
-        f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the buyer or our support team. Thank you for using our platform.",
+    await bot.send_message(
+        chat_id=trade["seller_id"],
+        text=f"📪 Trade <b>({trade['_id']})</b> has expired, and the transaction has been closed. If you have any questions or concerns, please reach out to the buyer or our support team. Thank you for using our platform.",
         reply_markup=review_menu(),
         parse_mode="html",
     )
 
 
-def process_merchant_webhook(bot):
-    data = request.get_json()
+async def process_merchant_webhook(bot: Bot):
+    data = await request.get_json()
     try:
         event_type = data["type"]
         print(event_type)
         # logger.info(f"Webhook event from server merchant: {event_type}")
 
         if event_type == "InvoiceReceivedPayment":
-            handle_payment_received_webhook(data)
+            await handle_payment_received_webhook(data, bot)
 
         elif event_type in ["InvoicePaymentSettled", "InvoiceSettled"]:
-            handle_invoice_paid_webhook(data)
+            await handle_invoice_paid_webhook(data, bot)
 
         elif event_type == "InvoiceExpired":
-            handle_invoice_expired_webhook(data)
+            await handle_invoice_expired_webhook(data, bot)
 
-    except UnsupportedMediaType:
-        # logger.error('Unsupported Media Type: request payload must be in JSON format')
-        return "Unsupported Media Type: request payload must be in JSON format", 200
     except Exception as e:
-        print(e)
-        # logger.error('Invalid request payload: missing required field')
-        return "Invalid request payload: missing required field", 200
-    return "", 200
+        print(f"Error processing webhook: {e}")
+        return f"Error: {str(e)}", 500
+    
+    return "Webhook processed successfully", 200

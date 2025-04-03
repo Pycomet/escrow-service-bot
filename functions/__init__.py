@@ -1,4 +1,4 @@
-from .trade import *
+from .trade import TradeClient
 from .user import *
 from .dispute import *
 from .utils import *

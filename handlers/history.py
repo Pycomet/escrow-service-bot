@@ -1,104 +1,112 @@
 from config import *
 from utils import *
 from functions import *
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 
-@bot.message_handler(regexp="^Trade")
-def trade_history(msg):
-    """
-    Return all the trades the user is involved in
-    """
-
-    bot.send_chat_action(msg.from_user.id, "typing")
-    user = UserClient.get_user(msg)
-    sells, buys = TradeClient.get_trades(str(msg.from_user.id))
-    purchases, sales, trades, active, reports = TradeClient.get_trades_report(
-        sells, buys
-    )
-
-    chat, id = get_received_msg(msg)
-    bot.delete_message(chat.id, id)
-
-    if sells == [] and buys == []:
-        bot.send_message(
-            user["_id"],
-            emoji.emojize(
-                """
-        <b>NO TRADE HISTORY</b>
-                """,
-            ),
-            parse_mode="html",
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /history command"""
+    user_id = update.effective_user.id
+    
+    # Get user's trades
+    trades = get_trades_by_user_id(user_id)
+    if not trades:
+        await update.message.reply_text(
+            "❌ You don't have any trade history yet.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
         )
-
-    else:
-
-        bot.send_message(
-            user["_id"],
-            f"""
-<b>Trade Reports</b> 📚
-Here is a record of all your recent trades
-
-👉 <b>Active trades                 {active}</b>
-👉 <b>Total trades                  {trades}</b>
-👉 <b>Trades as buyer             {purchases}</b>
-👉 <b>Trades as seller             {sales}</b>
-👉 <b>Reported trades             {reports}</b>
-                """,
-            reply_markup=select_trade(),
-            parse_mode="html",
-        )
-
-
-def send_all_trades(msg):
-    """
-    Return all the trades the user is involved in
-    """
-    # import pdb;
-    # pdb.set_trace()
-    bot.send_chat_action(msg.from_user.id, "typing")
-    user = UserClient.get_user(msg)
-    sells, buys = TradeClient.get_trades(user["_id"])
-
-    all_trades = sells + buys
-
-    bot.send_message(
-        user["_id"],
-        f"""
-<b>All ({len(all_trades)}) Trades IDs </b>
-------------------
-{', '.join([f"<b>{trade['_id']} ({'Seller' if trade['seller_id'] == user['_id'] else 'Buyer'})</b>" for trade in all_trades])}
-        """,
-        parse_mode="html",
+        return
+    
+    # Create keyboard with trade options
+    keyboard = []
+    for trade in trades[:5]:  # Limit to 5 most recent trades
+        status_emoji = {
+            "pending": "⏳",
+            "completed": "✅",
+            "disputed": "⚠️",
+            "cancelled": "❌"
+        }.get(trade["status"], "❓")
+        
+        keyboard.append([
+            InlineKeyboardButton(
+                f"{status_emoji} Trade #{trade['_id']} - {trade['amount']} {trade['currency']}",
+                callback_data=f"view_trade_{trade['_id']}"
+            )
+        ])
+    
+    keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")])
+    
+    await update.message.reply_text(
+        "📋 Your Trade History:\n\n"
+        "Select a trade to view details:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 
-def send_trade(msg):
-    "Returns A Specific Trade Information"
-
-    question = bot.send_message(
-        msg.from_user.id,
-        emoji.emojize(
-            ":warning: What is the ID of the trade ? ",
-        ),
-    )
-
-    bot.register_next_step_handler(question, view_trade)
-
-
-def view_trade(msg):
-    user = msg.from_user
-    trade_id = msg.text
-
-    try:
-        trade = TradeClient.get_trade(trade_id)
-        status = TradeClient.get_invoice_status(trade=trade)
-
-        bot.send_message(
-            msg.from_user.id,
-            Messages.trade_details(trade, status),
-            parse_mode="html",
+async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle trade view callback queries"""
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    
+    if data.startswith("view_trade_"):
+        trade_id = data.replace("view_trade_", "")
+        trade = get_trade_by_id(trade_id)
+        
+        if not trade:
+            await query.edit_message_text(
+                "❌ Trade not found. Please try again.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+            return
+        
+        # Format trade details
+        status_emoji = {
+            "pending": "⏳",
+            "completed": "✅",
+            "disputed": "⚠️",
+            "cancelled": "❌"
+        }.get(trade["status"], "❓")
+        
+        details = (
+            f"📋 <b>Trade Details</b>\n\n"
+            f"ID: <code>{trade['_id']}</code>\n"
+            f"Status: {status_emoji} {trade['status'].title()}\n"
+            f"Amount: {trade['amount']} {trade['currency']}\n"
+            f"Created: {trade['created_at']}\n"
+            f"Updated: {trade['updated_at']}\n\n"
         )
+        
+        if trade.get("description"):
+            details += f"Description: {trade['description']}\n\n"
+        
+        # Add action buttons based on trade status
+        keyboard = [[InlineKeyboardButton("🔙 Back to History", callback_data="history")]]
+        
+        if trade["status"] == "pending":
+            if trade["seller_id"] == query.from_user.id:
+                keyboard.append([InlineKeyboardButton("❌ Cancel Trade", callback_data=f"delete_trade_{trade_id}")])
+            elif trade["buyer_id"] == query.from_user.id:
+                keyboard.append([InlineKeyboardButton("⚠️ Report Issue", callback_data=f"report_trade_{trade_id}")])
+        
+        await query.edit_message_text(
+            details,
+            parse_mode="html",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    elif data == "history":
+        # Return to history menu
+        await history_handler(update, context)
 
-    except Exception as e:
-        print(e)
-        bot.send_message(msg.from_user.id, "Trade Not Found")
+
+def register_handlers(application):
+    """Register handlers for the history module"""
+    application.add_handler(CommandHandler("history", history_handler))
+    application.add_handler(CallbackQueryHandler(handle_trade_view_callback, pattern="^(view_trade_|history)"))

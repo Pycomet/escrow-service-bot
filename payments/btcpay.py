@@ -30,6 +30,8 @@ class BtcPayAPI(object):
         "Create A New Checkout"
 
         try:
+            app.logger.info(f"Trade - {trade}")
+            app.logger.info(f"Webhook - {WEBHOOK_URL} ---- {self.url}")
             # create checkout with trade info
             checkout_payload = {
                 "metadata": {"creator": trade["seller_id"]},
@@ -68,6 +70,7 @@ class BtcPayAPI(object):
             return self.checkout_url, self.invoice_id
 
         except Exception as e:
+            app.logger.info(e)
             print(e, "Error")
             return None, None
 

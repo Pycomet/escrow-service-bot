@@ -1,49 +1,55 @@
 from config import *
 from utils import *
 from functions import *
+from telegram import Update
+from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
 
 
-@bot.message_handler(commands=["wallet"])
-def user_wallet(msg):
+async def user_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Returns the user's wallet address
     """
-    bot.send_chat_action(msg.from_user.id, "typing")
-    user = UserClient.get_user(msg)
+    await context.bot.send_chat_action(chat_id=update.message.from_user.id, action="typing")
+    user = UserClient.get_user(update.message)
 
-    bot.send_message(
-        user["_id"],
-        f"Your wallet address is: <b>{user['wallet']}</b>",
+    await context.bot.send_message(
+        chat_id=user["_id"],
+        text=f"Your wallet address is: <b>{user['wallet']}</b>",
         parse_mode="html",
     )
 
 
-@bot.message_handler(commands=["editwallet"])
-def update_user_wallet(msg):
+async def update_user_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Updates the user's wallet address
     """
-    bot.send_chat_action(msg.from_user.id, "typing")
-    user = UserClient.get_user(msg)
+    await context.bot.send_chat_action(chat_id=update.message.from_user.id, action="typing")
+    user = UserClient.get_user(update.message)
 
-    bot.send_message(
-        user["_id"],
-        "Please type in your new wallet address ?",
+    await context.bot.send_message(
+        chat_id=user["_id"],
+        text="Please type in your new wallet address ?",
         # reply_markup=types.ReplyKeyboardRemove()
     )
 
-    bot.register_next_step_handler(msg, update_wallet)
+    context.user_data["next_step"] = update_wallet
 
 
-def update_wallet(msg):
+async def update_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Updates the user's wallet address
     """
-    address = msg.text
-    user = UserClient.get_user(msg)
+    address = update.message.text
+    user = UserClient.get_user(update.message)
 
     UserClient.set_wallet(user["_id"], address)
 
-    bot.send_message(
-        msg.from_user.id, "✅ Wallet updated successfully", reply_markup=trade_menu()
+    await context.bot.send_message(
+        chat_id=update.message.from_user.id, 
+        text="✅ Wallet updated successfully", 
+        reply_markup=trade_menu()
     )
+
+# Register handlers
+application.add_handler(CommandHandler("wallet", user_wallet))
+application.add_handler(CommandHandler("editwallet", update_user_wallet))

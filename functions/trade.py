@@ -1,6 +1,7 @@
 from config import *
 from database import *
 from functions import *
+from typing import Optional
 from .utils import generate_id
 from .user import UserClient
 from payments import BtcPayAPI
@@ -108,7 +109,7 @@ class TradeClient:
         return trade
 
     @staticmethod
-    def get_invoice_status(trade: TradeType) -> str or None:
+    def get_invoice_status(trade: TradeType) -> Optional[str]: # type: ignore
         "Get Payment Url"
         status = client.get_invoice_status(trade["invoice_id"])
         if status is not None:
@@ -120,11 +121,15 @@ class TradeClient:
         "Get Payment Url"
         active_trade: TradeType = db.trades.find_one({"_id": trade["_id"]})
         
-        if active_trade['invoice_id'] is "":
-            url, invoice_id = client.create_invoice(active_trade)
-            if url is not None:
-                TradeClient.add_invoice_id(trade, str(invoice_id))
-                return url
+        if active_trade['invoice_id'] == "":
+            try:
+                url, invoice_id = client.create_invoice(active_trade)
+                if url is not None:
+                    TradeClient.add_invoice_id(trade, str(invoice_id))
+                    return url
+            except Exception as e:
+                app.logger.info(e)
+                print(f"Error creating invoice: {e}")
         else:
             return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
         return None
