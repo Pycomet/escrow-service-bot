@@ -18,10 +18,11 @@ import cryptocompare
 from dotenv import load_dotenv
 load_dotenv()
 
-DEBUG = True
+DEBUG = False
 
 # Configuration variable
 TOKEN = os.getenv("TOKEN")
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "codefred")
 
 WEBHOOK_MODE = os.getenv("WEBHOOK_MODE", "False").lower() == "true"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")

@@ -78,7 +78,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     user = update.message.from_user
     await context.bot.send_chat_action(chat_id=user.id, action="typing")
-    user: UserType = UserClient.get_user(update.message)
+    user_data: UserType = UserClient.get_user(update.message)
     keyboard = await main_menu(update, context)
 
     await update.message.reply_text(

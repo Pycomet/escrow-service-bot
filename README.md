@@ -1,4 +1,3 @@
-
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -60,12 +59,96 @@
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
   * [Installation](#installation)
+* [Running the Bot](#running-the-bot)
+  * [Local Development (Polling Mode)](#local-development-polling-mode)
+  * [Webhook Mode (Production)](#webhook-mode-production)
+  * [Local Testing with Webhook](#local-testing-with-webhook)
 * [Usage](#usage)
 * [Roadmap](#roadmap)
 * [Contributing](#contributing)
 * [Donation](#donation)
 * [License](#license)
 * [Author](#contact)
+
+## Local Development
+
+To run the application locally with ngrok, use the `dev.sh` script:
+
+1. **Start Local Development**:
+   ```bash
+   ./dev.sh start
+   ```
+   This will start the application with ngrok, set up the webhook, and display the ngrok URL.
+
+2. **Stop Local Development**:
+   ```bash
+   ./dev.sh stop
+   ```
+   This will stop the application and ngrok.
+
+3. **Check Status**:
+   ```bash
+   ./dev.sh status
+   ```
+   This will show the current status of the local services.
+
+4. **View Logs**:
+   ```bash
+   ./dev.sh logs
+   ```
+   This will display the logs for the application and ngrok.
+
+5. **Show URLs**:
+   ```bash
+   ./dev.sh urls
+   ```
+   This will display the current ngrok and webhook URLs.
+
+6. **Check Webhook Status**:
+   ```bash
+   ./dev.sh webhook
+   ```
+   This will check the current webhook status with Telegram.
+
+## Production Deployment
+
+To deploy the application to production using Docker, use the `deploy.sh` script:
+
+1. **Deploy to Production**:
+   ```bash
+   ./deploy.sh start
+   ```
+   This will build and start the Docker containers, set up the webhook, and display the deployment status.
+
+2. **Stop Production Services**:
+   ```bash
+   ./deploy.sh stop
+   ```
+   This will stop all running Docker containers.
+
+3. **Restart Production Services**:
+   ```bash
+   ./deploy.sh restart
+   ```
+   This will restart all running Docker containers.
+
+4. **Check Deployment Status**:
+   ```bash
+   ./deploy.sh status
+   ```
+   This will show the current status of the production deployment.
+
+5. **View Production Logs**:
+   ```bash
+   ./deploy.sh logs
+   ```
+   This will display the logs for the production deployment.
+
+6. **Rollback to Previous Version**:
+   ```bash
+   ./deploy.sh rollback
+   ```
+   This will rollback the deployment to the previous version.
 
 <!-- PROBLEM SOLVED -->
 ## Problem Solved
@@ -81,17 +164,7 @@ This is a growing problem and my [escrow Service Bot](https://github.com/Pycomet
 
 The Escrow Service Bot offers an automated service acting as an escrow platform, able to facilitate a completely save trade environment on which both the seller and buyer can thrive and do business happily.
 
-All payments are being made directly to the respective parties, either through Bitcoin, Ethereum, Litecoin, Ripplecoin or Bitcoin Cash cryptocurrency which ofcourse is predefined by the seller's choice of local currency from the following:
-
-- US Dollars (USD)
-- Euros (EUR)
-- British Pound (GBP)
-- Canadian Dollar (CAD)
-- Japanese Yen (JPY)
-- The Swiss Franc (CHF)
-
-With an affiliate program being part of the structure, administrators of different Telegram Group platforms are also able to use the [escrow Service Bot](https://github.com/Pycomet/escrow-service-bot) in conducting save and fast business transactions within their groups smoothly, with each transaction being completed secured and easily traceable. Also, each registered group admin is entitled to a charge on every trade carried out by the group members.
-
+All payments are being made through BTCPay Server, providing secure and transparent transactions. The bot supports various payment methods and currencies, ensuring flexibility for both buyers and sellers.
 
 ### Ideal Users
 
@@ -103,88 +176,157 @@ With an affiliate program being part of the structure, administrators of differe
 
 ### Built With
 
-This section should list any frameworks/APIs used to build this project application.
-
-* [PyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI) to build the UI/UX feature for user interaction
-* [Flask](https://pypi.org/project/Flask) serving the bot as a simple webhook application
-* [Heroku](https://heroku.com) server for deployment
-* [Coinbase API](https://developers.coinbase.com) to serve as payment gateway
+* [PyTelegramBotAPI](https://pypi.org/project/pyTelegramBotAPI) - Telegram Bot API wrapper
+* [Quart](https://pypi.org/project/quart) - Async web framework for webhook support
+* [BTCPay Server](https://btcpayserver.org) - Payment processing
+* [MongoDB](https://www.mongodb.com) - Database
+* [ngrok](https://ngrok.com) - Local webhook testing
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This section covers how you can get the escrow Service Bot up and running locally with your own credentials in no time. All you need are the following.
-
 ### Prerequisites
 
-Here is the list of needed dependencies to have available on your machine(PC)
-
-* python > 3.6 - Goto [link](https://python.org) to download it
-* pip
-```sh
-pip install --upgrade pip
-```
+* Python 3.8+
+* MongoDB
+* ngrok (for local webhook testing)
+* Telegram Bot Token
+* BTCPay Server credentials
 
 ### Installation
 
-1. Open the project's [github page](https://github.com/Pycomet/escrow-service-bot) and star this project by tapping on the star button at the top right of the page.
-
-2. Get a bot token key from [@BotFather](https://t.me/BotFather)
-
-3. Create a [Coinbase account](https://coinbase.com) and retrieve your API information. This would be used to set up payment systems for your service bot instance.
-
-4. Clone this repository
-```sh
+1. Clone the repository:
+```bash
 git clone https://github.com/Pycomet/escrow-service-bot.git
-```
-
-5. Open the project directory
-```sh
 cd escrow-service-bot
 ```
 
-6. Create a virtual environment to install all the app dependencies
-```sh
+2. Create and activate virtual environment:
+```bash
 python -m venv env
-
-// Enter into the virtual environment (Linux)
-source env/bin/activate
+source env/bin/activate  # Linux/Mac
+# or
+.\env\Scripts\activate  # Windows
 ```
 
-7. Install the dependencies
-```sh
+3. Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 
-8. Create a `.env` file to house all your credentials
-```sh
-// Bot token from @Botfather
-TOKEN=""
+4. Create `.env` file with required credentials:
+```bash
+# Bot Configuration
+TOKEN=your_telegram_bot_token
+SUPPORT_USERNAME=your_support_username
+ADMIN_ID=your_admin_id
 
-// Coinbase API credentials
-API_KEY=""
-API_SECRET=""
+# BTCPay Configuration
+BTCPAY_URL=your_btcpay_url
+BTCPAY_API_KEY=your_btcpay_api_key
+BTCPAY_STORE_ID=your_btcpay_store_id
 
-// Your telegram user id
-ADMIN_ID=""
+# Database Configuration
+DATABASE_URL=your_mongodb_url
+DATABASE_NAME=your_database_name
 
-// Database url (here would be based on your personal choice for your database)
-DATABASE_URL=""
+# Webhook Configuration
+WEBHOOK_MODE=false  # Set to true for production
+WEBHOOK_URL=https://your-domain.com/webhook  # Required when WEBHOOK_MODE=true
+PORT=5000
 ```
 
-9. Managing database changes with Alembic commands;
-```sh
-- Generated migration: alembic revision --autogenerate -m "initial"
-- Applied migrations: alembic upgrade head
-```
+## Running the Bot
 
-10. You are ready to start the application
-```sh
+### Local Development (Polling Mode)
+1. Set `WEBHOOK_MODE=false` in your `.env` file
+2. Run the bot:
+```bash
 python main.py
 ```
+3. Alternatively, you can also just run
+```bash
+./dev.sh
+```
 
-ENJOY!
+### Webhook Mode (Production)
+1. Set `WEBHOOK_MODE=true` in your `.env` file
+2. Configure your webhook URL in `.env`
+3. Deploy to your production server
+
+### Local Testing with Webhook
+1. Install ngrok:
+```bash
+# Download ngrok from https://ngrok.com/download
+# Configure your authtoken
+ngrok config add-authtoken YOUR_AUTH_TOKEN
+```
+
+2. Use the deployment script:
+```bash
+# Make the script executable
+chmod +x deploy.sh
+
+# Start the services
+./deploy.sh
+
+# Check status
+./deploy.sh status
+
+# Stop services
+./deploy.sh stop
+```
+
+3. Monitor logs:
+```bash
+# Bot logs
+tail -f bot.log
+
+# Ngrok logs
+tail -f ngrok.log
+```
+
+4. Check ngrok tunnel status:
+```bash
+curl http://localhost:4040/api/tunnels
+```
+
+5. Check bot health:
+```bash
+curl http://localhost:5000/health
+```
+
+6. Check webhook status:
+```bash
+curl "https://api.telegram.org/botYOUR_BOT_TOKEN/getWebhookInfo"
+```
+
+## Manual Testing
+
+1. Check if processes are running:
+```bash
+# Check ngrok
+ps aux | grep ngrok
+
+# Check bot
+ps aux | grep "python main.py"
+```
+
+2. Check ngrok tunnel status:
+```bash
+curl http://localhost:4040/api/tunnels
+```
+
+3. Check bot health:
+```bash
+curl http://localhost:5000/health
+```
+
+4. Check webhook status:
+```bash
+curl "https://api.telegram.org/botYOUR_BOT_TOKEN/getWebhookInfo"
+```
 
 <!-- USAGE EXAMPLES -->
 ## Usage

@@ -9,19 +9,6 @@ from handlers import *
 from utils import *
 from functions import *
 
-# Configure logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
-# Initialize Quart app
-app = Quart(__name__)
-
-# Initialize bot application
-application = Application.builder().token(TOKEN).build()
-
 # Register all handlers
 def register_handlers():
     """Register all handlers for the bot"""
@@ -143,34 +130,18 @@ async def set_webhook():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-async def polling():
+def run_polling():
     """Run the bot in polling mode"""
-    try:
-        await application.initialize()
-        await application.start()
-        register_handlers()  # Register handlers before starting polling
-        logger.info("Starting bot in polling mode...")
-        await application.run_polling(drop_pending_updates=True)
-    except Exception as e:
-        logger.error(f"Error in polling mode: {e}")
-        raise
-    finally:
-        await application.stop()
+    register_handlers()  # Register handlers before starting polling
+    logger.info("Starting bot in polling mode...")
+    application.run_polling(drop_pending_updates=True)
 
 
 if __name__ == '__main__':
-    if WEBHOOK_MODE:
+    if WEBHOOK_MODE == True:
         # Run in webhook mode (production/deployment)
         logger.info("Starting bot in webhook mode...")
         app.run(host='0.0.0.0', port=PORT)
     else:
         # Run in polling mode (local development)
-        logger.info("Starting bot in polling mode...")
-        try:
-            asyncio.run(application.run_polling(drop_pending_updates=True))
-        except KeyboardInterrupt:
-            logger.info("Bot stopped by user")
-        except Exception as e:
-            logger.error(f"Bot stopped due to error: {e}")
-        finally:
-            logger.info("Bot shutdown complete")
+        run_polling()

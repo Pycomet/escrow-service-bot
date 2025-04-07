@@ -1,6 +1,12 @@
 from config import *
 # from handlers.initiate_trade import *
 from handlers import *
+from handlers.affiliate import affiliate_handler
+from handlers.history import history_handler
+from handlers.initiate_trade import initiate_trade_handler
+from handlers.join import join_handler
+from handlers.report import report_handler
+from handlers.rules import community_handler, rules_handler
 from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
