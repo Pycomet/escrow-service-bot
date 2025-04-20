@@ -10,7 +10,7 @@ services:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "https://26d4-2c0f-2a80-70-a410-00-d7a.ngrok-free.app"]
       interval: 30s
       timeout: 10s
       retries: 3

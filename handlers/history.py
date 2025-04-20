@@ -10,7 +10,7 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Get user's trades
-    trades = get_trades_by_user_id(user_id)
+    trades = trades_db.get_trades(user_id)
     if not trades:
         await update.message.reply_text(
             "❌ You don't have any trade history yet.",
@@ -55,7 +55,7 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
     
     if data.startswith("view_trade_"):
         trade_id = data.replace("view_trade_", "")
-        trade = get_trade_by_id(trade_id)
+        trade = trades_db.get_trade(trade_id)
         
         if not trade:
             await query.edit_message_text(

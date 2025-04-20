@@ -117,7 +117,7 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
     user_id = update.effective_user.id
     
     # Check if user is already involved in an active trade
-    active_trade = get_active_trade_by_user_id(user_id)
+    active_trade = trades_db.get_active_trade_by_user_id(str(user_id))
     if active_trade:
         await update.message.reply_text(
             f"❌ You already have an active trade (#{active_trade['_id']}). "

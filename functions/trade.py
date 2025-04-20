@@ -60,13 +60,35 @@ class TradeClient:
         # If there are no trades, return None or handle as needed
         return most_recent_trade[0] if most_recent_trade else None
 
+
     @staticmethod
-    def get_trade(id: str) -> TradeType or None:
+    def get_active_trade_by_user_id(user_id: str) -> Optional[TradeType]:
+        "Get the most recent active trade created by this user"
+        active_trade = (
+            db.trades.find(
+                {
+                    "$or": [
+                        {"seller_id": user_id},
+                        {"buyer_id": user_id},
+                    ]
+                },
+                {
+                    "is_active": True,
+                }
+            )
+            .sort([("created_at", -1)])
+            .limit(1)
+        )
+        return active_trade[0] if active_trade else None
+
+
+    @staticmethod
+    def get_trade(id: str) -> TradeType or None: # type: ignore
         trade: TradeType = db.trades.find_one({"_id": id})
         return trade
 
     @staticmethod
-    def get_trade_by_invoice_id(id: str) -> TradeType or None:
+    def get_trade_by_invoice_id(id: str) -> TradeType or None: # type: ignore
         trade: TradeType = db.trades.find_one({"invoice_id": id})
         return trade
 

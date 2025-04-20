@@ -10,7 +10,7 @@ async def report_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
     # Check if user is in a trade
-    trade = get_active_trade_by_user_id(user_id)
+    trade = trades_db.get_active_trade_by_user_id(user_id)
     if not trade:
         await update.message.reply_text(
             "❌ You are not currently involved in any active trade. Please start a trade first.",
