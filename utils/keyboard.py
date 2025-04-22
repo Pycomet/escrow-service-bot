@@ -177,3 +177,19 @@ def review_menu():
     ])
     return keyboard
 
+
+def currency_menu():
+    """Return currency selection menu"""
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🇺🇸 USD", callback_data="currency_USD"),
+            InlineKeyboardButton("🇪🇺 EUR", callback_data="currency_EUR")
+        ],
+        [
+            InlineKeyboardButton("🇬🇧 GBP", callback_data="currency_GBP"),
+            InlineKeyboardButton("🇯🇵 JPY", callback_data="currency_JPY")
+        ],
+        [InlineKeyboardButton("🔙 Cancel", callback_data="menu")]
+    ])
+    return keyboard
+

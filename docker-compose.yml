@@ -1,17 +1,28 @@
 version: '3.8'
 
 services:
-  queen:
+  escrow-bot:
     build:
       context: .
     ports:
       - "5000:5000"
     environment:
       - PYTHONUNBUFFERED=1
+      - TOKEN=${TOKEN}
+      - WEBHOOK_MODE=${WEBHOOK_MODE}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - ADMIN_ID=${ADMIN_ID}
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - BTCPAY_URL=${BTCPAY_URL}
+      - BTCPAY_STORE_ID=${BTCPAY_STORE_ID}
+      - BTCPAY_API_KEY=${BTCPAY_API_KEY}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "https://26d4-2c0f-2a80-70-a410-00-d7a.ngrok-free.app"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    volumes:
+      - ./bot.log:/bot.log

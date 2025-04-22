@@ -5,3 +5,37 @@
 2025-04-20 12:45:56,357 - config - INFO - Bot started successfully
 [2025-04-20 12:45:56 +0100] [44202] [INFO] Running on http://0.0.0.0:5000 (CTRL + C to quit)
 2025-04-20 12:45:56,357 - hypercorn.error - INFO - Running on http://0.0.0.0:5000 (CTRL + C to quit)
+2025-04-20 13:24:48,138 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendChatAction "HTTP/1.1 200 OK"
+2025-04-20 13:24:50,462 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendMessage "HTTP/1.1 200 OK"
+ * Serving Quart app 'config'
+ * Environment: production
+ * Please use an ASGI server (e.g. Hypercorn) directly in production
+ * Debug mode: False
+ * Running on http://0.0.0.0:5000 (CTRL + C to quit)
+[2025-04-20 13:24:50 +0100] [44202] [INFO] 127.0.0.1:35188 POST /webhook 1.1 200 20 2884873
+2025-04-20 13:24:53,094 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-04-20 13:24:53,095 - handlers.callbacks - INFO - Received callback data: create_trade
+2025-04-20 13:24:53,095 - handlers.callbacks - INFO - Starting trade creation process
+2025-04-20 13:24:53,317 - handlers.callbacks - ERROR - Error in menu callback: 'NoneType' object has no attribute 'reply_text'
+2025-04-20 13:24:53,506 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-04-20 13:24:53 +0100] [44202] [INFO] 127.0.0.1:35188 POST /webhook 1.1 200 20 596418
+[2025-04-20 13:25:21 +0100] [44202] [INFO] 127.0.0.1:43102 POST /webhook 1.1 200 20 820
+2025-04-20 13:25:25,555 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-04-20 13:25:25,555 - handlers.callbacks - INFO - Received callback data: menu
+2025-04-20 13:25:25,758 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-04-20 13:25:25 +0100] [44202] [INFO] 127.0.0.1:43102 POST /webhook 1.1 200 20 795403
+2025-04-20 13:25:29,060 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-04-20 13:25:29,060 - handlers.callbacks - INFO - Received callback data: create_trade
+2025-04-20 13:25:29,060 - handlers.callbacks - INFO - Starting trade creation process
+2025-04-20 13:25:29,361 - handlers.callbacks - ERROR - Error in menu callback: 'NoneType' object has no attribute 'reply_text'
+2025-04-20 13:25:29,572 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-04-20 13:25:29 +0100] [44202] [INFO] 127.0.0.1:43102 POST /webhook 1.1 200 20 722115
+2025-04-20 13:25:41,543 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendChatAction "HTTP/1.1 200 OK"
+2025-04-20 13:25:42,574 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendMessage "HTTP/1.1 200 OK"
+[2025-04-20 13:25:42 +0100] [44202] [INFO] 127.0.0.1:39482 POST /webhook 1.1 200 20 1612254
+2025-04-20 13:25:44,885 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-04-20 13:25:44,886 - handlers.callbacks - INFO - Received callback data: create_trade
+2025-04-20 13:25:44,886 - handlers.callbacks - INFO - Starting trade creation process
+2025-04-20 13:25:45,109 - handlers.callbacks - ERROR - Error in menu callback: 'NoneType' object has no attribute 'reply_text'
+2025-04-20 13:25:45,316 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-04-20 13:25:45 +0100] [44202] [INFO] 127.0.0.1:39482 POST /webhook 1.1 200 20 592545

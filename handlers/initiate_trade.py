@@ -80,16 +80,10 @@ async def creating_trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Get Payment Url
     # payment_url = TradeClient.get_invoice_url(trade=trade)
-    payment_url = "" # TODO: Change this entirely to web3 solution
+    payment_url = "" # Keeping empty as requested - will be implemented later
     trade = TradeClient.get_most_recent_trade(user)
 
-    if payment_url is None:
-        await context.bot.send_message(
-            chat_id=update.message.chat.id, 
-            text="❌ Unable to get payment url. Please try again"
-        )
-        return
-
+    # Skip the None check since we're using an empty string
     # Create an inline keyboard with a Forward button
     inline_keyboard = [
         [InlineKeyboardButton("Forward", switch_inline_query="")]
@@ -105,7 +99,6 @@ async def creating_trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     # Send instructions
-    # forward_instruction = "Tap and hold on the message above, then choose 'Forward' to send it to your friends."
     await context.bot.send_message(
         chat_id=update.message.from_user.id, 
         text=Messages.trade_created(trade)
@@ -115,6 +108,17 @@ async def creating_trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /trade command"""
     user_id = update.effective_user.id
+    
+    # Check if user already has a trade creation in progress
+    if context.user_data.get("trade_creation"):
+        await update.message.reply_text(
+            "❌ You already have a trade creation in progress. "
+            "Please complete it or use /cancel to start over.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
+        )
+        return
     
     # Check if user is already involved in an active trade
     active_trade = trades_db.get_active_trade_by_user_id(str(user_id))
@@ -143,6 +147,7 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def handle_trade_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the trade amount input"""
+    # Only handle if this user is in the amount step
     if not context.user_data.get("trade_creation", {}).get("step") == "amount":
         return
     
@@ -204,14 +209,16 @@ async def handle_trade_description(update: Update, context: ContextTypes.DEFAULT
     trade_data = context.user_data["trade_creation"]
     
     # Create the trade
-    trade = create_trade(
-        seller_id=update.effective_user.id,
-        amount=trade_data["amount"],
-        currency=trade_data["currency"],
-        description=description
+    trade = trades_db.open_new_trade(
+        update.message,
+        currency=trade_data["currency"]
     )
     
     if trade:
+        # Update the trade with the amount and description
+        trades_db.add_price(UserClient.get_user_by_id(update.effective_user.id), trade_data["amount"])
+        trades_db.add_terms(UserClient.get_user_by_id(update.effective_user.id), description)
+        
         # Clear trade creation data
         context.user_data.pop("trade_creation", None)
         
@@ -220,8 +227,8 @@ async def handle_trade_description(update: Update, context: ContextTypes.DEFAULT
             f"✅ Trade created successfully!\n\n"
             f"📋 <b>Trade Details</b>\n"
             f"ID: <code>{trade['_id']}</code>\n"
-            f"Amount: {trade['amount']} {trade['currency']}\n"
-            f"Description: {trade['description']}\n\n"
+            f"Amount: {trade_data['amount']} {trade_data['currency']}\n"
+            f"Description: {description}\n\n"
             f"Share this trade ID with the buyer to complete the transaction.",
             parse_mode="html",
             reply_markup=InlineKeyboardMarkup([[
@@ -237,16 +244,46 @@ async def handle_trade_description(update: Update, context: ContextTypes.DEFAULT
         )
 
 
+async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancel the current operation and clear user data"""
+    if "trade_creation" in context.user_data:
+        context.user_data.pop("trade_creation")
+        await update.message.reply_text(
+            "✅ Trade creation cancelled.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
+        )
+    else:
+        await update.message.reply_text(
+            "Nothing to cancel.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+            ]])
+        )
+
+
 def register_handlers(application):
     """Register handlers for the initiate trade module"""
     application.add_handler(CommandHandler("trade", initiate_trade_handler))
+    application.add_handler(CommandHandler("cancel", cancel_handler))
+    
+    # Use custom filter to only handle messages when the user is in the amount step
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE & 
+        (lambda update: update.effective_user and
+         application.user_data.get(update.effective_user.id, {}).get("trade_creation", {}).get("step") == "amount"),
         handle_trade_amount
     ))
+    
+    # Handle currency selection via callback query
     application.add_handler(CallbackQueryHandler(handle_trade_currency, pattern="^currency_"))
+    
+    # Use custom filter to only handle messages when the user is in the description step
     application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE &
+        (lambda update: update.effective_user and
+         application.user_data.get(update.effective_user.id, {}).get("trade_creation", {}).get("step") == "description"),
         handle_trade_description
     ))
 
