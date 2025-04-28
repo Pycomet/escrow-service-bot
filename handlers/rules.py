@@ -2,84 +2,134 @@ from config import *
 from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
+from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
+RULES_TEXT = """
+📜 <b>Escrow Service Rules</b>
+
+1️⃣ <b>General Rules</b>
+• All trades must be conducted through the bot
+• Be respectful to other users
+• No fraudulent activities
+• Keep communication clear and professional
+
+2️⃣ <b>Trade Rules</b>
+• Verify trade details before confirming
+• Only join trades you can complete
+• Follow payment instructions carefully
+• Report any issues immediately
+
+3️⃣ <b>Payment Rules</b>
+• Use only supported payment methods
+• Never share payment details in chat
+• Wait for confirmation before releasing funds
+• Keep payment receipts
+
+4️⃣ <b>Dispute Resolution</b>
+• Report disputes within 24 hours
+• Provide evidence when requested
+• Follow moderator instructions
+• Accept final decisions
+
+5️⃣ <b>Security</b>
+• Never share your private keys
+• Use secure payment methods
+• Report suspicious activity
+• Enable 2FA when available
+
+❗️ Violation of these rules may result in account suspension.
+"""
 
 async def rules_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /rules command"""
-    rules_text = (
-        "📜 <b>Escrow Service Rules</b>\n\n"
-        "1. <b>General Rules</b>\n"
-        "• All trades must be conducted through our escrow service\n"
-        "• Both parties must agree to the terms before starting a trade\n"
-        "• Payments must be made within the specified time frame\n\n"
-        
-        "2. <b>Seller Responsibilities</b>\n"
-        "• Provide accurate description of goods/services\n"
-        "• Deliver goods/services as agreed\n"
-        "• Respond to buyer inquiries promptly\n\n"
-        
-        "3. <b>Buyer Responsibilities</b>\n"
-        "• Make payment within the agreed time frame\n"
-        "• Verify goods/services upon receipt\n"
-        "• Report any issues promptly\n\n"
-        
-        "4. <b>Dispute Resolution</b>\n"
-        "• All disputes must be reported through the bot\n"
-        "• Provide evidence to support your claim\n"
-        "• Allow reasonable time for resolution\n\n"
-        
-        "5. <b>Fees and Payments</b>\n"
-        "• Service fees are clearly displayed before trade\n"
-        "• Payments are held in escrow until completion\n"
-        "• Refunds are processed according to our policy\n\n"
-        
-        "6. <b>Prohibited Activities</b>\n"
-        "• Fraudulent transactions\n"
-        "• Misrepresentation of goods/services\n"
-        "• Attempting to bypass the escrow service\n"
-        "• Harassment or abusive behavior\n\n"
-        
-        "By using our service, you agree to these rules. "
-        "Violations may result in account suspension or permanent ban."
-    )
-    
-    await update.message.reply_text(
-        rules_text,
-        parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-        ]])
-    )
+    try:
+        # Check if this is from a callback query or direct command
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(
+                RULES_TEXT,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        else:
+            await update.message.reply_text(
+                RULES_TEXT,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+    except Exception as e:
+        logger.error(f"Error in rules handler: {e}")
+        # Determine which message object to use
+        message = update.callback_query.message if update.callback_query else update.message
+        if message:
+            await message.reply_text(
+                "❌ An error occurred while displaying the rules. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
 
 async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /community command"""
-    community_text = (
-        "👥 <b>Join Our Community</b>\n\n"
-        "Connect with other users and stay updated:\n\n"
-        "📢 <b>Official Channel:</b>\n"
-        "@trusted_escrow_bot_updates\n\n"
-        "💬 <b>Discussion Group:</b>\n"
-        "@trusted_escrow_bot_group\n\n"
-        "📱 <b>Reviews Channel:</b>\n"
-        "@trusted_escrow_bot_reviews\n\n"
-        "Follow us for:\n"
-        "• Latest updates and features\n"
-        "• Community discussions\n"
-        "• User reviews and testimonials\n"
-        "• Support and assistance"
-    )
-    
-    await update.message.reply_text(
-        community_text,
-        parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📢 Join Channel", url="https://t.me/trusted_escrow_bot_updates")],
-            [InlineKeyboardButton("💬 Join Group", url="https://t.me/trusted_escrow_bot_group")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-        ])
-    )
+    try:
+        community_text = """
+🌐 <b>Join Our Community</b>
+
+Stay connected with our growing community:
+
+📢 <b>Official Channels</b>
+• Announcements: @escrow_announcements
+• Support Group: @escrow_support
+• Trading Group: @escrow_trading
+
+🤝 <b>Community Guidelines</b>
+• Be respectful to others
+• No spam or advertising
+• Keep discussions relevant
+• Follow moderator instructions
+
+Join us to:
+• Get trading tips
+• Find trading partners
+• Stay updated on features
+• Get community support
+"""
+        # Check if this is from a callback query or direct command
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(
+                community_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        else:
+            await update.message.reply_text(
+                community_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+    except Exception as e:
+        logger.error(f"Error in community handler: {e}")
+        # Determine which message object to use
+        message = update.callback_query.message if update.callback_query else update.message
+        if message:
+            await message.reply_text(
+                "❌ An error occurred while displaying community information. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
 
 def register_handlers(application):

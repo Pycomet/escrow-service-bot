@@ -7,11 +7,13 @@ from handlers.initiate_trade import initiate_trade_handler
 from handlers.join import join_handler
 from handlers.report import report_handler
 from handlers.rules import community_handler, rules_handler
+from handlers.review import review_handler
 from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
+from utils.keyboard import trade_type_menu
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,13 +21,12 @@ logger = logging.getLogger(__name__)
 # Callback Handlers
 async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle menu-related callback queries"""
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    
     try:
-        query = update.callback_query
-        await query.answer()
-        
-        data = query.data
-        logger.info(f"Received callback data: {data}")
-        
         if data == "menu":
             # Show main menu
             await query.edit_message_text(
@@ -36,9 +37,44 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             )
         
         elif data == "create_trade":
-            # Start trade creation process
+            # Start trade creation process using edit_message instead of expecting a reply_text
             logger.info("Starting trade creation process")
-            await initiate_trade_handler(update, context)
+            user_id = update.effective_user.id
+            
+            # Check if user already has a trade creation in progress
+            if context.user_data.get("trade_creation"):
+                await query.edit_message_text(
+                    "❌ You already have a trade creation in progress. "
+                    "Please complete it or use /cancel to start over.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    ]])
+                )
+                return
+            
+            # Check if user is already involved in an active trade
+            active_trade = trades_db.get_active_trade_by_user_id(str(user_id))
+            if active_trade:
+                await query.edit_message_text(
+                    f"❌ You already have an active trade (#{active_trade['_id']}). "
+                    "Please complete or cancel your current trade before starting a new one.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    ]])
+                )
+                return
+            
+            # Start trade creation process - now ask for trade type first
+            keyboard = await trade_type_menu()
+            
+            await query.edit_message_text(
+                "📝 Let's create a new trade!\n\n"
+                "Please select the type of trade you want to create:",
+                reply_markup=keyboard
+            )
+            
+            # Set state to wait for trade type selection
+            context.user_data["trade_creation"] = {"step": "select_trade_type"}
         
         elif data == "join_trade":
             # Start trade joining process

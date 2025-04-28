@@ -14,12 +14,14 @@ class TradeClient:
 
     @staticmethod
     def open_new_trade(
-        msg, currency: str = "USD", chat: str | None = None
+        msg, currency: str = "USD", chat: str | None = None, trade_type: str = "CryptoToCrypto"
     ) -> TradeType:
         """
         Returns a new trade without Agent
         """
         user: UserType = UserClient.get_user(msg)
+
+        print(user.keys())
 
         trade: TradeType = {
             "_id": generate_id(),
@@ -32,8 +34,8 @@ class TradeClient:
             "currency": "USD",
             "invoice_id": "",
             "is_completed": False,
-            "invoice_id": "",
             "chat": chat,
+            "trade_type": trade_type,
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
         }
@@ -64,22 +66,19 @@ class TradeClient:
     @staticmethod
     def get_active_trade_by_user_id(user_id: str) -> Optional[TradeType]:
         "Get the most recent active trade created by this user"
-        active_trade = (
-            db.trades.find(
-                {
-                    "$or": [
-                        {"seller_id": user_id},
-                        {"buyer_id": user_id},
-                    ]
-                },
-                {
-                    "is_active": True,
-                }
-            )
-            .sort([("created_at", -1)])
-            .limit(1)
-        )
-        return active_trade[0] if active_trade else None
+        active_trade_cursor = db.trades.find(
+            {
+                "$or": [
+                    {"seller_id": user_id},
+                    {"buyer_id": user_id},
+                ],
+                "is_active": True
+            }
+        ).sort([("created_at", -1)]).limit(1)
+        
+        active_trades = list(active_trade_cursor)
+        logging.info(f"Active trades: {active_trades}")
+        return active_trades[0] if active_trades else None
 
 
     @staticmethod
@@ -178,10 +177,16 @@ class TradeClient:
     @staticmethod
     def get_trades(user_id: str):
         "Retrun list of trades the user is in"
-        sells = db.trades.find({"seller_id": user_id})
-        buys = db.trades.find({"buyer_id": user_id})
+        sells_cursor = db.trades.find({"seller_id": user_id})
+        buys_cursor = db.trades.find({"buyer_id": user_id})
 
-        return list(sells), list(buys)
+        sells = list(sells_cursor)
+        buys = list(buys_cursor)
+
+        logger.info(f"Sells: {sells}")
+        logger.info(f"Buys: {buys}")
+
+        return sells + buys
 
     @staticmethod
     def get_trades_report(sells: list, buys: list):
@@ -256,3 +261,96 @@ class TradeClient:
             )
             return True
         return False
+
+    @staticmethod
+    def reset_all_active_trades() -> int:
+        """Reset all active trades to inactive state
+        
+        Returns the number of trades that were reset
+        """
+        result = db.trades.update_many(
+            {"is_active": True},
+            {"$set": {"is_active": False, "updated_at": datetime.now()}}
+        )
+        return result.modified_count
+        
+    @staticmethod
+    def get_all_active_trades():
+        """Get all active trades in the database
+        
+        Returns a list of all active trades
+        """
+        active_trades_cursor = db.trades.find({"is_active": True})
+        return list(active_trades_cursor)
+
+    @staticmethod
+    def get_active_market_shops():
+        """Get all active market shops"""
+        shops = db.trades.find({
+            "trade_type": "MarketShop",
+            "is_active": True,
+            "buyer_id": ""  # No buyer yet
+        }).sort([("created_at", -1)])
+        return list(shops)
+
+    @staticmethod
+    def get_trade_by_invoice_id(invoice_id: str) -> TradeType | None:
+        """Get trade by invoice ID"""
+        trade = db.trades.find_one({"invoice_id": invoice_id})
+        return trade
+
+    @staticmethod
+    def update_trade_status(trade_id: str, status: str) -> bool:
+        """Update trade status"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "status": status,
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error updating trade status: {e}")
+            return False
+
+    @staticmethod
+    def confirm_crypto_deposit(trade_id: str) -> bool:
+        """Confirm crypto deposit for a trade"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "is_crypto_deposited": True,
+                        "crypto_deposit_time": datetime.now(),
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error confirming crypto deposit: {e}")
+            return False
+
+    @staticmethod
+    def confirm_fiat_payment(trade_id: str) -> bool:
+        """Confirm fiat payment for a trade"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "is_fiat_paid": True,
+                        "fiat_payment_time": datetime.now(),
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error confirming fiat payment: {e}")
+            return False

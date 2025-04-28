@@ -1,6 +1,7 @@
 from config import *
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
+from typing import Optional
 import emoji
 
 async def main_menu(update=None, context=None):
@@ -95,17 +96,6 @@ def agent_menu(balance):
     ])
     return keyboard
 
-
-def local_currency_menu():
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(
-            text=emoji.emojize("🇺🇸 US Dollars (USD)"),
-            callback_data="dollar",
-        )]
-    ])
-    return keyboard
-
-
 def give_verdict():
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(text="Approve Transaction 👍", callback_data="verdict")],
@@ -178,16 +168,45 @@ def review_menu():
     return keyboard
 
 
-def currency_menu():
+def currency_menu(type: Optional[str]):
     """Return currency selection menu"""
+
+    if type == "crypto":
+        currencies = [
+            ("₮ USDT", "currency_USDT"),
+            ("₿ BTC", "currency_BTC"),
+            ("Ξ ETH", "currency_ETH")
+        ]
+    else:
+        currencies = [
+            ("🇺🇸 USD", "currency_USD"),
+            ("🇪🇺 EUR", "currency_EUR"),
+            ("🇬🇧 GBP", "currency_GBP"),
+            ("🇯🇵 JPY", "currency_JPY")
+        ]
+
+    # Build buttons (2 per row)
+    buttons = [
+        [InlineKeyboardButton(text, callback_data=data) for text, data in currencies[i:i+2]]
+        for i in range(0, len(currencies), 2)
+    ]
+
+    # Add the cancel button at the end
+    buttons.append([InlineKeyboardButton("🔙 Cancel", callback_data="menu")])
+
+    return InlineKeyboardMarkup(buttons)
+
+
+async def trade_type_menu():
+    """Return trade type selection menu"""
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🇺🇸 USD", callback_data="currency_USD"),
-            InlineKeyboardButton("🇪🇺 EUR", callback_data="currency_EUR")
+            InlineKeyboardButton("💰 Crypto → Fiat", callback_data="trade_type_CryptoToFiat"),
+            InlineKeyboardButton("💱 Crypto → Crypto", callback_data="trade_type_Disabled")
         ],
         [
-            InlineKeyboardButton("🇬🇧 GBP", callback_data="currency_GBP"),
-            InlineKeyboardButton("🇯🇵 JPY", callback_data="currency_JPY")
+            InlineKeyboardButton("🛒 Crypto → Product", callback_data="trade_type_Disabled"),
+            InlineKeyboardButton("🔒 Market Shop ", callback_data="trade_type_TradeOffer")
         ],
         [InlineKeyboardButton("🔙 Cancel", callback_data="menu")]
     ])

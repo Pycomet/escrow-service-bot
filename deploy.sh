@@ -15,10 +15,10 @@ fi
 
 # Build and deploy using docker-compose
 echo "🔨 Building Docker image..."
-docker-compose build
+docker compose build
 
 echo "🏃 Starting Docker container..."
-docker-compose up -d
+docker compose up -d
 
 echo "✅ Deployment complete!"
 echo "ℹ️ To check container status: docker-compose ps"

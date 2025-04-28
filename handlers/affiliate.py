@@ -3,7 +3,33 @@ from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, MessageHandler, filters, CommandHandler, CallbackQueryHandler
+import logging
+import random
+import string
 
+def generate_affiliate_code(length=8):
+    """Generate a random affiliate code"""
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
+def get_affiliate_code(user_id):
+    """Get or create an affiliate code for a user"""
+    try:
+        # Check if user already has an affiliate code
+        user = trades_db.get_user(user_id)
+        if user and user.get('affiliate_code'):
+            return user['affiliate_code']
+        
+        # Generate new affiliate code
+        affiliate_code = generate_affiliate_code()
+        
+        # Save affiliate code to user
+        trades_db.update_user(user_id, {'affiliate_code': affiliate_code})
+        
+        return affiliate_code
+    except Exception as e:
+        logger.error(f"Error getting affiliate code: {e}")
+        return None
 
 async def start_affiliate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -84,36 +110,79 @@ async def add_addresses(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def affiliate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /affiliate command"""
-    user_id = update.effective_user.id
-    
-    # Get user's affiliate code
-    affiliate_code = get_affiliate_code(user_id)
-    if not affiliate_code:
-        # Generate new affiliate code if user doesn't have one
-        affiliate_code = generate_affiliate_code(user_id)
-    
-    # Create affiliate link
-    bot_username = (await context.bot.get_me()).username
-    affiliate_link = f"https://t.me/{bot_username}?start={affiliate_code}"
-    
-    # Get affiliate stats
-    stats = get_affiliate_stats(user_id)
-    
-    await update.message.reply_text(
-        f"🎯 <b>Your Affiliate Program</b>\n\n"
-        f"Your unique affiliate code: <code>{affiliate_code}</code>\n"
-        f"Your affiliate link: {affiliate_link}\n\n"
-        f"📊 <b>Statistics:</b>\n"
-        f"Total referrals: {stats['total_referrals']}\n"
-        f"Active referrals: {stats['active_referrals']}\n"
-        f"Total earnings: ${stats['total_earnings']:.2f}\n\n"
-        f"Share your affiliate link with others and earn a commission for each successful trade they complete!",
-        parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔗 Copy Link", callback_data=f"copy_link_{affiliate_link}"),
-            InlineKeyboardButton("📊 View Stats", callback_data="affiliate_stats")
-        ]])
-    )
+    try:
+        user_id = update.effective_user.id
+        
+        # Get user's affiliate code
+        affiliate_code = get_affiliate_code(user_id)
+        if not affiliate_code:
+            raise Exception("Failed to generate affiliate code")
+        
+        # Get user's affiliate stats
+        stats = trades_db.get_affiliate_stats(user_id)
+        referrals = stats.get('referrals', 0)
+        earnings = stats.get('earnings', 0)
+        
+        affiliate_text = f"""
+🎯 <b>Affiliate Program</b>
+
+Your unique affiliate code: <code>{affiliate_code}</code>
+
+📊 <b>Your Stats</b>
+• Total Referrals: {referrals}
+• Total Earnings: {earnings} USDT
+
+💰 <b>How It Works</b>
+• Share your affiliate code with others
+• Earn 20% of our fees from their trades
+• Get paid automatically in USDT
+• No minimum payout threshold
+
+🔄 <b>Commission Structure</b>
+• Level 1 (Direct): 20%
+• Level 2 (Indirect): 5%
+• Lifetime commissions
+• Instant payouts
+
+📱 <b>Share Your Link</b>
+https://t.me/{context.bot.username}?start=ref_{affiliate_code}
+
+Start sharing and earning today! 💪
+"""
+        
+        # Check if this is from a callback query or direct command
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(
+                affiliate_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📤 Share", switch_inline_query=f"Join using my code: {affiliate_code}")],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                ])
+            )
+        else:
+            await update.message.reply_text(
+                affiliate_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📤 Share", switch_inline_query=f"Join using my code: {affiliate_code}")],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                ])
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in affiliate handler: {e}")
+        # Determine which message object to use
+        message = update.callback_query.message if update.callback_query else update.message
+        if message:
+            await message.reply_text(
+                "❌ An error occurred while accessing affiliate information. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
 
 async def handle_affiliate_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

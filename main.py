@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.error import TelegramError
 from config import *
 from handlers import *
+from handlers.webhook import process_merchant_webhook
 from utils import *
 from functions import *
 
@@ -52,6 +53,40 @@ async def startup():
         await application.initialize()
         await application.start()
         register_handlers()
+        
+        # Set webhook if in webhook mode
+        if WEBHOOK_MODE and WEBHOOK_URL:
+            logger.info("Checking for existing webhooks...")
+            webhook_info = await application.bot.get_webhook_info()
+            if webhook_info.url:
+                logger.info(f"Found existing webhook: {webhook_info.url}, removing it...")
+                await application.bot.delete_webhook()
+            
+            logger.info(f"Setting webhook to {WEBHOOK_URL}")
+            await application.bot.set_webhook(
+                url=WEBHOOK_URL,
+                allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
+                drop_pending_updates=True,
+                max_connections=40
+            )
+            logger.info("Webhook set successfully")
+            
+            # Verify webhook was set correctly
+            webhook_info = await application.bot.get_webhook_info()
+            if webhook_info.url == WEBHOOK_URL:
+                logger.info("Webhook verification successful")
+            else:
+                logger.warning(f"Webhook verification failed. Expected: {WEBHOOK_URL}, Got: {webhook_info.url}")
+        else:
+            logger.info("Webhook mode is disabled")
+
+        # Reset all active trades when the bot starts
+        reset_count = trades_db.reset_all_active_trades()
+        if reset_count > 0:
+            logger.info(f"Reset {reset_count} active trades on startup")
+        else:
+            logger.info("No active trades to reset")
+        
         logger.info("Bot started successfully")
     except Exception as e:
         logger.error(f"Failed to start bot: {e}")
@@ -117,16 +152,46 @@ async def set_webhook():
         if not WEBHOOK_URL:
             return jsonify({"status": "error", "message": "WEBHOOK_URL not configured"}), 400
         
+        # Delete any existing webhook
+        logger.info("Removing any existing webhook...")
+        await application.bot.delete_webhook()
+        
         # Set webhook with additional parameters for better security and functionality
+        logger.info(f"Setting webhook to {WEBHOOK_URL}")
         await application.bot.set_webhook(
             url=WEBHOOK_URL,
             allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
             drop_pending_updates=True,
             max_connections=40
         )
-        return jsonify({"status": "success", "message": f"Webhook set to {WEBHOOK_URL}"}), 200
+        
+        # Verify webhook was set correctly
+        webhook_info = await application.bot.get_webhook_info()
+        webhook_status = "success" if webhook_info.url == WEBHOOK_URL else "warning"
+        webhook_message = f"Webhook set to {WEBHOOK_URL}"
+        
+        if webhook_status == "warning":
+            webhook_message += f" but verification shows {webhook_info.url}"
+        
+        return jsonify({"status": webhook_status, "message": webhook_message}), 200
     except Exception as e:
         logger.error(f"Error setting webhook: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/pay', methods=['POST'])
+async def handle_payment_webhook():
+    """Handle payment webhook from merchant"""
+    try:
+        if not application.running:
+            await application.initialize()
+            await application.start()
+            register_handlers()
+        
+        result = await process_merchant_webhook(application.bot)
+        return result
+    except Exception as e:
+        logger.error(f"Error processing payment webhook: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
