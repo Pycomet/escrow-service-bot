@@ -70,7 +70,7 @@ start_services() {
 
     # Start ngrok
     echo "Starting ngrok..."
-    nohup ngrok http 5000 > ngrok.log 2>&1 &
+    nohup ngrok http 8000 > ngrok.log 2>&1 &
     NGROK_PID=$!
 
     # Wait for ngrok to start
@@ -87,7 +87,7 @@ start_services() {
     # Set environment variables
     export WEBHOOK_MODE=true
     export WEBHOOK_URL="${NGROK_URL}/webhook"
-    export PORT=5000
+    export PORT=8000
 
     # Set the webhook with Telegram
     if [ -z "$TOKEN" ]; then

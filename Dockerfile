@@ -6,6 +6,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONNUMBUFFERED 1
 ENV PYTHONUNBUFFERED 1
+ENV PORT 8080
 
 # install system dependencies
 RUN apt-get update \
@@ -23,10 +24,10 @@ COPY . .
 # Create and set permissions for log file
 RUN touch /app/bot.log && chmod 666 /app/bot.log
 
-EXPOSE 5000
-
 # Use a shell script to handle signals properly
 COPY ./entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+EXPOSE ${PORT}
 
 ENTRYPOINT ["/app/entrypoint.sh"]

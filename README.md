@@ -234,7 +234,7 @@ DATABASE_NAME=your_database_name
 # Webhook Configuration
 WEBHOOK_MODE=false  # Set to true for production
 WEBHOOK_URL=https://your-domain.com/webhook  # Required when WEBHOOK_MODE=true
-PORT=5000
+PORT=8000
 ```
 
 ## Running the Bot
@@ -294,7 +294,7 @@ curl http://localhost:4040/api/tunnels
 
 5. Check bot health:
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:8000/health
 ```
 
 6. Check webhook status:
@@ -320,7 +320,7 @@ curl http://localhost:4040/api/tunnels
 
 3. Check bot health:
 ```bash
-curl http://localhost:5000/health
+curl http://localhost:8000/health
 ```
 
 4. Check webhook status:

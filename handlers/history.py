@@ -3,6 +3,7 @@ from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from utils.trade_status import get_trade_status, format_trade_status
 import logging
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ async def send_message_or_edit(message, text, reply_markup, is_callback=False, p
 async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /history command"""
     try:
-        user_id = update.effective_user.id
+        user_id = str(update.effective_user.id)
         is_callback = bool(update.callback_query)
         message = update.callback_query.message if is_callback else update.message
         
@@ -57,20 +58,15 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     trade_id = str(trade.get('_id', ''))
                     amount = str(trade.get('amount', '0'))
                     currency = str(trade.get('currency', 'Unknown'))
-                    status = str(trade.get('status', 'unknown')).lower()
+                    status, status_emoji = get_trade_status(trade)
                 else:
                     # Assuming trade is a list with ordered values
                     trade_id = str(trade[0]) if len(trade) > 0 else ''
                     amount = str(trade[1]) if len(trade) > 1 else '0'
                     currency = str(trade[2]) if len(trade) > 2 else 'Unknown'
-                    status = str(trade[3]).lower() if len(trade) > 3 else 'unknown'
-                
-                status_emoji = {
-                    "pending": "⏳",
-                    "completed": "✅",
-                    "disputed": "⚠️",
-                    "cancelled": "❌"
-                }.get(status, "❓")
+                    # For list format, we'll use a simple pending/completed status
+                    status = 'completed' if len(trade) > 3 and trade[3] else 'pending'
+                    status_emoji = '✅' if status == 'completed' else '⏳'
                 
                 keyboard.append([
                     InlineKeyboardButton(
@@ -131,19 +127,15 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
                 )
                 return
             
-            # Format trade details
-            status = str(trade.get('status', 'unknown')).lower()
-            status_emoji = {
-                "pending": "⏳",
-                "completed": "✅",
-                "disputed": "⚠️",
-                "cancelled": "❌"
-            }.get(status, "❓")
+            # Get trade status and emoji
+            status, status_emoji = get_trade_status(trade)
+            formatted_status = format_trade_status(status)
             
             details = (
                 f"📋 <b>Trade Details</b>\n\n"
                 f"ID: <code>{trade.get('_id', 'Unknown')}</code>\n"
-                f"Status: {status_emoji} {status.title()}\n"
+                f"Type: {trade.get('trade_type', 'Unknown')}\n"
+                f"Status: {status_emoji} {formatted_status}\n"
                 f"Amount: {trade.get('amount', '0')} {trade.get('currency', 'Unknown')}\n"
                 f"Created: {trade.get('created_at', 'Unknown')}\n"
                 f"Updated: {trade.get('updated_at', 'Unknown')}\n\n"
@@ -155,7 +147,8 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
             # Add action buttons based on trade status
             keyboard = [[InlineKeyboardButton("🔙 Back to History", callback_data="history")]]
             
-            if status == "pending":
+            # Only show action buttons for non-completed trades
+            if status not in ['completed', 'cancelled']:
                 if str(trade.get("seller_id")) == str(query.from_user.id):
                     keyboard.append([InlineKeyboardButton("❌ Cancel Trade", callback_data=f"delete_trade_{trade_id}")])
                 elif str(trade.get("buyer_id")) == str(query.from_user.id):

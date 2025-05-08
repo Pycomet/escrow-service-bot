@@ -10,78 +10,86 @@ logger = logging.getLogger(__name__)
 
 async def handle_invoice_paid_webhook(data, bot: Bot):
     "Response to when the invoice has been paid"
-    logger.info(f"Processing invoice paid webhook for invoice: {data['invoiceId']}")
-    trade: TradeType = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
-    
-    TradeClient.handle_invoice_paid(data["invoiceId"])
-    logger.info(f"Trade {trade['_id']} marked as paid")
+    try:
+        logger.info(f"Processing invoice paid webhook for invoice: {data['invoiceId']}")
+        trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
+        
+        if not trade:
+            logger.error(f"No trade found for invoice ID: {data['invoiceId']}")
+            return False
+            
+        TradeClient.handle_invoice_paid(data["invoiceId"])
+        logger.info(f"Trade {trade['_id']} marked as paid")
 
-    # Notify the seller to fulfill their agreed terms and wait for the buyer's approval
-    seller_notification = (
-        f"🚀 Congratulations! Trade <b>({trade['_id']})</b> has been paid, and you're one step closer to completion. "
-        "Please fulfill your agreed terms, and once done, request the buyer to approve the transaction on the bot. "
-        "Upon approval, the payment will be released to you."
-    )
-    await bot.send_message(
-        chat_id=trade["seller_id"],
-        text=seller_notification,
-        parse_mode="html",
-        reply_markup=review_menu(),
-    )
-    logger.info(f"Sent payment notification to seller {trade['seller_id']}")
+        # Convert IDs to integers and validate
+        try:
+            seller_id = int(trade["seller_id"])
+            buyer_id = int(trade["buyer_id"]) if trade.get("buyer_id") else None
+        except (ValueError, TypeError) as e:
+            logger.error(f"Invalid user IDs in trade {trade['_id']}: {e}")
+            return False
 
-    # Notify the buyer to approve the transaction
-    approval_message = (
-        f"🎉 Payment of <b>{trade['price']} {trade['currency']}</b> on trade <b>({trade['_id']})</b> has been successfully completed! "
-        "Please review the terms of the trade and click the button below to approve the transaction. "
-        "Your payment will be released to the seller upon approval."
-    )
+        if not seller_id:
+            logger.error(f"No seller_id found for trade {trade['_id']}")
+            return False
 
-    await bot.send_message(
-        chat_id=trade["buyer_id"],
-        text=approval_message,
-        reply_markup=give_verdict(),
-        parse_mode="html",
-    )
-    logger.info(f"Sent approval request to buyer {trade['buyer_id']}")
+        # Notify the seller
+        seller_notification = (
+            f"🚀 Congratulations! Trade <b>({trade['_id']})</b> has been paid, and you're one step closer to completion. "
+            "Please fulfill your agreed terms, and once done, request the buyer to approve the transaction on the bot. "
+            "Upon approval, the payment will be released to you."
+        )
+        try:
+            await bot.send_message(
+                chat_id=seller_id,
+                text=seller_notification,
+                parse_mode="html",
+                reply_markup=review_menu(),
+            )
+            logger.info(f"Sent payment notification to seller {seller_id}")
+        except Exception as e:
+            logger.error(f"Failed to send notification to seller {seller_id}: {e}")
 
-    completion_message = (
-        f"🎉 New Trade Completed! <b>{trade['_id']}</b> \n\n"
-        "✅ The trade has been successfully completed. Buyers and sellers have been notified.\n"
-        "Thank you for using our platform!"
-    )
+        # Notify the buyer if available
+        if buyer_id:
+            approval_message = (
+                f"🎉 Payment of <b>{trade['price']} {trade['currency']}</b> on trade <b>({trade['_id']})</b> has been successfully completed! "
+                "Please review the terms of the trade and click the button below to approve the transaction. "
+                "Your payment will be released to the seller upon approval."
+            )
+            try:
+                await bot.send_message(
+                    chat_id=buyer_id,
+                    text=approval_message,
+                    reply_markup=give_verdict(),
+                    parse_mode="html",
+                )
+                logger.info(f"Sent approval request to buyer {buyer_id}")
+            except Exception as e:
+                logger.error(f"Failed to send notification to buyer {buyer_id}: {e}")
 
-    await bot.send_message(
-        chat_id="@trusted_escrow_bot_reviews",
-        text=completion_message,
-        parse_mode="html",
-        disable_web_page_preview=True,
-    )
-    logger.info("Trade completion announcement sent to review channel")
+        # Send announcement to review channel
+        try:
+            completion_message = (
+                f"🎉 New Trade Completed! <b>{trade['_id']}</b> \n\n"
+                "✅ The trade has been successfully completed. Buyers and sellers have been notified.\n"
+                "Thank you for using our platform!"
+            )
+            await bot.send_message(
+                chat_id="@trusted_escrow_bot_reviews",
+                text=completion_message,
+                parse_mode="html",
+                disable_web_page_preview=True,
+            )
+            logger.info("Trade completion announcement sent to review channel")
+        except Exception as e:
+            logger.error(f"Failed to send announcement to review channel: {e}")
 
-    # # Notify the buyer that the trade has been successfully completed
-    # await bot.send_message(
-    #     chat_id=trade['buyer_id'],
-    #     text=f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
-    #     "Thank you for your payment. If you have any further questions or need assistance, feel free to reach out. "
-    #     "We appreciate your business!",
-    #     reply_markup=review_menu(),
-    #     parse_mode="html"
-    # )
-
-    # # Notify the seller that the trade has been successfully completed
-    # await bot.send_message(
-    #     chat_id=trade.seller_id,
-    #     text=f"🎉 Trade <b>({trade.id})</b> has been successfully completed! "
-    #     f"Payment of {trade.currency} {trade.amount} has been received. "
-    #     "If you have any further questions or need assistance, feel free to reach out. "
-    #     "We appreciate your business!",
-    #     reply_markup=review_menu(),
-    #     parse_mode="html"
-    # )
-
-    # logger.info("Invoice payment webhook processed successfully")
-    return True
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error in handle_invoice_paid_webhook: {e}", exc_info=True)
+        return False
 
 
 async def handle_payment_received_webhook(data, bot: Bot):

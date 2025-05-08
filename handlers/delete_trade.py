@@ -3,15 +3,16 @@ from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from functions.trade import TradeClient
 
 
 async def delete_trade_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /delete_trade command"""
-    user_id = update.effective_user.id
+    user_id = str(update.effective_user.id)
     
     # Get user's active trades
-    active_trades = get_active_trades_by_user_id(user_id)
-    if not active_trades:
+    active_trade = TradeClient.get_active_trade_by_user_id(user_id)
+    if not active_trade:
         await update.message.reply_text(
             "❌ You don't have any active trades to delete.",
             reply_markup=InlineKeyboardMarkup([[
@@ -20,15 +21,13 @@ async def delete_trade_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
     
-    # Create keyboard with trade options
-    keyboard = []
-    for trade in active_trades[:5]:  # Limit to 5 most recent trades
-        keyboard.append([
-            InlineKeyboardButton(
-                f"Trade #{trade['_id']} - {trade['amount']} {trade['currency']}",
-                callback_data=f"delete_trade_{trade['_id']}"
-            )
-        ])
+    # Create keyboard with trade option
+    keyboard = [[
+        InlineKeyboardButton(
+            f"Trade #{active_trade['_id']} - {active_trade['price']} {active_trade['currency']}",
+            callback_data=f"delete_trade_{active_trade['_id']}"
+        )
+    ]]
     
     keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")])
     

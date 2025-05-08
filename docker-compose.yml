@@ -5,7 +5,7 @@ services:
     build:
       context: .
     ports:
-      - "5000:5000"
+      - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
       - TOKEN=${TOKEN}
@@ -19,7 +19,7 @@ services:
       - BTCPAY_API_KEY=${BTCPAY_API_KEY}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

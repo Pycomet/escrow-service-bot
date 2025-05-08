@@ -373,7 +373,7 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
         )
         return
 
-    elif trade_type not in TradeTypeEnums:
+    elif trade_type not in [e.value for e in TradeTypeEnums]:
         await query.message.edit_text(
             "❌ Invalid trade type selected. Please start over with /trade",
             reply_markup=InlineKeyboardMarkup([[

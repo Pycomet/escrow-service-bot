@@ -22,11 +22,11 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-if [ "$WEBHOOK_MODE" = "True" ] && [ -z "$WEBHOOK_URL" ]; then
-  echo "ERROR: WEBHOOK_MODE is True but WEBHOOK_URL is not set. Exiting."
+if [ -z "$WEBHOOK_URL" ]; then
+  echo "ERROR: WEBHOOK_URL is not set. Exiting."
   exit 1
 fi
 
-# Start the application
+# Start the application with Hypercorn
 echo "Starting the application..."
-exec python main.py 
+exec hypercorn main:app --bind 0.0.0.0:${PORT:-8080} --workers 2 

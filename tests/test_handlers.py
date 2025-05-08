@@ -50,10 +50,12 @@ async def test_initiate_trade_handler(mock_update, mock_context):
         
         # Check if context was updated correctly
         assert "trade_creation" in mock_context.user_data
-        assert mock_context.user_data["trade_creation"]["step"] == "amount"
+        assert mock_context.user_data["trade_creation"]["step"] == "select_trade_type"
         
         # Check if message was sent
         mock_update.message.reply_text.assert_called_once()
+        args, _ = mock_update.message.reply_text.call_args
+        assert "Please select the type of trade" in args[0]
 
 
 @pytest.mark.asyncio
@@ -142,26 +144,27 @@ async def test_handle_trade_description(mock_update, mock_context):
     mock_context.user_data["trade_creation"] = {
         "step": "description",
         "amount": 100.0,
-        "currency": "USD"
+        "currency": "USD",
+        "trade_type": "CryptoToFiat"  # Add trade type to match flow
     }
     mock_update.message.text = "Test trade description"
     
-    # Mock the trade creation
+    # Mock the trade creation and flow handling
     mock_trade = {"_id": "ABC123"}
     with patch('handlers.initiate_trade.trades_db.open_new_trade', return_value=mock_trade), \
          patch('handlers.initiate_trade.trades_db.add_price'), \
          patch('handlers.initiate_trade.trades_db.add_terms'), \
-         patch('handlers.initiate_trade.UserClient.get_user_by_id'):
+         patch('handlers.initiate_trade.UserClient.get_user_by_id'), \
+         patch('handlers.trade_flows.fiat.CryptoFiatFlow.handle_flow', return_value=True):
         
         await handle_trade_description(mock_update, mock_context)
         
-        # Check if context was cleaned up
-        assert "trade_creation" not in mock_context.user_data
+        # Check if trade flow handler was called
+        from handlers.trade_flows.fiat import CryptoFiatFlow
+        CryptoFiatFlow.handle_flow.assert_called_once()
         
-        # Check if success message was sent
-        mock_update.message.reply_text.assert_called_once()
-        args, _ = mock_update.message.reply_text.call_args
-        assert "Trade created successfully" in args[0]
+        # Context should still exist since it's cleaned up after deposit
+        assert "trade_creation" in mock_context.user_data
 
 
 @pytest.mark.asyncio

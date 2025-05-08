@@ -43,11 +43,6 @@ class UserClient:
         print(new_user)
 
         db.users.insert_one(new_user)
-
-        bot.send_message(
-            ADMIN_ID,
-            f"New user registered to escrow bot - {new_user['name']}",
-        )
         return new_user
 
     @staticmethod

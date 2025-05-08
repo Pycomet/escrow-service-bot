@@ -42,7 +42,7 @@ class BtcPayAPI(object):
                     "expirationMinutes": 60,
                     "monitoringMinutes": 90,
                     "paymentTolerance": 0,
-                    "redirectURL": f"{WEBHOOK_URL.replace("webhook", "paid")}",
+                    "redirectURL": f"{WEBHOOK_URL.replace('webhook', 'paid')}",
                     "redirectAutomatically": True,
                     "requiresRefundEmail": True,
                     "checkoutType": None,

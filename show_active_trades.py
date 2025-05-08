@@ -12,7 +12,9 @@ def print_active_trades():
     """Print all active trades in the database"""
     logger.info("Fetching active trades...")
     try:
-        active_trades = TradeClient.get_all_active_trades()
+        # active_trades = TradeClient.get_all_active_trades()
+
+        active_trades = TradeClient.get_trades("1930829167")
         
         print(f"\n===== Active Trades ({len(active_trades)}) =====")
         
