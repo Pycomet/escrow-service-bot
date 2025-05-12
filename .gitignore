@@ -12,3 +12,6 @@ alembic.ini
 # Website
 web
 node_modules
+
+ssh-key-202309023.key
+./vps.txt

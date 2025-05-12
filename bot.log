@@ -1,22 +1,73 @@
-Traceback (most recent call last):
-  File "/Users/macbookpro/Documents/escrow-service-bot/main.py", line 7, in <module>
-    from config import *
-  File "/Users/macbookpro/Documents/escrow-service-bot/config.py", line 41, in <module>
-    application = Application.builder().token(TOKEN).build()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_application.py", line 459, in builder
-    return ApplicationBuilder()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_applicationbuilder.py", line 205, in __init__
-    self._job_queue: ODVInput[JobQueue] = DefaultValue(JobQueue())
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_jobqueue.py", line 112, in __init__
-    self.scheduler: "AsyncIOScheduler" = AsyncIOScheduler(  # noqa: UP037
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 87, in __init__
-    self.configure(gconfig, **options)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 126, in configure
-    self._configure(config)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/asyncio.py", line 48, in _configure
-    super(AsyncIOScheduler, self)._configure(config)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 697, in _configure
-    self.timezone = astimezone(config.pop('timezone', None)) or get_localzone()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/util.py", line 93, in astimezone
-    raise TypeError('Only timezones from the pytz library are supported')
-TypeError: Only timezones from the pytz library are supported
+2025-05-08 17:49:55,097 - config - INFO - Starting bot in webhook mode...
+ * Serving Quart app 'config'
+ * Environment: production
+ * Please use an ASGI server (e.g. Hypercorn) directly in production
+ * Debug mode: False
+ * Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-08 17:49:55,718 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/getMe "HTTP/1.1 200 OK"
+2025-05-08 17:49:55,719 - telegram.ext.Application - INFO - Application started
+2025-05-08 17:49:55,720 - config - INFO - All handlers registered successfully
+2025-05-08 17:49:55,720 - config - INFO - Checking for existing webhooks...
+2025-05-08 17:49:55,912 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/getWebhookInfo "HTTP/1.1 200 OK"
+2025-05-08 17:49:55,913 - config - INFO - Found existing webhook: https://5182-2c0f-2a80-a69-7110-00-d7a.ngrok-free.app/webhook, removing it...
+2025-05-08 17:49:56,130 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/deleteWebhook "HTTP/1.1 200 OK"
+2025-05-08 17:49:56,130 - config - INFO - Setting webhook to https://5182-2c0f-2a80-a69-7110-00-d7a.ngrok-free.app/webhook
+2025-05-08 17:49:56,325 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/setWebhook "HTTP/1.1 200 OK"
+2025-05-08 17:49:56,326 - config - INFO - Webhook set successfully
+2025-05-08 17:49:56,530 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/getWebhookInfo "HTTP/1.1 200 OK"
+2025-05-08 17:49:56,530 - config - INFO - Webhook verification successful
+2025-05-08 17:49:57,957 - config - INFO - No active trades to reset
+2025-05-08 17:49:57,957 - config - INFO - Bot started successfully
+[2025-05-08 17:49:57 +0100] [11169] [INFO] Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-08 17:49:57,958 - hypercorn.error - INFO - Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-08 17:50:31,706 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendChatAction "HTTP/1.1 200 OK"
+2025-05-08 17:50:32,199 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/sendMessage "HTTP/1.1 200 OK"
+[2025-05-08 17:50:32 +0100] [11169] [INFO] 127.0.0.1:40658 POST /webhook 1.1 200 20 1224026
+2025-05-08 17:50:38,490 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:38,491 - handlers.callbacks - INFO - Showing rules
+2025-05-08 17:50:38,691 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:38,903 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:38 +0100] [11169] [INFO] 127.0.0.1:60662 POST /webhook 1.1 200 20 988095
+2025-05-08 17:50:41,395 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:41,622 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:41 +0100] [11169] [INFO] 127.0.0.1:60662 POST /webhook 1.1 200 20 425601
+2025-05-08 17:50:43,206 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:43,207 - handlers.callbacks - INFO - Showing trade history
+2025-05-08 17:50:43,397 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:43,397 - handlers.history - INFO - User ID: 577180091
+2025-05-08 17:50:43,814 - config - INFO - Sells: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}]
+2025-05-08 17:50:43,815 - config - INFO - Buys: []
+2025-05-08 17:50:43,815 - handlers.history - INFO - Trades: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}]
+2025-05-08 17:50:43,815 - handlers.history - INFO - {'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}
+2025-05-08 17:50:44,014 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:44 +0100] [11169] [INFO] 127.0.0.1:60662 POST /webhook 1.1 200 20 1001700
+2025-05-08 17:50:46,706 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:46,707 - handlers.history - INFO - Trade ID: AZEni06XcO
+2025-05-08 17:50:47,133 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:47 +0100] [11169] [INFO] 127.0.0.1:60662 POST /webhook 1.1 200 20 631493
+2025-05-08 17:50:54,026 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:54,326 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:54,326 - handlers.history - INFO - User ID: 577180091
+2025-05-08 17:50:54,732 - config - INFO - Sells: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}]
+2025-05-08 17:50:54,732 - config - INFO - Buys: []
+2025-05-08 17:50:54,732 - handlers.history - INFO - Trades: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}]
+2025-05-08 17:50:54,732 - handlers.history - INFO - {'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}
+2025-05-08 17:50:54,951 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:54 +0100] [11169] [INFO] 127.0.0.1:52946 POST /webhook 1.1 200 20 1689267
+2025-05-08 17:50:56,174 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:50:56,377 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:50:56 +0100] [11169] [INFO] 127.0.0.1:52946 POST /webhook 1.1 200 20 396432
+2025-05-08 17:51:07,006 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:51:07,221 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:51:07 +0100] [11169] [INFO] 127.0.0.1:42760 POST /webhook 1.1 200 20 787469
+2025-05-08 17:51:29,324 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:51:29,325 - handlers.callbacks - INFO - Starting trade creation process
+2025-05-08 17:51:29,530 - root - INFO - Active trades: []
+2025-05-08 17:51:29,763 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:51:29 +0100] [11169] [INFO] 127.0.0.1:51480 POST /webhook 1.1 200 20 1003993
+2025-05-08 17:51:31,988 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-08 17:51:32,283 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAGHNK7uft7VperEw7ZXtfavohjY3ugP44Y/editMessageText "HTTP/1.1 200 OK"
+[2025-05-08 17:51:32 +0100] [11169] [INFO] 127.0.0.1:51480 POST /webhook 1.1 200 20 484861
+2025-05-08 17:52:02,115 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
+2025-05-08 17:52:02,115 - telegram.ext.Application - INFO - Application.stop() complete
+2025-05-08 17:52:02,116 - config - INFO - Bot stopped successfully
