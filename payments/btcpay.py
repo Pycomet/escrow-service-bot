@@ -30,6 +30,8 @@ class BtcPayAPI(object):
         "Create A New Checkout"
 
         try:
+            app.logger.info(f"Trade - {trade}")
+            app.logger.info(f"Webhook - {WEBHOOK_URL} ---- {self.url}")
             # create checkout with trade info
             checkout_payload = {
                 "metadata": {"creator": trade["seller_id"]},
@@ -40,7 +42,7 @@ class BtcPayAPI(object):
                     "expirationMinutes": 60,
                     "monitoringMinutes": 90,
                     "paymentTolerance": 0,
-                    "redirectURL": f"{WEBHOOK_URL}/paid",
+                    "redirectURL": f"{WEBHOOK_URL.replace('webhook', 'paid')}",
                     "redirectAutomatically": True,
                     "requiresRefundEmail": True,
                     "checkoutType": None,
@@ -68,6 +70,7 @@ class BtcPayAPI(object):
             return self.checkout_url, self.invoice_id
 
         except Exception as e:
+            app.logger.info(e)
             print(e, "Error")
             return None, None
 

@@ -1,0 +1,11 @@
+cashXcoin
+ubuntu@140.238.61.241:22
+23-9-2023
+
+
+
+
+rsync -avz -e "ssh -i ./escrow-service-bot/ssh-key-2023-09-23.key" \
+  --exclude=".git" \
+  --exclude="*.log" \
+  ./escrow-service-bot/ ubuntu@140.238.61.241:~/workspace/escrow-service-bot/

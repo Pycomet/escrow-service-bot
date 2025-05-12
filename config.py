@@ -1,8 +1,11 @@
 import os
-import telebot
-from telebot import types
+import logging
+import sys
+from telegram import Update
+from telegram.ext import Application, ContextTypes, CommandHandler, MessageHandler, filters
+
 import emoji
-from flask import Flask, Blueprint, make_response, request, render_template
+from quart import Quart, Blueprint, make_response, request
 from flask_restful import Api, Resource
 from pymongo import MongoClient
 import random
@@ -16,15 +19,18 @@ import cryptocompare
 from dotenv import load_dotenv
 load_dotenv()
 
-DEBUG = True
+DEBUG = False
 
-# Configuration variable
-TOKEN = os.getenv("TOKEN")
+# Configuration variables
+TOKEN = os.getenv("TOKEN")  # Keep as TOKEN to maintain compatibility
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "codefred")
 
-WEBHOOK_MODE = os.getenv("WEBHOOK_MODE")
+WEBHOOK_MODE = os.getenv("WEBHOOK_MODE", "False").lower() == "true"
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+DOMAIN = WEBHOOK_URL.replace("https://", "").split("/")[0] if WEBHOOK_URL else None
+PORT = int(os.getenv("PORT", "8080"))  # Changed default to 8080
 
-ADMIN_ID = int(os.getenv("ADMIN_ID"))
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 
 BTCPAY_URL = os.getenv("BTCPAY_URL")
 BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY")
@@ -33,10 +39,22 @@ BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 
-bot = telebot.TeleBot(TOKEN, threaded=True)
+# Initialize bot application
+application = Application.builder().token(TOKEN).build()
 
-# Initialize application
-app = Flask(__name__)
+# Initialize Quart application
+app = Quart(__name__)
 
+# Initialize database connection
 client = MongoClient(DATABASE_URL)
 db = client[DATABASE_NAME]
+
+# Configure logging to stdout for Cloud Run
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)

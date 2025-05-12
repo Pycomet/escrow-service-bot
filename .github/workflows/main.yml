@@ -1,0 +1,68 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Run tests
+      run: |
+        python -m pytest tests/
+        
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Google Auth
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - name: Set up Cloud SDK
+      uses: 'google-github-actions/setup-gcloud@v2'
+
+    - name: Configure Docker
+      run: |
+        gcloud auth configure-docker
+
+    - name: Build and Push Container
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }} .
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }}
+
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy escrow-service-bot \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }} \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated \
+          --set-env-vars="WEBHOOK_URL=https://escrow-service-bot-${{ secrets.GCP_PROJECT_ID }}.run.app/webhook,BOT_TOKEN=${{ secrets.BOT_TOKEN }}" \
+          --memory 512Mi \
+          --cpu 1 \
+          --min-instances 1 \
+          --max-instances 10 \
+          --port 8080 \
+          --environment="TOKEN=${TOKEN},WEBHOOK_MODE=${WEBHOOK_MODE},DATABASE_URL=${DATABASE_URL},BTCPAY_URL=${BTCPAY_URL},BTCPAY_STORE_ID=${BTCPAY_STORE_ID},BTCPAY_API_KEY=${BTCPAY_API_KEY}" \
+          --volumes ./bot.log:/bot.log

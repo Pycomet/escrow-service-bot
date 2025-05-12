@@ -1,56 +1,138 @@
 from config import *
 from utils import *
 from functions import *
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+
+RULES_TEXT = """
+📜 <b>Escrow Service Rules</b>
+
+1️⃣ <b>General Rules</b>
+• All trades must be conducted through the bot
+• Be respectful to other users
+• No fraudulent activities
+• Keep communication clear and professional
+
+2️⃣ <b>Trade Rules</b>
+• Verify trade details before confirming
+• Only join trades you can complete
+• Follow payment instructions carefully
+• Report any issues immediately
+
+3️⃣ <b>Payment Rules</b>
+• Use only supported payment methods
+• Never share payment details in chat
+• Wait for confirmation before releasing funds
+• Keep payment receipts
+
+4️⃣ <b>Dispute Resolution</b>
+• Report disputes within 24 hours
+• Provide evidence when requested
+• Follow moderator instructions
+• Accept final decisions
+
+5️⃣ <b>Security</b>
+• Never share your private keys
+• Use secure payment methods
+• Report suspicious activity
+• Enable 2FA when available
+
+❗️ Violation of these rules may result in account suspension.
+"""
+
+async def rules_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /rules command"""
+    try:
+        # Check if this is from a callback query or direct command
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(
+                RULES_TEXT,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        else:
+            await update.message.reply_text(
+                RULES_TEXT,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+    except Exception as e:
+        logger.error(f"Error in rules handler: {e}")
+        # Determine which message object to use
+        message = update.callback_query.message if update.callback_query else update.message
+        if message:
+            await message.reply_text(
+                "❌ An error occurred while displaying the rules. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
 
-@bot.message_handler(commands=["rules"])
-@bot.message_handler(regexp="^Rules")
-def rules(msg):
-    """
-    List of Rules
-    """
+async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /community command"""
+    try:
+        community_text = """
+🌐 <b>Join Our Community</b>
 
-    bot.send_message(
-        msg.from_user.id,
-        emoji.emojize(
-            f"""
-:scroll: <b>TELEGRAM ESCROW BOT SERVICE RULES</b> :scroll:
-----------------------------------------
-1.  Trades can only be created by a seller.
+Stay connected with our growing community:
 
-2.  Funds deposited by the buyer are only released to seller after the goods received are affirmed by the buyer.
+📢 <b>Official Channels</b>
+• Announcements: @escrow_announcements
+• Support Group: @escrow_support
+• Trading Group: @escrow_trading
 
-3.  Transaction price and trade currency should be agreed between both parties before trade is created.
+🤝 <b>Community Guidelines</b>
+• Be respectful to others
+• No spam or advertising
+• Keep discussions relevant
+• Follow moderator instructions
 
-4.  If a party is reported, the other party receives their refund and the guilty party banned from this service.
-            """,
-        ),
-        parse_mode="html",
-    )
+Join us to:
+• Get trading tips
+• Find trading partners
+• Stay updated on features
+• Get community support
+"""
+        # Check if this is from a callback query or direct command
+        if update.callback_query:
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(
+                community_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        else:
+            await update.message.reply_text(
+                community_text,
+                parse_mode="html",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+    except Exception as e:
+        logger.error(f"Error in community handler: {e}")
+        # Determine which message object to use
+        message = update.callback_query.message if update.callback_query else update.message
+        if message:
+            await message.reply_text(
+                "❌ An error occurred while displaying community information. Please try again later.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
 
 
-@bot.message_handler(regexp="^Community")
-def community(msg):
-    """
-    List of Community
-    """
-
-    keyboard = types.InlineKeyboardMarkup(row_width=1)
-    a = types.InlineKeyboardButton(
-        text="🌟 Bot Reviews", url="https://t.me/trusted_escrow_bot_reviews"
-    )
-    b = types.InlineKeyboardButton(
-        text="🔄 Bot Updates", url="https://t.me/tele_escrowbot?message=start"
-    )
-    keyboard.add(a, b)
-
-    bot.send_message(
-        msg.from_user.id,
-        f"""
-    🌐 <b>Explore Our Community!</b> 🌐
-
-Stay updated 🔄 with the latest news updates and read what others are saying about us
-        """,
-        reply_markup=keyboard,
-        parse_mode="html",
-    )
+def register_handlers(application):
+    """Register handlers for the rules module"""
+    application.add_handler(CommandHandler("rules", rules_handler))
+    application.add_handler(CommandHandler("community", community_handler))

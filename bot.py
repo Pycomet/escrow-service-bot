@@ -1,12 +1,14 @@
 from config import *
 from utils import *
 from functions import *
+from telegram import Update
+from telegram.ext import ContextTypes
 
 
 # APPROVING PAYMENTS
-def validate_pay(msg):
+async def validate_pay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Receives the transaction hash for checking"
-    user = UserClient.get_user(msg)
+    user = UserClient.get_user(update.message)
     trade: TradeType = TradeClient.get_most_recent_trade(user)
     status = TradeClient.get_invoice_status(trade=trade)
     print("Status", status)
@@ -14,9 +16,9 @@ def validate_pay(msg):
     if status.lower() == "approved" or status.lower() == "completed":
 
         # SEND CONFIRMATION TO SELLER
-        bot.send_message(
-            trade['seller_id'],
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=trade['seller_id'],
+            text=emoji.emojize(
                 f"""
 📝 <b>Trade ID - {trade['_id']}</b> 📝
 ------------------------------------                  
@@ -29,9 +31,9 @@ Please release <b>{trade['terms']}</b>, before you can receive payment.
         )
 
         # SEND CONFIRMATION TO BUYER
-        bot.send_message(
-            msg.from_user.id,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=update.message.from_user.id,
+            text=emoji.emojize(
                 f"""
 📝 <b>Trade ID - {trade['_id']}</b> 📝
 ------------------------------------       
@@ -47,9 +49,9 @@ Seller has been instructed to release the goods to you.
     else:
 
         # SEND ALERT TO SELLER
-        bot.send_message(
-            msg.from_user.id,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=update.message.from_user.id,
+            text=emoji.emojize(
                 f"""
 📝 <b>Trade {trade['_id']} - {status}</b> 📝
 ------------------------------------     
@@ -58,51 +60,49 @@ Payment Is Still Pending ❗
             ),
             parse_mode="html",
         )
-    # bot.delete_message(msg.chat.id, msg.message_id)
+    # await context.bot.delete_message(chat_id=update.message.chat.id, message_id=update.message.message_id)
 
 
 # REFUND PROCESS FOR BUYER
-
-
-def refund_to_buyer(msg):
+async def refund_to_buyer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Refund Coins Back To Buyer"
-    user = UserClient.get_user(msg)
+    user = UserClient.get_user(update.message)
     trade: TradeType = TradeClient.get_most_recent_trade(user)
     
     if trade.payment_status == True:
 
-        question = bot.send_message(
-            trade.buyer,
-            f"A refund was requested for your funds on trade {trade.id}. Please paste a wallet address to receive in {trade.coin}",
+        question = await context.bot.send_message(
+            chat_id=trade.buyer,
+            text=f"A refund was requested for your funds on trade {trade.id}. Please paste a wallet address to receive in {trade.coin}",
         )
-        bot.register_next_step_handler(question, refund_coins)
+        context.user_data["next_step"] = refund_coins
 
     else:
-        bot.send_message(
-            msg.id,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=update.message.chat.id,
+            text=emoji.emojize(
                 ":warning: Buyer Has Not Made Payments Yet!!",
             ),
             parse_mode="html",
         )
 
 
-def refund_coins(msg):
+async def refund_coins(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Payout refund"
 
-    wallet = msg.text
-    trade = get_recent_trade(msg.from_user)
+    wallet = update.message.text
+    trade = get_recent_trade(update.message.from_user)
 
     status, _ = pay_to_buyer(trade, wallet)
     if status is None:
 
-        send_invoice_to_admin(price=_, address=wallet)
+        await send_invoice_to_admin(price=_, address=wallet)
         close_trade(trade)
 
-    bot.send_message(
-        ADMIN_ID,
-        emoji.emojize(
-            """
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=emoji.emojize(
+            f"""
 <b>Refunds Paid</b> ☑️
 Txid -> {status}
             """,
@@ -114,22 +114,22 @@ Txid -> {status}
 # PAYOUT FUNDS TO SELLER
 
 # REFUND PROCES SELLER TO RECEIVE FUNDS
-def refund_to_seller(msg):
+async def refund_to_seller(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Refund Coins Back To Buyer"
-    trade = get_recent_trade(msg)
-    confirm_pay(trade)
+    trade = get_recent_trade(update.message)
+    await confirm_pay(trade)
 
     if trade.payment_status == True:
 
         status, _ = pay_funds_to_seller(trade)
         if status is None:
 
-            send_invoice_to_admin(price=_, address=trade.wallet)
+            await send_invoice_to_admin(price=_, address=trade.wallet)
             close_trade(trade)
 
-        bot.send_message(
-            ADMIN_ID,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=emoji.emojize(
                 f"""
 <b>Paid To Seller</b> :heavy_check_mark:
 Txid -> {status}
@@ -139,9 +139,9 @@ Txid -> {status}
         )
 
     else:
-        bot.send_message(
-            msg.id,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=update.message.chat.id,
+            text=emoji.emojize(
                 ":warning: Buyer Has Not Made Payments Yet!!",
             ),
             parse_mode="html",
@@ -149,9 +149,9 @@ Txid -> {status}
 
 
 # CLOSE TRADE WITH NO PAYOUTS
-def close_dispute_trade(msg):
+async def close_dispute_trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "Close Order After Dispute & No Body Has Paid"
-    trade = get_recent_trade(msg)
+    trade = get_recent_trade(update.message)
 
     close_trade(trade)
 
@@ -159,22 +159,22 @@ def close_dispute_trade(msg):
 
     for user in users:
 
-        bot.send_message(
-            user,
-            emoji.emojize(
+        await context.bot.send_message(
+            chat_id=user,
+            text=emoji.emojize(
                 f"<b>Trade {trade.id} Closed</b> :mailbox_closed: ",
             ),
             parse_mode="html",
         )
 
 
-def send_invoice_to_admin(price, address):
+async def send_invoice_to_admin(price, address):
     "Send An Invoice For Payment To Admin"
-    admin = f"@{ADMIN}"
+    admin = ADMIN_ID
 
-    bot.send_message(
-        admin,
-        f"""
+    await application.bot.send_message(
+        chat_id=int(admin),
+        text=f"""
 <b>New Payment Invoice</b>
 
 Cost - {price} BTC
