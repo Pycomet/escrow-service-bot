@@ -58,34 +58,37 @@ async def startup():
         if WEBHOOK_MODE and WEBHOOK_URL:
             logger.info("Checking for existing webhooks...")
             webhook_info = await application.bot.get_webhook_info()
-            if webhook_info.url:
-                logger.info(f"Found existing webhook: {webhook_info.url}, removing it...")
-                await application.bot.delete_webhook()
-            
-            logger.info(f"Setting webhook to {WEBHOOK_URL}")
-            await application.bot.set_webhook(
-                url=WEBHOOK_URL,
-                allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
-                drop_pending_updates=True,
-                max_connections=40
-            )
-            logger.info("Webhook set successfully")
-            
-            # Verify webhook was set correctly
-            webhook_info = await application.bot.get_webhook_info()
-            if webhook_info.url == WEBHOOK_URL:
-                logger.info("Webhook verification successful")
+            if webhook_info.url != WEBHOOK_URL:
+                if webhook_info.url:
+                    logger.info(f"Different webhook already set: {webhook_info.url}, removing it...")
+                    await application.bot.delete_webhook()
+                
+                logger.info(f"Setting webhook to {WEBHOOK_URL}")
+                await application.bot.set_webhook(
+                    url=WEBHOOK_URL,
+                    allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
+                    drop_pending_updates=True,
+                    max_connections=40
+                )
+
+                # Verify webhook was set correctly
+                webhook_info = await application.bot.get_webhook_info()
+                if webhook_info.url == WEBHOOK_URL:
+                    logger.info("Webhook set and verified successfully")
+                else:
+                    logger.warning(f"Webhook verification failed. Expected: {WEBHOOK_URL}, Got: {webhook_info.url}")
             else:
-                logger.warning(f"Webhook verification failed. Expected: {WEBHOOK_URL}, Got: {webhook_info.url}")
+                logger.info("Webhook is already correctly set. No changes needed.")
         else:
             logger.info("Webhook mode is disabled")
 
         # Reset all active trades when the bot starts
-        reset_count = trades_db.reset_all_active_trades()
-        if reset_count > 0:
-            logger.info(f"Reset {reset_count} active trades on startup")
-        else:
-            logger.info("No active trades to reset")
+        # # DISABLE ALL PENDIND TRADES
+        # reset_count = trades_db.reset_all_active_trades()
+        # if reset_count > 0:
+        #     logger.info(f"Reset {reset_count} active trades on startup")
+        # else:
+        #     logger.info("No active trades to reset")
         
         logger.info("Bot started successfully")
     except Exception as e:

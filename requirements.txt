@@ -10,7 +10,6 @@ charset-normalizer==3.4.1
 click==8.1.8
 coverage==7.8.0
 cryptocompare==0.7.0
-cryptography==3.3.2
 decorator==4.4.2
 dnspython==2.7.0
 emoji==0.5.4
