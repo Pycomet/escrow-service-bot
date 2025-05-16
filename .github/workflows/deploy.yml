@@ -1,13 +1,14 @@
 # .github/workflows/deploy.yml
-name: Build and Deploy to Cloud Run
+name: Trigger Cloud Build
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
-  build-and-deploy:
+  trigger-cloud-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -34,14 +35,26 @@ jobs:
           echo "Active project:"
           gcloud config get-value project
 
-      # Configure Docker to use gcloud credentials
-      - name: Configure Docker for Artifact Registry
+      # Submit build to Cloud Build 
+      - name: Submit to Cloud Build
         run: |
-          # Get access token from gcloud
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          # Get the current commit SHA
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Triggering Cloud Build for commit: ${COMMIT_SHA}"
           
-          # Login to Artifact Registry with access token
-          echo "$ACCESS_TOKEN" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
+          # Submit the build to Cloud Build
+          gcloud builds submit --config=cloudbuild.yaml \
+            --substitutions=COMMIT_SHA=${COMMIT_SHA} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+            
+          echo "✅ Cloud Build triggered successfully!"
+            
+      # Clean up service account key
+      - name: Clean up service account key
+        if: always() # Run even if previous steps fail
+        run: |
+          rm -f /tmp/gcp-sa-key.json
+          echo "Service account key file removed"
 
       # Build Docker image
       - name: Build Docker image
@@ -127,10 +140,3 @@ jobs:
             echo "❌ All deployment attempts failed"
             exit 1
           fi
-
-      # Clean up service account key
-      - name: Clean up service account key
-        if: always() # Run even if previous steps fail
-        run: |
-          rm -f /tmp/gcp-sa-key.json
-          echo "Service account key file removed"
