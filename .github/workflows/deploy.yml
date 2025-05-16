@@ -36,7 +36,7 @@ jobs:
       - name: Build Docker image
         id: docker_build
         run: |
-          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot:${{ github.sha }}"
+          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot@sha256:${{ github.sha }}"
           docker build -t "${IMAGE_NAME}" .
           echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
       
