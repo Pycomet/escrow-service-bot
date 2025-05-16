@@ -29,22 +29,31 @@ jobs:
         run: gcloud config set builds/logging CLOUD_LOGGING_ONLY --project=${{ secrets.GCP_PROJECT_ID }}
         continue-on-error: true # If SA lacks permission to set project-wide config (unlikely to be needed for client-side)
 
-      # Authenticate Docker to push to your specific Artifact Registry host
-      - name: Configure Docker to push to Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
+      # This command configures Docker to use gcloud as a credential helper for the specified registry.
+      # It updates Docker's configuration file.
+      - name: Configure Docker to use gcloud credential helper
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
+          echo "Docker credential helper configured for us-central1-docker.pkg.dev"
+          # Optional: Verify Docker's config to see the credential helper (for debugging)
+          # cat ~/.docker/config.json || true
 
       - name: Build Docker image
         id: docker_build
         run: |
           IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot:${{ github.sha }}"
+          echo "Building Docker image: ${IMAGE_NAME}"
           docker build -t "${IMAGE_NAME}" .
           echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
       
       - name: Push Docker image to Artifact Registry
-        run: docker push "${{ env.IMAGE_BUILT }}"
+        run: |
+          echo "Pushing image: ${{ env.IMAGE_BUILT }}"
+          docker push "${{ env.IMAGE_BUILT }}"
 
       - name: Deploy to Cloud Run
         run: |
+          echo "Deploying image to Cloud Run: ${{ env.IMAGE_BUILT }}"
           gcloud run deploy escrow-service-bot \
             --image "${{ env.IMAGE_BUILT }}" \
             --region us-central1 \
