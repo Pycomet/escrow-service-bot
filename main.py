@@ -198,6 +198,12 @@ async def handle_payment_webhook():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/', methods=['GET'])
+async def root():
+    """Simple root endpoint for Cloud Run health checks"""
+    return jsonify({"status": "ok", "message": "Service is running"}), 200
+
+
 def run_polling():
     """Run the bot in polling mode"""
     register_handlers()  # Register handlers before starting polling
@@ -207,11 +213,10 @@ def run_polling():
 
 # Don't run app.run() here since entrypoint.sh handles starting the server with hypercorn
 if __name__ == '__main__':
-    if WEBHOOK_MODE:
-        # In webhook mode, the app will be run by the entrypoint.sh script
-        # using hypercorn main:app --bind 0.0.0.0:${PORT:-8080} --workers 2
+    if WEBHOOK_MODE == True:
+        # Run in webhook mode (production/deployment)
         logger.info("Starting bot in webhook mode...")
-        # Don't call app.run() here as it conflicts with hypercorn in entrypoint.sh
+        app.run(host='0.0.0.0', port=PORT)
     else:
         # Run in polling mode (local development)
         run_polling()
