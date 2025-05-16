@@ -15,26 +15,30 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Google Cloud SDK
+        id: setup_gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      - name: Display gcloud authentication state
+      - name: Verify gcloud Authentication
         run: |
           echo "GCLOUD AUTH LIST:"
           gcloud auth list
+          if ! gcloud auth list --filter="status:ACTIVE" --format="value(account)" | grep -q .; then
+            echo "gcloud authentication failed. No active account."
+            exit 1
+          fi
           echo "GCLOUD CONFIG LIST:"
           gcloud config list
-          echo "GCLOUD INFO:"
-          gcloud info
           echo "ACTIVE GCLOUD PROJECT:"
           gcloud config get-value project
-
-      - name: Configure Cloud Build logging for gcloud (client-side precaution)
-        run: gcloud config set builds/logging CLOUD_LOGGING_ONLY --project=${{ secrets.GCP_PROJECT_ID }}
-        continue-on-error: true
+          if [ "$(gcloud config get-value project)" != "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "gcloud project is not set correctly. Expected ${{ secrets.GCP_PROJECT_ID }}, Got $(gcloud config get-value project)"
+            exit 1
+          fi
+          echo "Successfully authenticated with gcloud."
 
       # OPTION 1: Keep trying with gcloud auth configure-docker (current approach)
       # - name: Configure Docker to use gcloud credential helper
@@ -50,7 +54,7 @@ jobs:
           echo "Attempting Docker login with access token..."
           ACCESS_TOKEN=$(gcloud auth print-access-token)
           if [ -z "$ACCESS_TOKEN" ]; then
-            echo "Failed to get access token from gcloud."
+            echo "Failed to get access token from gcloud. Ensure gcloud is authenticated."
             exit 1
           fi
           docker login \
@@ -74,7 +78,6 @@ jobs:
           DOCKER_CLI_EXPERIMENTAL: enabled # For potential debug flags if needed later
         run: |
           echo "Pushing image: ${{ env.IMAGE_BUILT }}"
-          # Try with --debug for more verbose docker output if it still fails
           docker --debug push "${{ env.IMAGE_BUILT }}"
           # docker push "${{ env.IMAGE_BUILT }}" # Original command
 
