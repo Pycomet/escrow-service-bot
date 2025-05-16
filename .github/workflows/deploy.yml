@@ -21,22 +21,45 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      # This step configures the gcloud CLI within the GitHub Action runner.
-      # It's a good precaution if any gcloud command (like run deploy)
-      # might interact with Cloud Build APIs or be affected by project build settings.
-      # The build itself here is a local 'docker build', not a 'gcloud builds submit'.
+      - name: Display gcloud authentication state
+        run: |
+          echo "GCLOUD AUTH LIST:"
+          gcloud auth list
+          echo "GCLOUD CONFIG LIST:"
+          gcloud config list
+          echo "GCLOUD INFO:"
+          gcloud info
+          echo "ACTIVE GCLOUD PROJECT:"
+          gcloud config get-value project
+
       - name: Configure Cloud Build logging for gcloud (client-side precaution)
         run: gcloud config set builds/logging CLOUD_LOGGING_ONLY --project=${{ secrets.GCP_PROJECT_ID }}
-        continue-on-error: true # If SA lacks permission to set project-wide config (unlikely to be needed for client-side)
+        continue-on-error: true
 
-      # This command configures Docker to use gcloud as a credential helper for the specified registry.
-      # It updates Docker's configuration file.
-      - name: Configure Docker to use gcloud credential helper
+      # OPTION 1: Keep trying with gcloud auth configure-docker (current approach)
+      # - name: Configure Docker to use gcloud credential helper
+      #   run: |
+      #     gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
+      #     echo "Docker credential helper configured for us-central1-docker.pkg.dev"
+      #     echo "Docker config.json contents:"
+      #     cat ~/.docker/config.json || echo "Could not display ~/.docker/config.json"
+
+      # OPTION 2: Try explicit docker login with an access token
+      - name: Authenticate Docker with Access Token
         run: |
-          gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
-          echo "Docker credential helper configured for us-central1-docker.pkg.dev"
-          # Optional: Verify Docker's config to see the credential helper (for debugging)
-          # cat ~/.docker/config.json || true
+          echo "Attempting Docker login with access token..."
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "Failed to get access token from gcloud."
+            exit 1
+          fi
+          docker login \
+            -u oauth2accesstoken \
+            -p "${ACCESS_TOKEN}" \
+            https://us-central1-docker.pkg.dev
+          echo "Docker login attempted."
+          echo "Docker config.json contents after login:"
+          cat ~/.docker/config.json || echo "Could not display ~/.docker/config.json"
 
       - name: Build Docker image
         id: docker_build
@@ -47,9 +70,13 @@ jobs:
           echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
       
       - name: Push Docker image to Artifact Registry
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled # For potential debug flags if needed later
         run: |
           echo "Pushing image: ${{ env.IMAGE_BUILT }}"
-          docker push "${{ env.IMAGE_BUILT }}"
+          # Try with --debug for more verbose docker output if it still fails
+          docker --debug push "${{ env.IMAGE_BUILT }}"
+          # docker push "${{ env.IMAGE_BUILT }}" # Original command
 
       - name: Deploy to Cloud Run
         run: |
@@ -60,7 +87,4 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --project=${{ secrets.GCP_PROJECT_ID }}
-            # Remember to add your necessary environment variables here if they aren't
-            # already configured directly on your Cloud Run service in GCP.
-            # For example:
-            # --set-env-vars="TOKEN=${{ secrets.BOT_TOKEN }},DATABASE_URL=${{ secrets.DATABASE_URL }},WEBHOOK_URL=https://your-cloud-run-url/webhook"
+            # Add --set-env-vars if needed
