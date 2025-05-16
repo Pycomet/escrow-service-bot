@@ -205,11 +205,13 @@ def run_polling():
     application.run_polling(drop_pending_updates=True)
 
 
+# Don't run app.run() here since entrypoint.sh handles starting the server with hypercorn
 if __name__ == '__main__':
-    if WEBHOOK_MODE == True:
-        # Run in webhook mode (production/deployment)
+    if WEBHOOK_MODE:
+        # In webhook mode, the app will be run by the entrypoint.sh script
+        # using hypercorn main:app --bind 0.0.0.0:${PORT:-8080} --workers 2
         logger.info("Starting bot in webhook mode...")
-        app.run(host='0.0.0.0', port=PORT)
+        # Don't call app.run() here as it conflicts with hypercorn in entrypoint.sh
     else:
         # Run in polling mode (local development)
         run_polling()

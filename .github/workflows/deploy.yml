@@ -66,7 +66,8 @@ jobs:
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --project=${{ secrets.GCP_PROJECT_ID }}
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --set-env-vars="TOKEN=${{ secrets.BOT_TOKEN }},DATABASE_URL=${{ secrets.DATABASE_URL }},DATABASE_NAME=${{ secrets.DATABASE_NAME }},WEBHOOK_URL=https://escrow-service-bot-${{ secrets.GCP_PROJECT_ID }}.run.app/webhook,WEBHOOK_MODE=true,BTCPAY_URL=${{ secrets.BTCPAY_URL }},BTCPAY_API_KEY=${{ secrets.BTCPAY_API_KEY }},BTCPAY_STORE_ID=${{ secrets.BTCPAY_STORE_ID }},ADMIN_ID=${{ secrets.ADMIN_ID }}"
 
       # Clean up service account key
       - name: Clean up service account key
