@@ -21,6 +21,9 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
+      - name: Configure Cloud Build logging
+        run: gcloud config set builds/logging CLOUD_LOGGING_ONLY
+
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker
 
