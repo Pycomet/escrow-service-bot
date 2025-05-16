@@ -4,6 +4,7 @@ from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
+from functions.dispute import get_dispute_by_id
 
 # Store trade in context instead of global variable
 async def start_dispute(update: Update, context: ContextTypes.DEFAULT_TYPE):
