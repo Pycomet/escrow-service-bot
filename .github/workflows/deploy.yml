@@ -1,13 +1,13 @@
 # .github/workflows/deploy.yml
-name: Deploy to Cloud Run
+name: Build and Deploy to Cloud Run via GitHub Actions
 
 on:
   push:
     branches:
-      - main
+      - main # Triggers on merge/push to main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,24 +21,38 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      - name: Configure Cloud Build logging
-        run: gcloud config set builds/logging CLOUD_LOGGING_ONLY
+      # This step configures the gcloud CLI within the GitHub Action runner.
+      # It's a good precaution if any gcloud command (like run deploy)
+      # might interact with Cloud Build APIs or be affected by project build settings.
+      # The build itself here is a local 'docker build', not a 'gcloud builds submit'.
+      - name: Configure Cloud Build logging for gcloud (client-side precaution)
+        run: gcloud config set builds/logging CLOUD_LOGGING_ONLY --project=${{ secrets.GCP_PROJECT_ID }}
+        continue-on-error: true # If SA lacks permission to set project-wide config (unlikely to be needed for client-side)
 
-      - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker
+      # Authenticate Docker to push to Google Container Registry (GCR)
+      # If you were using Artifact Registry, the host would be different, e.g., us-central1-docker.pkg.dev
+      - name: Configure Docker to push to GCR
+        run: gcloud auth configure-docker gcr.io --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Build Docker image
+        id: docker_build
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot .
+          IMAGE_NAME="gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }}"
+          docker build -t "${IMAGE_NAME}" .
+          echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
       
-      - name: Push Docker image
-        run: |
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot
+      - name: Push Docker image to GCR
+        run: docker push "${{ env.IMAGE_BUILT }}"
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy escrow-service-bot \
-            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot \
+            --image "${{ env.IMAGE_BUILT }}" \
             --region us-central1 \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+            # Remember to add your necessary environment variables here if they aren't
+            # already configured directly on your Cloud Run service in GCP.
+            # For example:
+            # --set-env-vars="TOKEN=${{ secrets.BOT_TOKEN }},DATABASE_URL=${{ secrets.DATABASE_URL }},WEBHOOK_URL=https://your-cloud-run-url/webhook"
