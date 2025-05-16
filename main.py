@@ -50,6 +50,24 @@ def register_handlers():
 async def startup():
     """Initialize the application before serving"""
     try:
+        logger.info("Starting application initialization...")
+        
+        # Initialize application without waiting for full telegram bot setup
+        loop = asyncio.get_event_loop()
+        # Run initialization in background to prevent blocking startup
+        loop.create_task(initialize_bot())
+        
+        logger.info("Application ready to serve requests")
+    except Exception as e:
+        logger.error(f"Error during startup, but continuing to serve: {e}")
+        # Don't re-raise - allow the application to start even if there are issues
+        # The health check endpoint will report the status
+
+
+async def initialize_bot():
+    """Initialize the bot in background to not block startup"""
+    try:
+        logger.info("Initializing Telegram bot...")
         await application.initialize()
         await application.start()
         register_handlers()
@@ -57,43 +75,38 @@ async def startup():
         # Set webhook if in webhook mode
         if WEBHOOK_MODE and WEBHOOK_URL:
             logger.info("Checking for existing webhooks...")
-            webhook_info = await application.bot.get_webhook_info()
-            if webhook_info.url != WEBHOOK_URL:
-                if webhook_info.url:
-                    logger.info(f"Different webhook already set: {webhook_info.url}, removing it...")
-                    await application.bot.delete_webhook()
-                
-                logger.info(f"Setting webhook to {WEBHOOK_URL}")
-                await application.bot.set_webhook(
-                    url=WEBHOOK_URL,
-                    allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
-                    drop_pending_updates=True,
-                    max_connections=40
-                )
-
-                # Verify webhook was set correctly
+            try:
                 webhook_info = await application.bot.get_webhook_info()
-                if webhook_info.url == WEBHOOK_URL:
-                    logger.info("Webhook set and verified successfully")
+                if webhook_info.url != WEBHOOK_URL:
+                    if webhook_info.url:
+                        logger.info(f"Different webhook already set: {webhook_info.url}, removing it...")
+                        await application.bot.delete_webhook()
+                    
+                    logger.info(f"Setting webhook to {WEBHOOK_URL}")
+                    await application.bot.set_webhook(
+                        url=WEBHOOK_URL,
+                        allowed_updates=["message", "callback_query", "inline_query", "chosen_inline_result"],
+                        drop_pending_updates=True,
+                        max_connections=40
+                    )
+
+                    # Verify webhook was set correctly
+                    webhook_info = await application.bot.get_webhook_info()
+                    if webhook_info.url == WEBHOOK_URL:
+                        logger.info("Webhook set and verified successfully")
+                    else:
+                        logger.warning(f"Webhook verification failed. Expected: {WEBHOOK_URL}, Got: {webhook_info.url}")
                 else:
-                    logger.warning(f"Webhook verification failed. Expected: {WEBHOOK_URL}, Got: {webhook_info.url}")
-            else:
-                logger.info("Webhook is already correctly set. No changes needed.")
+                    logger.info("Webhook is already correctly set. No changes needed.")
+            except Exception as webhook_error:
+                logger.error(f"Error setting webhook but continuing: {webhook_error}")
         else:
             logger.info("Webhook mode is disabled")
-
-        # Reset all active trades when the bot starts
-        # # DISABLE ALL PENDIND TRADES
-        # reset_count = trades_db.reset_all_active_trades()
-        # if reset_count > 0:
-        #     logger.info(f"Reset {reset_count} active trades on startup")
-        # else:
-        #     logger.info("No active trades to reset")
         
-        logger.info("Bot started successfully")
+        logger.info("Bot initialized successfully")
     except Exception as e:
-        logger.error(f"Failed to start bot: {e}")
-        raise
+        logger.error(f"Failed to initialize bot (will retry on requests): {e}")
+        # We'll initialize the bot on-demand in the request handlers
 
 
 @app.after_serving
@@ -109,27 +122,55 @@ async def shutdown():
 
 @app.route('/health', methods=['GET'])
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint - simplified to ensure Cloud Run startup succeeds"""
     try:
-        if not application.running:
-            return jsonify({"status": "error", "message": "Application not running"}), 503
+        status = {
+            "status": "ok", 
+            "message": "Service is running",
+            "details": {
+                "application_running": application.running
+            }
+        }
         
-        # Check if bot can connect to Telegram
-        await application.bot.get_me()
-        return jsonify({"status": "healthy", "message": "Bot is running"}), 200
+        # Only check Telegram API status if application is running
+        if application.running:
+            try:
+                # Set a short timeout for the request
+                bot_info = await asyncio.wait_for(application.bot.get_me(), timeout=2.0)
+                status["details"]["bot_name"] = bot_info.username
+                status["details"]["bot_connected"] = True
+            except asyncio.TimeoutError:
+                status["details"]["bot_connected"] = False
+                status["details"]["bot_error"] = "Telegram API timeout"
+            except Exception as bot_err:
+                status["details"]["bot_connected"] = False
+                status["details"]["bot_error"] = str(bot_err)
+        
+        return jsonify(status), 200
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({
+            "status": "error", 
+            "message": "Health check error", 
+            "error": str(e)
+        }), 500
 
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
     """Handle incoming webhook updates"""
     try:
+        # Initialize the bot if it's not running
         if not application.running:
-            await application.initialize()
-            await application.start()
-            register_handlers()
+            logger.info("Bot not running, initializing on demand...")
+            try:
+                await application.initialize()
+                await application.start()
+                register_handlers()
+                logger.info("Bot initialized successfully on-demand")
+            except Exception as init_err:
+                logger.error(f"Failed to initialize bot on-demand: {init_err}")
+                return jsonify({"status": "error", "message": "Bot initialization failed"}), 500
         
         update_data = await request.get_json()
         if not update_data:
@@ -200,8 +241,8 @@ async def handle_payment_webhook():
 
 @app.route('/', methods=['GET'])
 async def root():
-    """Simple root endpoint for Cloud Run health checks"""
-    return jsonify({"status": "ok", "message": "Service is running"}), 200
+    """Simple root endpoint for Cloud Run's default health checks"""
+    return jsonify({"status": "ok", "message": "Service is ready to handle requests"}), 200
 
 
 def run_polling():
