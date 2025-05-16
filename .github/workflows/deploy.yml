@@ -56,22 +56,78 @@ jobs:
         run: |
           echo "Pushing image: ${{ env.IMAGE_BUILT }}"
           docker push "${{ env.IMAGE_BUILT }}"
+          
+      # Verify image is accessible before deploying
+      - name: Verify image is accessible
+        run: |
+          echo "Verifying image is accessible in Artifact Registry..."
+          
+          # Wait for up to 60 seconds for the image to be accessible
+          max_attempts=12
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Attempt $attempt of $max_attempts..."
+            
+            if gcloud artifacts docker images describe "${{ env.IMAGE_BUILT }}" --project=${{ secrets.GCP_PROJECT_ID }} --quiet; then
+              echo "✅ Image is accessible and ready for deployment!"
+              break
+            else
+              echo "Image not yet accessible, waiting 5 seconds..."
+              sleep 5
+              attempt=$((attempt + 1))
+            fi
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Timed out waiting for image to be accessible"
+            exit 1
+          fi
 
       # Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
           echo "Deploying image to Cloud Run: ${{ env.IMAGE_BUILT }}"
-          gcloud run deploy escrow-service-bot \
-            --image "${{ env.IMAGE_BUILT }}" \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
-            --timeout=300s \
-            --cpu=1 \
-            --memory=512Mi \
-            --cpu-boost
+          
+          # Retry deployment up to 3 times
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            echo "Deployment attempt $attempt of $max_attempts..."
             
+            if gcloud run deploy escrow-service-bot \
+              --image "${{ env.IMAGE_BUILT }}" \
+              --region us-central1 \
+              --platform managed \
+              --allow-unauthenticated \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --timeout=600s \
+              --cpu=1 \
+              --memory=512Mi \
+              --cpu-boost \
+              --no-traffic; then
+              
+              echo "✅ Deployment succeeded!"
+              
+              # Now migrate traffic to the new revision
+              echo "Migrating traffic to new revision..."
+              gcloud run services update-traffic escrow-service-bot \
+                --region us-central1 \
+                --project=${{ secrets.GCP_PROJECT_ID }} \
+                --to-latest
+              
+              break
+            else
+              echo "Deployment failed, waiting 15 seconds before retry..."
+              sleep 15
+              attempt=$((attempt + 1))
+            fi
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ All deployment attempts failed"
+            exit 1
+          fi
+
       # Clean up service account key
       - name: Clean up service account key
         if: always() # Run even if previous steps fail
