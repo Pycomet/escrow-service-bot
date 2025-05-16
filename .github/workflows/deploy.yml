@@ -4,7 +4,7 @@ name: Build and Deploy to Cloud Run via GitHub Actions
 on:
   push:
     branches:
-      - main # Triggers on merge/push to main
+      - main
 
 jobs:
   build-and-deploy:
