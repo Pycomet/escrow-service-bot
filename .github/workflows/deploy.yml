@@ -29,19 +29,18 @@ jobs:
         run: gcloud config set builds/logging CLOUD_LOGGING_ONLY --project=${{ secrets.GCP_PROJECT_ID }}
         continue-on-error: true # If SA lacks permission to set project-wide config (unlikely to be needed for client-side)
 
-      # Authenticate Docker to push to Google Container Registry (GCR)
-      # If you were using Artifact Registry, the host would be different, e.g., us-central1-docker.pkg.dev
-      - name: Configure Docker to push to GCR
-        run: gcloud auth configure-docker gcr.io --project=${{ secrets.GCP_PROJECT_ID }}
+      # Authenticate Docker to push to your specific Artifact Registry host
+      - name: Configure Docker to push to Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Build Docker image
         id: docker_build
         run: |
-          IMAGE_NAME="gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }}"
+          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot:${{ github.sha }}"
           docker build -t "${IMAGE_NAME}" .
           echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
       
-      - name: Push Docker image to GCR
+      - name: Push Docker image to Artifact Registry
         run: docker push "${{ env.IMAGE_BUILT }}"
 
       - name: Deploy to Cloud Run
