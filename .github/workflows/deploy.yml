@@ -1,10 +1,11 @@
 # .github/workflows/deploy.yml
-name: Build and Deploy to Cloud Run via GitHub Actions
+name: Build and Deploy to Cloud Run
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Allow manual triggering
 
 jobs:
   build-and-deploy:
@@ -14,73 +15,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Google Cloud SDK
-        id: setup_gcloud
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
-
-      - name: Verify gcloud Authentication
+      # Create service account key file from secret
+      - name: Set up GCP service account key
         run: |
-          echo "GCLOUD AUTH LIST:"
-          gcloud auth list
-          if ! gcloud auth list --filter="status:ACTIVE" --format="value(account)" | grep -q .; then
-            echo "gcloud authentication failed. No active account."
-            exit 1
-          fi
-          echo "GCLOUD CONFIG LIST:"
-          gcloud config list
-          echo "ACTIVE GCLOUD PROJECT:"
+          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-sa-key.json
+          echo "Service account key file created at /tmp/gcp-sa-key.json"
+
+      # Authenticate directly with gcloud using the key file
+      - name: Authenticate with gcloud
+        run: |
+          gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          
+          # Verify gcloud is authenticated successfully
+          echo "Active gcloud account:"
+          gcloud auth list --filter=status:ACTIVE --format="value(account)"
+          
+          # Verify project is set correctly
+          echo "Active project:"
           gcloud config get-value project
-          if [ "$(gcloud config get-value project)" != "${{ secrets.GCP_PROJECT_ID }}" ]; then
-            echo "gcloud project is not set correctly. Expected ${{ secrets.GCP_PROJECT_ID }}, Got $(gcloud config get-value project)"
-            exit 1
-          fi
-          echo "Successfully authenticated with gcloud."
 
-      # OPTION 1: Keep trying with gcloud auth configure-docker (current approach)
-      # - name: Configure Docker to use gcloud credential helper
-      #   run: |
-      #     gcloud auth configure-docker us-central1-docker.pkg.dev --project=${{ secrets.GCP_PROJECT_ID }}
-      #     echo "Docker credential helper configured for us-central1-docker.pkg.dev"
-      #     echo "Docker config.json contents:"
-      #     cat ~/.docker/config.json || echo "Could not display ~/.docker/config.json"
-
-      # OPTION 2: Try explicit docker login with an access token
-      - name: Authenticate Docker with Access Token
+      # Configure Docker to use gcloud credentials
+      - name: Configure Docker for Artifact Registry
         run: |
-          echo "Attempting Docker login with access token..."
+          # Get access token from gcloud
           ACCESS_TOKEN=$(gcloud auth print-access-token)
-          if [ -z "$ACCESS_TOKEN" ]; then
-            echo "Failed to get access token from gcloud. Ensure gcloud is authenticated."
-            exit 1
-          fi
-          docker login \
-            -u oauth2accesstoken \
-            -p "${ACCESS_TOKEN}" \
-            https://us-central1-docker.pkg.dev
-          echo "Docker login attempted."
-          echo "Docker config.json contents after login:"
-          cat ~/.docker/config.json || echo "Could not display ~/.docker/config.json"
+          
+          # Login to Artifact Registry with access token
+          echo "$ACCESS_TOKEN" | docker login -u oauth2accesstoken --password-stdin https://us-central1-docker.pkg.dev
 
+      # Build Docker image
       - name: Build Docker image
-        id: docker_build
         run: |
           IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot:${{ github.sha }}"
           echo "Building Docker image: ${IMAGE_NAME}"
           docker build -t "${IMAGE_NAME}" .
           echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
-      
+
+      # Push Docker image to Artifact Registry
       - name: Push Docker image to Artifact Registry
-        env:
-          DOCKER_CLI_EXPERIMENTAL: enabled # For potential debug flags if needed later
         run: |
           echo "Pushing image: ${{ env.IMAGE_BUILT }}"
-          docker --debug push "${{ env.IMAGE_BUILT }}"
-          # docker push "${{ env.IMAGE_BUILT }}" # Original command
+          docker push "${{ env.IMAGE_BUILT }}"
 
+      # Deploy to Cloud Run
       - name: Deploy to Cloud Run
         run: |
           echo "Deploying image to Cloud Run: ${{ env.IMAGE_BUILT }}"
@@ -89,5 +67,12 @@ jobs:
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated \
-            --project=${{ secrets.GCP_PROJECT_ID }}
-            # Add --set-env-vars if needed
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --set-env-vars="WEBHOOK_URL=https://escrow-service-bot-${{ secrets.GCP_PROJECT_ID }}.run.app/webhook,PORT=8080"
+
+      # Clean up service account key
+      - name: Clean up service account key
+        if: always() # Run even if previous steps fail
+        run: |
+          rm -f /tmp/gcp-sa-key.json
+          echo "Service account key file removed"

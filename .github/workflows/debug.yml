@@ -1,0 +1,55 @@
+name: Debug GCP Authentication
+
+on:
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  debug-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify GCP Secret Format
+        run: |
+          # Check if GCP_SA_KEY is set and looks like valid JSON (without revealing it)
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "ERROR: GCP_SA_KEY is empty"
+            exit 1
+          fi
+          
+          # Check if it starts with { and ends with } - basic JSON validation
+          if [[ "${{ secrets.GCP_SA_KEY }}" != {* ]] || [[ "${{ secrets.GCP_SA_KEY }}" != *} ]]; then
+            echo "ERROR: GCP_SA_KEY does not appear to be valid JSON"
+            echo "It should start with '{' and end with '}'"
+            exit 1
+          fi
+          
+          echo "GCP_SA_KEY appears to be formatted as JSON"
+      
+      - name: Write Key to File
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
+          # Make sure the file has content
+          if [ ! -s "/tmp/gcp-key.json" ]; then
+            echo "ERROR: Failed to write key to file"
+            exit 1
+          fi
+          echo "Successfully wrote key to file"
+          
+      - name: Authenticate Directly with gcloud
+        run: |
+          # Try direct authentication with gcloud
+          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+          
+          # Verify authentication
+          echo "GCLOUD AUTH LIST:"
+          gcloud auth list
+          
+          # Check project
+          echo "ACTIVE PROJECT:"
+          gcloud config get-value project
+          
+          # Try to list storage buckets as a simple API test
+          echo "TRYING TO LIST STORAGE BUCKETS:"
+          gcloud storage ls || echo "Could not list buckets, but auth might still be working"
+          
+          # Clean up
+          rm /tmp/gcp-key.json 
