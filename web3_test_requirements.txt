@@ -1,0 +1,48 @@
+# Web3 Testing Suite Requirements
+# ================================
+# This file contains all Python packages required for testing
+# Web3 functionality in the escrow service bot
+
+# Core Web3 Libraries
+# -------------------
+web3>=6.0.0               # Ethereum/BSC blockchain interaction
+solana>=0.30.0            # Solana blockchain interaction  
+spl-token>=0.2.0          # Solana SPL token support
+tronpy>=0.5.0             # Tron blockchain interaction
+
+# Cryptography & Wallet Generation
+# --------------------------------
+mnemonic>=0.20            # BIP39 mnemonic phrase generation
+solders>=0.18.0           # Solana-specific cryptographic functions
+PyNaCl>=1.5.0             # NaCl cryptography (for Solana)
+eth-account>=0.8.0        # Ethereum account management
+eth-utils>=2.0.0          # Ethereum utility functions
+hdwallet>=2.2.0           # HD wallet derivation (BTC/LTC/DOGE)
+coincurve>=20.0.0         # Secp256k1 elliptic curve cryptography
+
+# Network & API
+# -------------
+requests>=2.25.0          # HTTP requests for price APIs and RPC calls
+aiohttp>=3.7.0            # Async HTTP for Solana client
+httpx>=0.24.0             # Modern HTTP client for Tron
+
+# Data Handling
+# -------------
+base58>=2.1.0             # Base58 encoding/decoding
+binascii                  # Binary/ASCII conversions (built-in)
+
+# Optional Dependencies
+# --------------------
+# These are imported by some scripts but not required for basic functionality
+pycryptodome>=3.15.0      # Additional cryptographic functions
+cytoolz>=0.12.0           # Cython-based toolz (performance)
+
+# Development & Testing
+# --------------------
+pytest>=7.0.0             # For future test framework integration
+pytest-asyncio>=0.21.0    # Async test support
+
+# Note: Some packages may have additional system dependencies:
+# - On macOS: may need to install libffi-dev
+# - On Ubuntu/Debian: may need python3-dev, libffi-dev
+# - On CentOS/RHEL: may need python3-devel, libffi-devel 
