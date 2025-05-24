@@ -1,22 +1,80 @@
-Traceback (most recent call last):
-  File "/Users/macbookpro/Documents/escrow-service-bot/main.py", line 7, in <module>
-    from config import *
-  File "/Users/macbookpro/Documents/escrow-service-bot/config.py", line 43, in <module>
-    application = Application.builder().token(TOKEN).build()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_application.py", line 459, in builder
-    return ApplicationBuilder()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_applicationbuilder.py", line 205, in __init__
-    self._job_queue: ODVInput[JobQueue] = DefaultValue(JobQueue())
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/telegram/ext/_jobqueue.py", line 112, in __init__
-    self.scheduler: "AsyncIOScheduler" = AsyncIOScheduler(  # noqa: UP037
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 87, in __init__
-    self.configure(gconfig, **options)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 126, in configure
-    self._configure(config)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/asyncio.py", line 48, in _configure
-    super(AsyncIOScheduler, self)._configure(config)
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/schedulers/base.py", line 697, in _configure
-    self.timezone = astimezone(config.pop('timezone', None)) or get_localzone()
-  File "/Users/macbookpro/.pyenv/versions/3.10.5/lib/python3.10/site-packages/apscheduler/util.py", line 93, in astimezone
-    raise TypeError('Only timezones from the pytz library are supported')
-TypeError: Only timezones from the pytz library are supported
+2025-05-24 15:01:56,260 - config - INFO - Starting bot in webhook mode...
+ * Serving Quart app 'config'
+ * Environment: production
+ * Please use an ASGI server (e.g. Hypercorn) directly in production
+ * Debug mode: False
+ * Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-24 15:01:56,277 - config - INFO - Starting application initialization...
+2025-05-24 15:01:56,277 - config - INFO - Application ready to serve requests
+2025-05-24 15:01:56,278 - config - INFO - Initializing Telegram bot...
+[2025-05-24 15:01:56 +0100] [20248] [INFO] Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-24 15:01:56,278 - hypercorn.error - INFO - Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-05-24 15:01:56,885 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/getMe "HTTP/1.1 200 OK"
+2025-05-24 15:01:56,886 - telegram.ext.Application - INFO - Application started
+2025-05-24 15:01:56,888 - config - INFO - All handlers registered successfully
+2025-05-24 15:01:56,888 - config - INFO - Checking for existing webhooks...
+2025-05-24 15:01:57,067 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/getWebhookInfo "HTTP/1.1 200 OK"
+2025-05-24 15:01:57,069 - config - INFO - Webhook is already correctly set. No changes needed.
+2025-05-24 15:01:57,069 - config - INFO - Bot initialized successfully
+2025-05-24 15:01:57,570 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendChatAction "HTTP/1.1 200 OK"
+2025-05-24 15:01:59,328 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendMessage "HTTP/1.1 200 OK"
+[2025-05-24 15:01:59 +0100] [20248] [INFO] 127.0.0.1:50805 POST /webhook 1.1 200 20 2412551
+2025-05-24 15:01:59,708 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendChatAction "HTTP/1.1 200 OK"
+2025-05-24 15:02:00,140 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendMessage "HTTP/1.1 200 OK"
+[2025-05-24 15:02:00 +0100] [20248] [INFO] 127.0.0.1:50805 POST /webhook 1.1 200 20 648745
+2025-05-24 15:02:00,572 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendChatAction "HTTP/1.1 200 OK"
+2025-05-24 15:02:01,041 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendMessage "HTTP/1.1 200 OK"
+[2025-05-24 15:02:01 +0100] [20248] [INFO] 127.0.0.1:50805 POST /webhook 1.1 200 20 728111
+2025-05-24 15:02:01,490 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendChatAction "HTTP/1.1 200 OK"
+2025-05-24 15:02:02,039 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendMessage "HTTP/1.1 200 OK"
+[2025-05-24 15:02:02 +0100] [20248] [INFO] 127.0.0.1:50805 POST /webhook 1.1 200 20 825657
+2025-05-24 15:02:09,823 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendChatAction "HTTP/1.1 200 OK"
+2025-05-24 15:02:10,277 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/sendMessage "HTTP/1.1 200 OK"
+[2025-05-24 15:02:10 +0100] [20248] [INFO] 127.0.0.1:50812 POST /webhook 1.1 200 20 1032528
+2025-05-24 15:02:12,959 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:12,961 - handlers.callbacks - INFO - Showing trade history
+2025-05-24 15:02:13,147 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:13,148 - handlers.history - INFO - User ID: 577180091
+2025-05-24 15:02:13,542 - config - INFO - Sells: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:13,543 - config - INFO - Buys: []
+2025-05-24 15:02:13,543 - handlers.history - INFO - Trades: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:13,543 - handlers.history - INFO - {'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}
+2025-05-24 15:02:13,543 - handlers.history - INFO - {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}
+2025-05-24 15:02:13,759 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:13 +0100] [20248] [INFO] 127.0.0.1:50812 POST /webhook 1.1 200 20 1026354
+2025-05-24 15:02:20,400 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:20,402 - handlers.history - INFO - Trade ID: qGsvuWvQG2
+2025-05-24 15:02:20,871 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:20 +0100] [20248] [INFO] 127.0.0.1:50815 POST /webhook 1.1 200 20 1091703
+2025-05-24 15:02:23,096 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:23,380 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:23,382 - handlers.history - INFO - User ID: 577180091
+2025-05-24 15:02:23,794 - config - INFO - Sells: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:23,795 - config - INFO - Buys: []
+2025-05-24 15:02:23,795 - handlers.history - INFO - Trades: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:23,795 - handlers.history - INFO - {'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}
+2025-05-24 15:02:23,796 - handlers.history - INFO - {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}
+2025-05-24 15:02:24,091 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:24 +0100] [20248] [INFO] 127.0.0.1:50815 POST /webhook 1.1 200 20 1256684
+2025-05-24 15:02:25,734 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:25,736 - handlers.history - INFO - Trade ID: AZEni06XcO
+2025-05-24 15:02:26,627 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:26 +0100] [20248] [INFO] 127.0.0.1:50815 POST /webhook 1.1 200 20 1129667
+2025-05-24 15:02:29,099 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:29,295 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:29,297 - handlers.history - INFO - User ID: 577180091
+2025-05-24 15:02:29,702 - config - INFO - Sells: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:29,703 - config - INFO - Buys: []
+2025-05-24 15:02:29,703 - handlers.history - INFO - Trades: [{'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}, {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}]
+2025-05-24 15:02:29,703 - handlers.history - INFO - {'_id': 'AZEni06XcO', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': True, 'price': 10000.0, 'invoice_id': 'NiJ4TgC4tPN93tkPDwq45H', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'updated_at': datetime.datetime(2025, 4, 27, 23, 56, 7, 712000), 'terms': 'A trade window on morgage'}
+2025-05-24 15:02:29,704 - handlers.history - INFO - {'_id': 'qGsvuWvQG2', 'seller_id': '577180091', 'buyer_id': '', 'currency': 'USD', 'is_active': False, 'is_paid': False, 'price': 500.0, 'invoice_id': '4yZ5XprH5BvnnHX7LRxpi8', 'is_completed': False, 'chat': None, 'trade_type': 'CryptoToFiat', 'created_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'updated_at': datetime.datetime(2025, 5, 13, 3, 49, 12, 774000), 'terms': ';)&7fhkurefvhj'}
+2025-05-24 15:02:29,910 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:29 +0100] [20248] [INFO] 127.0.0.1:50815 POST /webhook 1.1 200 20 1018625
+2025-05-24 15:02:32,611 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:32,803 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:32 +0100] [20248] [INFO] 127.0.0.1:50815 POST /webhook 1.1 200 20 384866
+2025-05-24 15:02:38,967 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-05-24 15:02:38,969 - handlers.callbacks - INFO - Starting trade creation process
+2025-05-24 15:02:39,166 - root - INFO - Active trades: []
+2025-05-24 15:02:39,383 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAENWN5h4btq3j9ALSNQoSvWaJ-yN1deDi0/editMessageText "HTTP/1.1 200 OK"
+[2025-05-24 15:02:39 +0100] [20248] [INFO] 127.0.0.1:50825 POST /webhook 1.1 200 20 986684
