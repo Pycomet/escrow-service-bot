@@ -4,7 +4,6 @@ from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from functions.dispute import get_dispute_by_id
 
 # Store trade in context instead of global variable
 async def start_dispute(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -23,49 +22,65 @@ async def call_dispute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send The Verdict To Buyer And Seller"""
 
     dispute_id = update.message.text
-
-    dispute = get_dispute_by_id(dispute_id)
-    keyboard = give_verdict()
-
-    if dispute != None:
-        # Store trade in context for later use
-        context.user_data["trade"] = dispute.trade
-        trade = dispute.trade
-
-        await context.bot.send_message(
-            chat_id=update.message.from_user.id,
-            text=emoji.emojize(
-                f"""
-:ticket: <b>Dispute Ticket -- {dispute.id}</b>
-----------------------
-Complaint --> {dispute.complaint}
+    
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=emoji.emojize(
+            f":warning: Please resolve dispute {dispute_id}",
+        ),
+    )
 
 
-Trade Info;
--------------
-<b>ID --> {trade.id}</b>
-<b>Seller ID --> {trade.seller}</b>
-<b>Buyer ID --> {trade.buyer}</b>
-<b>Price --> {trade.price} {trade.currency}</b>
-<b>Preferred method of payment --> {trade.coin}</b>
-<b>Created on --> {trade.created_at}</b>
-<b>Payment Status --> {trade.payment_status}</b>
-<b>Is Open --> {trade.is_open}</b>
+    await context.bot.send_message(
+        chat_id=update.message.from_user.id,
+        text=emoji.emojize(
+            ":warning: Feature currently unavailable!",
+        ),
+    )
 
-Give verdict :grey_question:
-                """,
-            ),
-            reply_markup=keyboard,
-            parse_mode="html",
-        )
 
-    else:
-        await context.bot.send_message(
-            chat_id=update.message.from_user.id,
-            text=emoji.emojize(
-                ":warning: Dispute Not Found!",
-            ),
-        )
+#     dispute = get_dispute_by_id(dispute_id)
+#     keyboard = give_verdict()
+
+#     if dispute != None:
+#         # Store trade in context for later use
+#         context.user_data["trade"] = dispute.trade
+#         trade = dispute.trade
+
+#         await context.bot.send_message(
+#             chat_id=update.message.from_user.id,
+#             text=emoji.emojize(
+#                 f"""
+# :ticket: <b>Dispute Ticket -- {dispute.id}</b>
+# ----------------------
+# Complaint --> {dispute.complaint}
+
+
+# Trade Info;
+# -------------
+# <b>ID --> {trade.id}</b>
+# <b>Seller ID --> {trade.seller}</b>
+# <b>Buyer ID --> {trade.buyer}</b>
+# <b>Price --> {trade.price} {trade.currency}</b>
+# <b>Preferred method of payment --> {trade.coin}</b>
+# <b>Created on --> {trade.created_at}</b>
+# <b>Payment Status --> {trade.payment_status}</b>
+# <b>Is Open --> {trade.is_open}</b>
+
+# Give verdict :grey_question:
+#                 """,
+#             ),
+#             reply_markup=keyboard,
+#             parse_mode="html",
+#         )
+
+#     else:
+#         await context.bot.send_message(
+#             chat_id=update.message.from_user.id,
+#             text=emoji.emojize(
+#                 ":warning: Dispute Not Found!",
+#             ),
+#         )
 
 
 async def pass_verdict(update: Update, context: ContextTypes.DEFAULT_TYPE):
