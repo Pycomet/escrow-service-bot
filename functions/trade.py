@@ -92,22 +92,30 @@ class TradeClient:
         return trade
 
     @staticmethod
-    def add_price(user: UserType, price: float) -> TradeType | None:
-        trade = TradeClient.get_most_recent_trade(user)
+    def add_price(user: UserType, price: float, trade_id: Optional[str] = None) -> TradeType | None:
+        if trade_id:
+            trade = TradeClient.get_trade(trade_id)
+        else:
+            trade = TradeClient.get_most_recent_trade(user)
+        
         if trade is not None:
-            db.trades.update_one({"_id": trade["_id"]}, {"$set": {"price": price}})
-            return trade
+            db.trades.update_one({"_id": trade["_id"]}, {"$set": {"price": price, "updated_at": datetime.now()}})
+            return TradeClient.get_trade(trade["_id"]) # Return fresh trade data
         return None
 
     @staticmethod
-    def add_terms(user: UserType, terms: str) -> TradeType | None:
+    def add_terms(user: UserType, terms: str, trade_id: Optional[str] = None) -> TradeType | None:
         """
         Update terms of contract
         """
-        trade = TradeClient.get_most_recent_trade(user)
+        if trade_id:
+            trade = TradeClient.get_trade(trade_id)
+        else:
+            trade = TradeClient.get_most_recent_trade(user)
+
         if trade is not None:
-            db.trades.update_one({"_id": trade["_id"]}, {"$set": {"terms": terms}})
-            return trade
+            db.trades.update_one({"_id": trade["_id"]}, {"$set": {"terms": terms, "updated_at": datetime.now()}})
+            return TradeClient.get_trade(trade["_id"]) # Return fresh trade data
         return None
 
     @staticmethod

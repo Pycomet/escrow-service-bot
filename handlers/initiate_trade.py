@@ -1,100 +1,30 @@
 from config import *
 from utils import *
 from functions import *
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import logging
 
+from utils.keyboard import trade_type_menu
+from utils.enums import TradeTypeEnums
+from handlers.trade_flows import TradeFlowHandler
+from utils.messages import Messages
+from functions.trade import TradeClient
+from functions.user import UserClient
+
+# Import flow classes and their specific state constants
+from handlers.trade_flows.fiat import CryptoFiatFlow, AWAITING_AMOUNT, AWAITING_CURRENCY, AWAITING_DESCRIPTION
+# from handlers.trade_flows.crypto import CryptoCryptoFlow # etc.
+# from handlers.trade_flows.product import CryptoProductFlow
+# from handlers.trade_flows.market import MarketShopFlow
+
+logger = logging.getLogger(__name__)
 
 ##############TRADE CREATION
-async def trade_terms(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Terms of trade
-    """
-    user = UserClient.get_user(update.message)
-
-    question = await context.bot.send_message(
-        chat_id=user["_id"],
-        text="📝 What are the terms for the escrow contract you are about to create ?",
-    )
-
-    context.user_data["next_step"] = trade_price
-
-
-async def trade_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Receive user input on trade price
-    """
-    # import pdb; pdb.set_trace()
-    terms = update.message.text
-    user = UserClient.get_user_by_id(update.message.from_user.id)
-
-    trade = TradeClient.add_terms(user=user, terms=str(terms))
-
-    if trade is None:
-        await context.bot.send_message(
-            chat_id=user["_id"],
-            text="❌ Error creating trade. Please try again.",
-        )
-        return
-
-    question = await context.bot.send_message(
-        chat_id=user["_id"],
-        text="💰 What is the price of the trade in your local currency?",
-    )
-
-    context.user_data["next_step"] = creating_trade
-
-
-async def creating_trade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Recieve user price input on trade
-    """
-    price = update.message.text
-    user = UserClient.get_user_by_id(update.message.from_user.id)
-
-    trade = TradeClient.add_price(user=user, price=float(price))
-
-    if trade is None:
-        await context.bot.send_message(
-            chat_id=update.message.chat.id, 
-            text="❌ Unable to find your trade. Please start over"
-        )
-        return
-
-    # Get Payment Url
-    # payment_url = TradeClient.get_invoice_url(trade=trade)
-    payment_url = "" # Keeping empty as requested - will be implemented later
-    trade = TradeClient.get_most_recent_trade(user)
-
-    # Skip the None check since we're using an empty string
-    # Create an inline keyboard with a Forward button
-    inline_keyboard = [
-        [InlineKeyboardButton("Forward", switch_inline_query=""),
-         InlineKeyboardButton("Join Trade", url=f"https://t.me/{context.bot.username}?start=join_{trade['_id']}")]
-    ]
-    keyboard_markup = InlineKeyboardMarkup(inline_keyboard)
-
-    # Send the message with the inline keyboard
-    await context.bot.send_message(
-        chat_id=update.message.from_user.id,
-        text=Messages.trade_created(trade),
-        parse_mode="html",
-        reply_markup=keyboard_markup,
-    )
-
-    # Send instructions
-    await context.bot.send_message(
-        chat_id=update.message.from_user.id, 
-        text=Messages.trade_created(trade)
-    )
-
-
 async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /trade command"""
     user_id = update.effective_user.id
     
-    # Check if user already has a trade creation in progress
     if context.user_data.get("trade_creation"):
         await update.message.reply_text(
             "❌ You already have a trade creation in progress. "
@@ -105,19 +35,21 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
         )
         return
     
-    # Check if user is already involved in an active trade
-    active_trade = trades_db.get_active_trade_by_user_id(str(user_id))
-    if active_trade:
-        await update.message.reply_text(
-            f"❌ You already have an active trade (#{active_trade['_id']}). "
-            "Please complete or cancel your current trade before starting a new one.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-            ]])
-        )
-        return
-    
-    # Start trade creation process - now ask for trade type first
+    user_obj = UserClient.get_user(update.message)
+    if user_obj:
+        active_trade = TradeClient.get_most_recent_trade(user_obj)
+        if active_trade and active_trade.get('is_active', False):
+            await update.message.reply_text(
+                f"❌ You already have an active trade (#{active_trade['_id']}). "
+                "Please complete or cancel your current trade before starting a new one.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+            return
+    else:
+        logging.warning(f"User not found for ID {user_id} in initiate_trade_handler")
+
     keyboard = await trade_type_menu()
     await update.message.reply_text(
         "📝 Let's create a new trade!\n\n"
@@ -125,234 +57,13 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
         reply_markup=keyboard
     )
     
-    # Set state to wait for trade type selection
     context.user_data["trade_creation"] = {"step": "select_trade_type"}
-
-
-async def handle_trade_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the trade amount input"""
-    # Only handle if this user is in the amount step
-    if not context.user_data.get("trade_creation", {}).get("step") == "amount":
-        return
-    
-    try:
-        amount = float(update.message.text)
-        if amount <= 0:
-            raise ValueError("Amount must be positive")
-        
-        # Store amount and move to next step
-        context.user_data["trade_creation"]["amount"] = amount
-        context.user_data["trade_creation"]["step"] = "currency"
-        
-        # Get trade type to customize currency options
-        trade_type = context.user_data["trade_creation"].get("trade_type", "")
- 
-        if trade_type == TradeTypeEnums.CRYPTO_FIAT.value:
-            prompt = "💱 Please select the crypto currency of the asset you're trying to sell:"
-            keyboard = currency_menu("crypto")
-
-        elif trade_type == TradeTypeEnums.CRYPTO_CRYPTO.value:
-            prompt = "💱 Please select the base currency for this crypto exchange:"
-            keyboard = currency_menu("fiat")
-
-        elif trade_type == TradeTypeEnums.CRYPTO_PRODUCT.value:
-            prompt = "💱 Please select the currency for pricing your product:"
-            keyboard = currency_menu("fiat")
-
-        elif trade_type == TradeTypeEnums.MARKET_SHOP.value:
-            prompt = "💱 Here are the list of available trades in the market right now:"
-            keyboard = None # Ideally meant to be the list of available trades
-
-        else:
-            prompt = "💱 Please select the currency for this trade:"
-            keyboard = currency_menu("fiat")
-        
-        
-        await update.message.reply_text(
-            prompt,
-            reply_markup=keyboard                                                                                                                                                                                       
-        )
-        
-    except ValueError:
-        await update.message.reply_text(
-            "❌ Please enter a valid positive number.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Cancel", callback_data="menu")
-            ]])
-        )
-
-
-async def handle_trade_currency(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the trade currency selection"""
-    query = update.callback_query
-    await query.answer()
-    
-    if not context.user_data.get("trade_creation", {}).get("step") == "currency":
-        return
-    
-    currency = query.data.replace("currency_", "")
-    
-    # Store currency and move to next step
-    context.user_data["trade_creation"]["currency"] = currency
-    context.user_data["trade_creation"]["step"] = "description"
-    
-    # Get the trade type to customize the prompt
-    trade_type = context.user_data["trade_creation"].get("trade_type", "")
-    
-    if trade_type == "CryptoToFiat":
-        prompt = (
-            "📝 <b>Details for your Crypto to Fiat Trade</b>\n\n"
-            f"Selected currency: {currency}\n\n"
-            "Please provide the following details:\n"
-            "• Which cryptocurrency you're selling\n"
-            "• Your preferred payment method (bank transfer, cash, etc.)\n"
-            "• Any additional terms or conditions"
-        )
-    elif trade_type == "CryptoToCrypto":
-        prompt = (
-            "📝 <b>Details for your Crypto to Crypto Trade</b>\n\n"
-            f"Selected currency: {currency}\n\n"
-            "Please provide the following details:\n"
-            "• Which cryptocurrency you're offering\n"
-            "• Which cryptocurrency you want in return\n"
-            "• Exchange rate details\n"
-            "• Any additional terms or requirements"
-        )
-    elif trade_type == "CryptoToProduct":
-        prompt = (
-            "📝 <b>Details for your Crypto to Product Trade</b>\n\n"
-            f"Selected currency: {currency}\n\n"
-            "Please provide the following details:\n"
-            "• Product name and description\n"
-            "• Condition (new, used, etc.)\n"
-            "• Delivery or pickup details\n"
-            "• Which cryptocurrency you accept\n"
-            "• Any warranty or return policy"
-        )
-    elif trade_type == "MarketShop":
-        prompt = (
-            "📝 <b>Details for your Market Shop</b>\n\n"
-            f"Selected currency: {currency}\n\n"
-            "Please provide the following details:\n"
-            "• Shop name\n"
-            "• Types of products available\n"
-            "• Pricing and cryptocurrency acceptance\n"
-            "• Shipping/delivery information\n"
-            "• Any shop policies or rules"
-        )
-    else:
-        prompt = (
-            "📝 Please enter a description for this trade:\n\n"
-            "Include details about what you're selling and any specific terms or conditions."
-        )
-    
-    await query.edit_message_text(
-        prompt,
-        parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="menu")
-        ]])
-    )
-
-
-async def handle_trade_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the trade description input"""
-    if not context.user_data.get("trade_creation", {}).get("step") == "description":
-        logging.warning("handle_trade_description called but step is not 'description'")
-        return
-    
-    # Get trade type and route to appropriate flow
-    trade_data = context.user_data["trade_creation"]
-    trade_type = trade_data.get("trade_type", "")
-    
-    logging.info(f"Routing to trade flow handler for type: {trade_type}")
-    
-    # Import here to avoid circular imports
-    from handlers.trade_flows import TradeFlowHandler
-    
-    # Route to specific trade flow
-    success = await TradeFlowHandler.route_trade_flow(update, context, trade_type)
-    
-    if not success:
-        logging.error("Trade flow handler failed")
-        await update.message.reply_text(
-            "❌ Failed to process trade. Please try again.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-            ]])
-        )
-
-
-async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cancel the current operation and clear user data"""
-    if "trade_creation" in context.user_data:
-        context.user_data.pop("trade_creation")
-        await update.message.reply_text(
-            "✅ Trade creation cancelled.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-            ]])
-        )
-    else:
-        await update.message.reply_text(
-            "Nothing to cancel.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-            ]])
-        )
-
-
-def register_handlers(application):
-    """Register handlers for the initiate trade module"""
-    application.add_handler(CommandHandler("trade", initiate_trade_handler))
-    application.add_handler(CommandHandler("cancel", cancel_handler))
-    
-    # Handle currency selection via callback query
-    application.add_handler(CallbackQueryHandler(handle_trade_currency, pattern="^currency_"))
-    
-    # Handle trade type selection via callback query
-    application.add_handler(CallbackQueryHandler(handle_trade_type_selection, pattern="^trade_type_"))
-    
-    # Handle deposit check callback
-    application.add_handler(CallbackQueryHandler(handle_check_deposit_callback, pattern="^check_deposit$"))
-    
-    # Create a combined handler for all trade creation steps
-    async def trade_creation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        # Early return if this is not a private chat or is a command
-        if not update.effective_user or not update.message or update.message.text.startswith('/'):
-            return
-            
-        # Get the current step in the trade creation process
-        current_step = context.user_data.get("trade_creation", {}).get("step")
-        logging.info(f"Processing message in trade creation. Current step: {current_step}, Text: {update.message.text}")
-        
-        # Route to the appropriate handler based on the step
-        if current_step == "select_trade_type":
-            logging.info("Handling trade type selection step")
-            # Ignore text messages at this step, selection handled by callback query
-            return
-        elif current_step == "amount":
-            logging.info("Handling amount step")
-            await handle_trade_amount(update, context)
-        elif current_step == "description":
-            logging.info("Handling description step")
-            await handle_trade_description(update, context)
-        else:
-            logging.info(f"Message received but no matching step found. Current step: {current_step}")
-    
-    # Register the combined handler for all text messages in private chats
-    application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
-        trade_creation_handler
-    ))
-
 
 async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the trade type selection callback"""
     query = update.callback_query
     await query.answer()
     
-    # Verify we're in the correct step
     if not context.user_data.get("trade_creation", {}).get("step") == "select_trade_type":
         await query.message.edit_text(
             "❌ Something went wrong. Please start over with /trade",
@@ -362,9 +73,10 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
         )
         return
     
-    trade_type = query.data.replace("trade_type_", "")
+    trade_type_value = query.data.replace("trade_type_", "")
     
-    if trade_type == "Disabled":
+    valid_enum_values = [e.value for e in TradeTypeEnums]
+    if trade_type_value == "Disabled":
         await query.message.edit_text(
             "❌ This feature is currently not available, will be back active soon!",
             reply_markup=InlineKeyboardMarkup([[
@@ -372,49 +84,181 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
             ]])
         )
         return
-
-    elif trade_type not in [e.value for e in TradeTypeEnums]:
+    elif trade_type_value not in valid_enum_values:
         await query.message.edit_text(
             "❌ Invalid trade type selected. Please start over with /trade",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
             ]])
         )
+        context.user_data.pop("trade_creation", None)
         return
-    
+        
+    context.user_data["trade_creation"]["trade_type"] = trade_type_value
+    context.user_data["trade_creation"]["step"] = "flow_initiated"
 
-
+    logging.info(f"Trade type {trade_type_value} selected. Initiating flow setup.")
     
-    # Store trade type and update state
-    context.user_data["trade_creation"]["trade_type"] = trade_type
-    context.user_data["trade_creation"]["step"] = "amount"
+    success = await TradeFlowHandler.initiate_flow_setup(update, context, trade_type_value)
     
-    # Ask for trade amount
-    await query.message.edit_text(
-        f"💰 You've selected a {trade_type} trade.\n\n"
-        "Please enter the amount for this trade:",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="menu")
-        ]])
-    )
+    if not success:
+        logging.error(f"Trade flow setup failed for type: {trade_type_value}")
+        try:
+            await query.edit_message_text(
+                "❌ Failed to start trade setup. Please try again or contact support.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                ]])
+            )
+        except Exception as e:
+            logging.error(f"Error editing message after flow setup failure: {e}")
+        context.user_data.pop("trade_creation", None)
 
+async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Cancel the current trade creation process"""
+    if "trade_creation" in context.user_data:
+        context.user_data.pop("trade_creation")
+        message_text = "✅ Trade creation process has been cancelled."
+    else:
+        message_text = "ℹ️ You don't have any active trade creation process to cancel."
+
+    reply_markup=InlineKeyboardMarkup([[
+        InlineKeyboardButton("🆕 Start New Trade", callback_data="create_trade"),
+        InlineKeyboardButton("🏡 Main Menu", callback_data="menu")
+    ]])
+
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(message_text, reply_markup=reply_markup)
+    elif update.message:
+        await update.message.reply_text(message_text, reply_markup=reply_markup)
+
+async def dispatch_to_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Dispatches incoming messages or callback queries to the appropriate
+    method in the active trade flow based on context.
+    """
+    if not context.user_data or "trade_creation" not in context.user_data:
+        # If not in a trade creation flow, or if called for a message not meant for it,
+        # simply return and let other handlers (if any) process it.
+        # This also means it won't interfere with commands.
+        return
+
+    trade_creation_data = context.user_data.get("trade_creation")
+    if not trade_creation_data: # Should be caught by the above, but as a safeguard
+        return
+
+    active_flow_name = trade_creation_data.get("active_flow_module")
+    current_flow_step = trade_creation_data.get("current_flow_step")
+
+    # If flow is not yet fully initiated (e.g. just after type selection but before flow sets its own step)
+    if not active_flow_name or not current_flow_step or trade_creation_data.get("step") != "flow_initiated":
+        # This check ensures it only acts when a flow is truly active and managing steps.
+        # It avoids interfering if 'step' is 'select_trade_type' for example.
+        return
+
+    target_flow_class = None
+    if active_flow_name == CryptoFiatFlow.FLOW_NAME:
+        target_flow_class = CryptoFiatFlow
+    # Add elif for other flows when they are implemented
+    # elif active_flow_name == CryptoCryptoFlow.FLOW_NAME:
+    #     target_flow_class = CryptoCryptoFlow
+
+    if not target_flow_class:
+        logging.error(f"dispatch_to_flow: Unknown active_flow_module name: {active_flow_name}")
+        return
+
+    # Message Handling
+    if update.message and update.message.text and not update.message.text.startswith('/'):
+        if active_flow_name == CryptoFiatFlow.FLOW_NAME:
+            if current_flow_step == AWAITING_AMOUNT:
+                await target_flow_class.handle_amount_input(update, context)
+            elif current_flow_step == AWAITING_DESCRIPTION:
+                await target_flow_class.handle_description_input(update, context)
+            else:
+                # Optionally, inform the user if they send text at an unexpected step
+                # await update.message.reply_text("I'm expecting you to use a button or follow other instructions.")
+                logging.debug(f"Fiat flow: Unhandled message for step {current_flow_step}. Text: {update.message.text}")
+        # Add elif for other flows' message steps
+
+    # Callback Query Handling
+    elif update.callback_query:
+        query = update.callback_query
+        # Specific flow related callbacks (not generic ones like cancel, menu, etc.)
+        if query.data.startswith("currency_"):
+            if active_flow_name == CryptoFiatFlow.FLOW_NAME and current_flow_step == AWAITING_CURRENCY:
+                await target_flow_class.handle_currency_selection(query, context)
+            else:
+                await query.answer("This currency choice is not active right now.")
+                logging.warning(f"Flow dispatch: Unhandled currency_ callback for flow {active_flow_name}, step {current_flow_step}")
+        # Add elif for other flows and their specific callback prefixes
+        else:
+            # This 'else' means the callback wasn't handled by specific patterns above
+            # It might be a generic callback that slipped through or an unexpected one for the current flow state
+            # It's important not to broadly answer all unhandled callbacks here without care,
+            # as other more specific handlers (registered with higher priority or different patterns) should catch them.
+            logging.debug(f"Flow dispatch: Callback '{query.data}' not explicitly handled for flow {active_flow_name}, step {current_flow_step}")
+            # If absolutely sure it's an unhandled relevant callback for this dispatcher:
+            # await query.answer("This option isn't available at this step.")
 
 async def handle_check_deposit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the check deposit callback"""
+    """Handle the check deposit callback by routing to the appropriate trade flow."""
     query = update.callback_query
     await query.answer()
     
-    # Get trade type and route to appropriate flow
-    trade_data = context.user_data.get("trade_creation", {})
-    trade_type = trade_data.get("trade_type", "")
+    # trade_id is now expected to be part of the callback_data, e.g., "check_deposit_TRADEID"
+    trade_id = None
+    if query.data and query.data.startswith("check_deposit_"):
+        parts = query.data.split("_", 2)
+        if len(parts) > 2:
+            trade_id = parts[-1]
     
-    if trade_type == TradeTypeEnums.CRYPTO_FIAT.value:
-        from handlers.trade_flows.fiat import CryptoFiatFlow
-        await CryptoFiatFlow.handle_deposit(update, context)
-    else:
-        await query.edit_message_text(
-            "❌ Invalid trade type for deposit check.",
+    if not trade_id: # Fallback if trade_id not in callback, try context (less reliable for this specific callback)
+        trade_id = context.user_data.get('trade_creation', {}).get('trade_id') or \
+                   context.user_data.get('active_trade_id_for_deposit_check')
+
+    trade_type = None
+    if trade_id:
+        trade = TradeClient.get_trade(trade_id)
+        if trade:
+            trade_type = trade.get("trade_type")
+            # Store trade_id in context if fetched this way, so flow method can access it if needed
+            context.user_data['active_trade_id_for_deposit_check'] = trade_id 
+        else:
+            await query.message.edit_text(f"❌ Trade with ID {trade_id} not found for deposit check.")
+            return
+    else: # If no trade_id could be determined at all
+        await query.message.edit_text("❌ Could not identify the trade for deposit check. Please try again.")
+        return
+
+    if not trade_type:
+        await query.message.edit_text("❌ Could not determine trade type for deposit check.")
+        return
+
+    success = await TradeFlowHandler.route_to_flow_method(update, context, trade_type, "handle_deposit_check")
+
+    if not success:
+        await query.message.edit_text(
+            "❌ Deposit check failed, is not applicable for this trade type, or deposit not found.",
             reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔄 Try Again", callback_data=f"check_deposit_{trade_id}" if trade_id else "check_deposit"),
                 InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
             ]])
         )
+
+def register_handlers(application):
+    """Register handlers for the initiate trade module"""
+    application.add_handler(CommandHandler("trade", initiate_trade_handler))
+    application.add_handler(CommandHandler("cancel", cancel_handler))
+    application.add_handler(CallbackQueryHandler(cancel_handler, pattern="^cancel_creation$"))
+
+    application.add_handler(CallbackQueryHandler(handle_trade_type_selection, pattern="^trade_type_"))
+    
+    application.add_handler(CallbackQueryHandler(handle_check_deposit_callback, pattern=r"^check_deposit(?:_\w+)?$"))
+
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, 
+        dispatch_to_flow
+    ), group=1)
+
+    application.add_handler(CallbackQueryHandler(dispatch_to_flow, pattern="^.*$", block=False), group=1)
