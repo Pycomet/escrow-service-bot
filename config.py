@@ -15,6 +15,7 @@ import asyncio
 # from prisma import Client
 from datetime import datetime
 import cryptocompare
+from typing import Optional
 
 from dotenv import load_dotenv
 load_dotenv()

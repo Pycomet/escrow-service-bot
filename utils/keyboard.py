@@ -175,7 +175,12 @@ def currency_menu(type: Optional[str]):
         currencies = [
             ("₮ USDT", "currency_USDT"),
             ("₿ BTC", "currency_BTC"),
-            ("Ξ ETH", "currency_ETH")
+            ("Ξ ETH", "currency_ETH"),
+            ("◎ SOL", "currency_SOL"),
+            ("🟡 BNB", "currency_BNB"),
+            ("Ł LTC", "currency_LTC"),
+            ("Ð DOGE", "currency_DOGE"),
+            ("ⓣ TRX", "currency_TRX")
         ]
     else:
         currencies = [
@@ -202,11 +207,11 @@ async def trade_type_menu():
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("💰 Crypto → Fiat", callback_data="trade_type_CryptoToFiat"),
-            InlineKeyboardButton("💱 Crypto → Crypto", callback_data="trade_type_Disabled")
+            InlineKeyboardButton("💱 Crypto → Crypto", callback_data="trade_type_CryptoToCrypto")
         ],
         [
-            InlineKeyboardButton("🛒 Crypto → Product", callback_data="trade_type_Disabled"),
-            InlineKeyboardButton("🔒 Market Shop ", callback_data="trade_type_TradeOffer")
+            InlineKeyboardButton("🛒 Crypto → Product", callback_data="trade_type_CryptoToProduct"),
+            InlineKeyboardButton("🔒 Market Shop ", callback_data="trade_type_MarketShop")
         ],
         [InlineKeyboardButton("🔙 Cancel", callback_data="menu")]
     ])
