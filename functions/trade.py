@@ -92,10 +92,14 @@ class TradeClient:
         return trade
 
     @staticmethod
-    def add_price(user: UserType, price: float, trade_id: Optional[str] = None) -> TradeType | None:
+    def add_price(*, price: float, user: Optional[UserType] = None, trade_id: Optional[str] = None) -> TradeType | None:
+        if not trade_id and not user:
+            raise ValueError("Either user or trade_id must be provided to add_price")
+        
+        trade: Optional[TradeType] = None
         if trade_id:
             trade = TradeClient.get_trade(trade_id)
-        else:
+        elif user: # user is not None
             trade = TradeClient.get_most_recent_trade(user)
         
         if trade is not None:
@@ -104,13 +108,17 @@ class TradeClient:
         return None
 
     @staticmethod
-    def add_terms(user: UserType, terms: str, trade_id: Optional[str] = None) -> TradeType | None:
+    def add_terms(*, terms: str, user: Optional[UserType] = None, trade_id: Optional[str] = None) -> TradeType | None:
         """
         Update terms of contract
         """
+        if not trade_id and not user:
+            raise ValueError("Either user or trade_id must be provided to add_terms")
+
+        trade: Optional[TradeType] = None
         if trade_id:
             trade = TradeClient.get_trade(trade_id)
-        else:
+        elif user: # user is not None
             trade = TradeClient.get_most_recent_trade(user)
 
         if trade is not None:
