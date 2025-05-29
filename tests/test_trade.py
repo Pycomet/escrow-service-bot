@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 from datetime import datetime
 import sys
 import os
@@ -119,35 +119,58 @@ def test_get_most_recent_trade(mock_db, mock_user):
 def test_add_terms(mock_db, mock_user):
     """Test adding terms to a trade"""
     with patch('functions.trade.TradeClient.get_most_recent_trade') as mock_get_trade:
-        mock_get_trade.return_value = {"_id": "ABC123"}
+        # Ensure the mock trade has an _id for the add_terms logic that might use trade_id
+        mock_trade_instance = {"_id": "ABC123", "seller_id": mock_user["_id"]}
+        mock_get_trade.return_value = mock_trade_instance
         
-        result = TradeClient.add_terms(mock_user, "Test terms")
+        # Test calling add_terms with user object (original way)
+        TradeClient.add_terms(user=mock_user, terms="Test terms")
         
-        assert result is not None
-        
-        # Verify update_one was called with the correct parameters
         mock_db.trades.update_one.assert_called_once()
         args, _ = mock_db.trades.update_one.call_args
         filter_query, update_query = args
         assert filter_query == {"_id": "ABC123"}
-        assert update_query == {"$set": {"terms": "Test terms"}}
+        # Check for terms and the new updated_at field using ANY
+        assert update_query == {"$set": {"terms": "Test terms", "updated_at": ANY}}
+        
+        # Reset mock for next call
+        mock_db.trades.update_one.reset_mock()
+
+        # Test calling add_terms with trade_id (new way)
+        TradeClient.add_terms(trade_id="TID123", terms="New terms")
+        mock_db.trades.update_one.assert_called_once()
+        args_tid, _ = mock_db.trades.update_one.call_args
+        filter_query_tid, update_query_tid = args_tid
+        assert filter_query_tid == {"_id": "TID123"}
+        assert update_query_tid == {"$set": {"terms": "New terms", "updated_at": ANY}}
 
 
 def test_add_price(mock_db, mock_user):
     """Test adding price to a trade"""
     with patch('functions.trade.TradeClient.get_most_recent_trade') as mock_get_trade:
-        mock_get_trade.return_value = {"_id": "ABC123"}
+        mock_trade_instance = {"_id": "ABC123", "seller_id": mock_user["_id"]}
+        mock_get_trade.return_value = mock_trade_instance
         
-        result = TradeClient.add_price(mock_user, 100.0)
+        # Test calling add_price with user object
+        TradeClient.add_price(user=mock_user, price=100.0)
         
-        assert result is not None
-        
-        # Verify update_one was called with the correct parameters
         mock_db.trades.update_one.assert_called_once()
         args, _ = mock_db.trades.update_one.call_args
         filter_query, update_query = args
         assert filter_query == {"_id": "ABC123"}
-        assert update_query == {"$set": {"price": 100.0}}
+        # Check for price and the new updated_at field using ANY
+        assert update_query == {"$set": {"price": 100.0, "updated_at": ANY}}
+
+        # Reset mock for next call
+        mock_db.trades.update_one.reset_mock()
+
+        # Test calling add_price with trade_id
+        TradeClient.add_price(trade_id="TID456", price=200.0)
+        mock_db.trades.update_one.assert_called_once()
+        args_tid, _ = mock_db.trades.update_one.call_args
+        filter_query_tid, update_query_tid = args_tid
+        assert filter_query_tid == {"_id": "TID456"}
+        assert update_query_tid == {"$set": {"price": 200.0, "updated_at": ANY}}
 
 
 def test_add_buyer(mock_db):

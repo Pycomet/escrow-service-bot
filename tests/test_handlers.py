@@ -7,27 +7,47 @@ import os
 # Add project root to path to allow imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from telegram import Update, User, Message, Chat, CallbackQuery
+from telegram import Update, User, Message, Chat, CallbackQuery, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from handlers.initiate_trade import initiate_trade_handler, handle_trade_amount, handle_trade_currency, handle_trade_description, cancel_handler
+
+# Updated imports: removed handle_trade_amount, handle_trade_currency, handle_trade_description
+from handlers.initiate_trade import (
+    initiate_trade_handler, 
+    handle_trade_type_selection, # Assuming this is the correct handler for type selection logic testing
+    cancel_handler,
+    dispatch_to_flow, # For testing the dispatcher if needed, though flow tests might cover it
+    handle_check_deposit_callback # For testing deposit check routing
+)
+# Import TradeFlowHandler if we need to mock its methods called by initiate_trade handlers
+from handlers.trade_flows import TradeFlowHandler
+from utils.enums import TradeTypeEnums # For setting up trade_type in tests
+from utils.keyboard import trade_type_menu # Import trade_type_menu
 
 
 @pytest.fixture
 def mock_update():
     """Create a mock Update object for testing"""
     update = AsyncMock(spec=Update)
-    update.effective_user = MagicMock(spec=User)
+    update.effective_user = AsyncMock(spec=User)
     update.effective_user.id = 123456
     update.effective_user.username = "testuser"
+    
     update.message = AsyncMock(spec=Message)
     update.message.from_user = update.effective_user
     update.message.chat = AsyncMock(spec=Chat)
     update.message.chat.id = 123456
-    update.message.text = "100"
+    update.message.text = "initial_message_text"
+    # Ensure reply_text is an AsyncMock if it's awaited or needs assertions like assert_called_once
+    update.message.reply_text = AsyncMock()
+
     update.callback_query = AsyncMock(spec=CallbackQuery)
     update.callback_query.from_user = update.effective_user
-    update.callback_query.message = update.message
-    update.callback_query.data = "currency_USD"
+    update.callback_query.message = update.message 
+    update.callback_query.data = "initial_callback_data"
+    # Ensure answer and edit_message_text are AsyncMocks
+    update.callback_query.answer = AsyncMock()
+    update.callback_query.message.edit_text = AsyncMock() # cq.message can be different from update.message
+    
     return update
 
 
@@ -37,148 +57,150 @@ def mock_context():
     context = AsyncMock(spec=ContextTypes.DEFAULT_TYPE)
     context.user_data = {}
     context.bot = AsyncMock()
-    context.application = AsyncMock()
-    context.application.user_data = {123456: {}}
+    # context.application = AsyncMock() # Usually not needed for handler logic testing directly
     return context
 
 
 @pytest.mark.asyncio
 async def test_initiate_trade_handler(mock_update, mock_context):
-    """Test the /trade command handler"""
-    with patch('handlers.initiate_trade.trades_db.get_active_trade_by_user_id', return_value=None):
-        await initiate_trade_handler(mock_update, mock_context)
-        
-        # Check if context was updated correctly
-        assert "trade_creation" in mock_context.user_data
-        assert mock_context.user_data["trade_creation"]["step"] == "select_trade_type"
-        
-        # Check if message was sent
-        mock_update.message.reply_text.assert_called_once()
-        args, _ = mock_update.message.reply_text.call_args
-        assert "Please select the type of trade" in args[0]
+    """Test the /trade command handler successfully initiates trade type selection."""
+    # Nested with statements for clarity and linter compatibility
+    with patch('handlers.initiate_trade.UserClient.get_user', return_value={"_id": mock_update.effective_user.id}) as mock_get_user:
+        with patch('handlers.initiate_trade.TradeClient.get_most_recent_trade', return_value=None) as mock_get_recent_trade:
+            with patch('handlers.initiate_trade.trade_type_menu', new_callable=AsyncMock) as mock_trade_type_menu_call:
+                
+                mock_trade_type_menu_call.return_value = MagicMock(spec=InlineKeyboardMarkup) # Mock keyboard object
 
+                await initiate_trade_handler(mock_update, mock_context)
+                
+                assert "trade_creation" in mock_context.user_data
+                assert mock_context.user_data["trade_creation"]["step"] == "select_trade_type"
+                
+                mock_get_user.assert_called_once_with(mock_update.message)
+                mock_get_recent_trade.assert_called_once_with(mock_get_user.return_value)
+                mock_trade_type_menu_call.assert_called_once() 
+                mock_update.message.reply_text.assert_called_once()
+                args, _ = mock_update.message.reply_text.call_args
+                assert "Please select the type of trade" in args[0]
 
 @pytest.mark.asyncio
 async def test_initiate_trade_handler_with_active_trade(mock_update, mock_context):
-    """Test the /trade command handler when user already has an active trade"""
-    with patch('handlers.initiate_trade.trades_db.get_active_trade_by_user_id', return_value={"_id": "ABC123"}):
-        await initiate_trade_handler(mock_update, mock_context)
-        
-        # Check that context was not updated
-        assert "trade_creation" not in mock_context.user_data
-        
-        # Check if error message was sent
-        mock_update.message.reply_text.assert_called_once()
-        args, _ = mock_update.message.reply_text.call_args
-        assert "You already have an active trade" in args[0]
+    """Test /trade command handler when user already has an active trade."""
+    # Nested with statements
+    with patch('handlers.initiate_trade.UserClient.get_user', return_value={"_id": mock_update.effective_user.id}) as mock_get_user:
+        with patch('handlers.initiate_trade.TradeClient.get_most_recent_trade', return_value={"_id": "existing_trade_123", "is_active": True}) as mock_get_recent_trade:
 
+            await initiate_trade_handler(mock_update, mock_context)
+            
+            assert "trade_creation" not in mock_context.user_data
+            mock_get_user.assert_called_once_with(mock_update.message)
+            mock_get_recent_trade.assert_called_once_with(mock_get_user.return_value)
+            mock_update.message.reply_text.assert_called_once()
+            args, _ = mock_update.message.reply_text.call_args
+            assert "You already have an active trade" in args[0]
 
-@pytest.mark.asyncio
-async def test_handle_trade_amount(mock_update, mock_context):
-    """Test handling the trade amount input"""
-    # Set up the context for amount step
-    mock_context.user_data["trade_creation"] = {"step": "amount"}
-    
-    # The currency_menu function must be imported from handlers.initiate_trade
-    mock_keyboard = MagicMock()
-    with patch('handlers.initiate_trade.currency_menu', return_value=mock_keyboard):
-        # We need to skip the actual amount handling since we can't easily mock currency_menu
-        # Let's instead test just the context update without calling the function
-        
-        # Manually simulate what handle_trade_amount does
-        context = mock_context
-        update = mock_update
-        
-        # Parse the amount
-        amount = float(update.message.text)
-        
-        # Store amount and move to next step
-        context.user_data["trade_creation"]["amount"] = amount
-        context.user_data["trade_creation"]["step"] = "currency"
-        
-        # Check if context was updated correctly
-        assert mock_context.user_data["trade_creation"]["step"] == "currency"
-        assert mock_context.user_data["trade_creation"]["amount"] == 100.0
-
+# Removed test_handle_trade_amount
+# Removed test_handle_trade_amount_invalid
+# Removed test_handle_trade_currency
+# Removed test_handle_trade_description
 
 @pytest.mark.asyncio
-async def test_handle_trade_amount_invalid(mock_update, mock_context):
-    """Test handling invalid trade amount input"""
-    # Set up the context for amount step
-    mock_context.user_data["trade_creation"] = {"step": "amount"}
-    mock_update.message.text = "invalid"
-    
-    await handle_trade_amount(mock_update, mock_context)
-    
-    # Check if context was not updated
-    assert mock_context.user_data["trade_creation"]["step"] == "amount"
-    assert "amount" not in mock_context.user_data["trade_creation"]
-    
-    # Check if error message was sent
-    mock_update.message.reply_text.assert_called_once()
-    args, _ = mock_update.message.reply_text.call_args
-    assert "Please enter a valid positive number" in args[0]
+async def test_handle_trade_type_selection_valid(mock_update, mock_context):
+    """Test handling a valid trade type selection."""
+    mock_context.user_data["trade_creation"] = {"step": "select_trade_type"}
+    mock_update.callback_query.data = f"trade_type_{TradeTypeEnums.CRYPTO_FIAT.value}"
 
+    with patch.object(TradeFlowHandler, 'initiate_flow_setup', new_callable=AsyncMock) as mock_initiate_flow:
+        mock_initiate_flow.return_value = True
+
+        await handle_trade_type_selection(mock_update, mock_context)
+
+        mock_update.callback_query.answer.assert_called_once()
+        mock_initiate_flow.assert_called_once_with(mock_update, mock_context, TradeTypeEnums.CRYPTO_FIAT.value)
+        
+        assert mock_context.user_data["trade_creation"]["trade_type"] == TradeTypeEnums.CRYPTO_FIAT.value
+        assert mock_context.user_data["trade_creation"]["step"] == "flow_initiated"
 
 @pytest.mark.asyncio
-async def test_handle_trade_currency(mock_update, mock_context):
-    """Test handling the currency selection callback"""
-    # Set up the context for currency step
-    mock_context.user_data["trade_creation"] = {"step": "currency", "amount": 100.0}
-    
-    await handle_trade_currency(mock_update, mock_context)
-    
-    # Check if context was updated correctly
-    assert mock_context.user_data["trade_creation"]["step"] == "description"
-    assert mock_context.user_data["trade_creation"]["currency"] == "USD"
-    
-    # Check if callback was answered and message edited
+async def test_handle_trade_type_selection_disabled(mock_update, mock_context):
+    """Test handling a disabled trade type selection."""
+    mock_context.user_data["trade_creation"] = {"step": "select_trade_type"}
+    mock_update.callback_query.data = "trade_type_Disabled"
+
+    await handle_trade_type_selection(mock_update, mock_context)
+
     mock_update.callback_query.answer.assert_called_once()
-    mock_update.callback_query.edit_message_text.assert_called_once()
+    mock_update.callback_query.message.edit_text.assert_called_once()
+    args, _ = mock_update.callback_query.message.edit_text.call_args
+    assert "This feature is currently not available" in args[0]
+    # Ensure trade_creation state is not advanced
+    assert mock_context.user_data["trade_creation"]["step"] == "select_trade_type"
+    assert "trade_type" not in mock_context.user_data["trade_creation"]
+
+@pytest.mark.asyncio
+async def test_handle_trade_type_selection_invalid(mock_update, mock_context):
+    """Test handling an invalid trade type selection."""
+    mock_context.user_data["trade_creation"] = {"step": "select_trade_type"}
+    mock_update.callback_query.data = "trade_type_InvalidFlow"
+
+    await handle_trade_type_selection(mock_update, mock_context)
+
+    mock_update.callback_query.answer.assert_called_once()
+    mock_update.callback_query.message.edit_text.assert_called_once()
+    args, _ = mock_update.callback_query.message.edit_text.call_args
+    assert "Invalid trade type selected" in args[0]
+    assert "trade_creation" not in mock_context.user_data # Context should be cleared
 
 
 @pytest.mark.asyncio
-async def test_handle_trade_description(mock_update, mock_context):
-    """Test handling the trade description input"""
-    # Set up the context for description step
-    mock_context.user_data["trade_creation"] = {
-        "step": "description",
-        "amount": 100.0,
-        "currency": "USD",
-        "trade_type": "CryptoToFiat"  # Add trade type to match flow
-    }
-    mock_update.message.text = "Test trade description"
-    
-    # Mock the trade creation and flow handling
-    mock_trade = {"_id": "ABC123"}
-    with patch('handlers.initiate_trade.trades_db.open_new_trade', return_value=mock_trade), \
-         patch('handlers.initiate_trade.trades_db.add_price'), \
-         patch('handlers.initiate_trade.trades_db.add_terms'), \
-         patch('handlers.initiate_trade.UserClient.get_user_by_id'), \
-         patch('handlers.trade_flows.fiat.CryptoFiatFlow.handle_flow', return_value=True):
-        
-        await handle_trade_description(mock_update, mock_context)
-        
-        # Check if trade flow handler was called
-        from handlers.trade_flows.fiat import CryptoFiatFlow
-        CryptoFiatFlow.handle_flow.assert_called_once()
-        
-        # Context should still exist since it's cleaned up after deposit
-        assert "trade_creation" in mock_context.user_data
+async def test_cancel_handler_with_active_creation(mock_update, mock_context):
+    """Test canceling an active trade creation process via message."""
+    mock_context.user_data["trade_creation"] = {"step": "some_step"}
+    # Simulate it being called from a message for this test case
+    mock_update.callback_query = None 
 
-
-@pytest.mark.asyncio
-async def test_cancel_handler(mock_update, mock_context):
-    """Test canceling trade creation"""
-    # Set up the context with trade creation data
-    mock_context.user_data["trade_creation"] = {"step": "amount"}
-    
     await cancel_handler(mock_update, mock_context)
     
-    # Check if context was cleaned up
     assert "trade_creation" not in mock_context.user_data
-    
-    # Check if confirmation message was sent
     mock_update.message.reply_text.assert_called_once()
     args, _ = mock_update.message.reply_text.call_args
-    assert "Trade creation cancelled" in args[0] 
+    assert "Trade creation process has been cancelled" in args[0]
+
+@pytest.mark.asyncio
+async def test_cancel_handler_with_callback_query(mock_update, mock_context):
+    """Test canceling an active trade creation process via callback query."""
+    mock_context.user_data["trade_creation"] = {"step": "some_step"}
+    mock_update.message = None # Simulate callback-based call
+    
+    # Ensure callback_query.message is a distinct mock and its edit_text is also an AsyncMock
+    cb_message_mock = AsyncMock(spec=Message)
+    cb_message_mock.edit_text = AsyncMock()
+    mock_update.callback_query.message = cb_message_mock
+
+    await cancel_handler(mock_update, mock_context)
+
+    assert "trade_creation" not in mock_context.user_data
+    mock_update.callback_query.answer.assert_called_once()
+    # Assert that the edit_text method of the specific cb_message_mock was called
+    cb_message_mock.edit_text.assert_called_once()
+    args, kwargs = cb_message_mock.edit_text.call_args
+    assert "Trade creation process has been cancelled" in args[0]
+    assert isinstance(kwargs.get('reply_markup'), InlineKeyboardMarkup)
+
+@pytest.mark.asyncio
+async def test_cancel_handler_no_active_creation(mock_update, mock_context):
+    """Test canceling when no trade creation is active."""
+    # Ensure trade_creation is not in context
+    if "trade_creation" in mock_context.user_data: 
+        del mock_context.user_data["trade_creation"]
+    mock_update.callback_query = None # Simulate message based
+
+    await cancel_handler(mock_update, mock_context)
+
+    mock_update.message.reply_text.assert_called_once()
+    args, _ = mock_update.message.reply_text.call_args
+    assert "You don't have any active trade creation process" in args[0]
+
+# Tests for dispatch_to_flow and handle_check_deposit_callback would require more setup
+# to mock the interaction with specific flow modules (e.g., CryptoFiatFlow methods).
+# These are good candidates for future expansion of this test file. 
