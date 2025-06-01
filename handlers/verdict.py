@@ -22,7 +22,7 @@ async def call_dispute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send The Verdict To Buyer And Seller"""
 
     dispute_id = update.message.text
-
+    
     await context.bot.send_message(
         chat_id=ADMIN_ID,
         text=emoji.emojize(
@@ -37,6 +37,7 @@ async def call_dispute(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ":warning: Feature currently unavailable!",
         ),
     )
+
 
 #     dispute = get_dispute_by_id(dispute_id)
 #     keyboard = give_verdict()
