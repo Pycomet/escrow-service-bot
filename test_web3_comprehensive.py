@@ -74,8 +74,8 @@ def check_dependencies():
     print("🔍 Checking Dependencies...")
     
     required_packages = [
-        'mnemonic', 'solders', 'nacl', 'eth_account', 'eth_utils', 
-        'hdwallet', 'solana', 'web3', 'requests', 'base58'
+        'mnemonic', 'solders', 'nacl', 'eth_account', 'eth_utils', 'hdwallet',
+        'solana', 'web3', 'requests', 'base58'
     ]
     
     missing_packages = []

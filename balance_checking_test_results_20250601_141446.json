@@ -1,0 +1,72 @@
+{
+  "test_wallets": {
+    "solana": "H8N5o6dTopcB31LvBDDRJSNN6FfEHyczqip8TXPZCJc",
+    "bsc": "0x3B7b60729F832E2c3795F199ec62631Fbf83BcF3"
+  },
+  "solana_balance": {
+    "success": true,
+    "data": {
+      "results": [
+        {
+          "address": "9eeneoxQmxbYFTrffFS5rDz1VsdCpQuzd4D67UNE5D8W",
+          "sol_balance": [
+            {
+              "publicKey": "9eeneoxQmxbYFTrffFS5rDz1VsdCpQuzd4D67UNE5D8W",
+              "amount": "0.036064735"
+            },
+            "https://solscan.io/account/9eeneoxQmxbYFTrffFS5rDz1VsdCpQuzd4D67UNE5D8W"
+          ],
+          "usdt_balance": [
+            {
+              "publicKey": "9eeneoxQmxbYFTrffFS5rDz1VsdCpQuzd4D67UNE5D8W",
+              "amount": "1.877585"
+            },
+            "https://solscan.io/account/9eeneoxQmxbYFTrffFS5rDz1VsdCpQuzd4D67UNE5D8W"
+          ]
+        },
+        {
+          "address": "11111111111111111111111111111112",
+          "error": "InvalidParamsMessage { message: \"Invalid param: could not find account\" }"
+        }
+      ],
+      "sol_price": 151.47
+    }
+  },
+  "bsc_balance": {
+    "success": true,
+    "data": {
+      "results": [
+        {
+          "address": "0x742d35Cc1B1c1F7BC46E2e0c6Ac9A4eCeD3e5C5D",
+          "balance": [
+            {
+              "publicKey": "0x742d35CC1B1c1F7bc46e2e0c6ac9A4ECED3E5c5D",
+              "amount": 0
+            },
+            "https://bscscan.com/address/0x742d35CC1B1c1F7bc46e2e0c6ac9A4ECED3E5c5D"
+          ]
+        },
+        {
+          "address": "0x0000000000000000000000000000000000000000",
+          "balance": [
+            {
+              "publicKey": "0x0000000000000000000000000000000000000000",
+              "amount": "99207.401103683505824306"
+            },
+            "https://bscscan.com/address/0x0000000000000000000000000000000000000000"
+          ]
+        }
+      ],
+      "bnb_price": 648.77
+    }
+  },
+  "generic_balance": {
+    "success": false,
+    "data": null
+  },
+  "balance_validation": false,
+  "price_fetching": {
+    "success": false,
+    "data": null
+  }
+}

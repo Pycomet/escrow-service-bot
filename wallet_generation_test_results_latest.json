@@ -1,0 +1,43 @@
+{
+  "solana": {
+    "success": true,
+    "wallet_data": {
+      "mnemonic": "cook leopard pave goat minimum recipe blossom figure farm fix shine stay",
+      "private_key": "60067ace2c4e7afee2087866c18569a9b62104304970c35ed7c9bc435d30ba36",
+      "public_address": "31Kh7ydPZiKwerPjKWz8GSuecFuK1VWd3aK6xhXHot25"
+    }
+  },
+  "bsc": {
+    "success": true,
+    "wallet_data": {
+      "mnemonic": "frown nose expose admit congress athlete steak bring since plunge voyage heavy",
+      "private_key": "f0a331757e4b41a7ed264acc9b680db8c6040b1d0933dbcbcb4527a119192747",
+      "address": "0x4AE1Fd80Cc546c3944eec3d03F029297b205EA06"
+    }
+  },
+  "litecoin": {
+    "success": true,
+    "wallet_data": {
+      "mnemonic": "obey acoustic tornado solve crouch join valve mutual weasel rotate someone supreme",
+      "private_key": "fb688c576d1d8461e826657e9aebf0285160623d76ee354cbfc4474a9227a4cf",
+      "bech32_address": "LUok8W4Q2uaYW11pejcKW4ce2vKHJpyG97"
+    }
+  },
+  "dogecoin": {
+    "success": true,
+    "wallet_data": {
+      "mnemonic": "toy bulb move calm post hat lunch smooth lunar mouse fee question",
+      "private_key": "7b4cf19b4f4bb18d583827c3a90ab215c5f60f2c17597221679db698cf0ab8f8",
+      "address": "DKzXPZ4ahExCZNKVHbuUWr6PvWpFKzpxGy"
+    }
+  },
+  "tron": {
+    "success": true,
+    "wallet_data": {
+      "mnemonic": "card sunset expand swift giggle carpet unknown praise burden tide witness wagon",
+      "private_key": "8a0c68e6f9873ff8ca2a138d11b0e02d20100c2c07d552559514a7616124dfe0",
+      "address": "TKLwmuRL9bRVdE4o92yw9NdoE7KCWxr72y"
+    }
+  },
+  "address_validation": true
+}

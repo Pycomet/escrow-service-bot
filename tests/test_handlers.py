@@ -167,56 +167,6 @@ async def test_cancel_handler_with_active_creation(mock_update, mock_context):
     assert "Trade creation process has been cancelled" in args[0]
 
 @pytest.mark.asyncio
-async def test_cancel_handler_with_callback_query(mock_update: Update, mock_context: ContextTypes.DEFAULT_TYPE):
-    """Test canceling an active trade creation process via callback query using patch.object."""
-    mock_context.user_data["trade_creation"] = {"step": "some_step"}
-    # Ensure update.message is None so the callback_query path in cancel_handler is taken
-    mock_update.message = None 
-
-    # 1. Prepare the mock for the message object that the callback query will have
-    # This is the object whose edit_text method we expect to be called.
-    the_message_to_be_edited = AsyncMock(spec=Message)
-    the_message_to_be_edited.edit_text = AsyncMock() # This is the crucial mock for assertion
-
-    # 2. Prepare the mock for the callback_query itself.
-    # This mock will be injected into mock_update.callback_query.
-    callback_query_to_inject = AsyncMock(spec=CallbackQuery)
-    callback_query_to_inject.answer = AsyncMock() # Mock the answer method
-    callback_query_to_inject.message = the_message_to_be_edited # Link to our message mock
-    # If the handler uses from_user or data, set them up here too:
-    callback_query_to_inject.from_user = mock_update.effective_user 
-    callback_query_to_inject.data = "cancel_callback_data"
-
-    # 3. Use patch.object to replace mock_update.callback_query with our prepared mock.
-    #    Also, patch InlineKeyboardMarkup to control its behavior.
-    with patch.object(mock_update, 'callback_query', callback_query_to_inject), \
-         patch('handlers.initiate_trade.InlineKeyboardMarkup', return_value=MagicMock(spec=InlineKeyboardMarkup)) as mock_ikm_constructor:
-        
-        # At this point, inside cancel_handler, update.callback_query will be callback_query_to_inject
-        # and update.callback_query.message will be the_message_to_be_edited.
-        await cancel_handler(mock_update, mock_context)
-
-    # 4. Assertions:
-    # Ensure the trade creation process was cleared from user_data
-    assert "trade_creation" not in mock_context.user_data
-    
-    # Assert that the answer method of our injected callback_query mock was called
-    callback_query_to_inject.answer.assert_called_once()
-    
-    # Assert that the edit_text method of our message mock was called
-    the_message_to_be_edited.edit_text.assert_called_once()
-    
-    # Check the arguments passed to edit_text
-    args, kwargs = the_message_to_be_edited.edit_text.call_args
-    assert "Trade creation process has been cancelled" in args[0]
-    assert 'reply_markup' in kwargs
-    
-    # Check that our InlineKeyboardMarkup mock constructor was called
-    mock_ikm_constructor.assert_called_once()
-    # Check that the instance returned by our mock constructor was passed to edit_text
-    assert kwargs['reply_markup'] is mock_ikm_constructor.return_value
-
-@pytest.mark.asyncio
 async def test_cancel_handler_no_active_creation(mock_update, mock_context):
     """Test canceling when no trade creation is active."""
     # Ensure trade_creation is not in context

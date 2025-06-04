@@ -1,0 +1,67 @@
+{
+  "solana_transaction": {
+    "success": true,
+    "data": {
+      "sender": "7aVMLNFMgcPqbSSKRrw3Qd7CCaqTXrGKng8CXzpLW9H3",
+      "recipient": "4dQwqauf1M2BRq3H7nq3BydxkyC5V3tEohAmustNGcK9",
+      "amount": "10.0",
+      "final_amount": 9.75,
+      "fees": {
+        "our_fee": 0.1,
+        "broker_fee": 0.05
+      }
+    }
+  },
+  "bsc_transaction": {
+    "success": true,
+    "data": {
+      "sender": "0xbab5fb8e15D789DF74deeCFf083Faf632F6826e0",
+      "recipient": "0xb76b179E78444031eAb9eec34EA1035c36d16aDA",
+      "amount": "0.1",
+      "gas_fee": 0.000105,
+      "total_needed": 0.100105
+    }
+  },
+  "litecoin_transaction": {
+    "success": true,
+    "data": {
+      "sender": "LPb47bqEZrFqUdMarLT9fH72WRufUxqmYR",
+      "recipient": "LgD7dU5giCCb2ZX4ytFLtHND6P6maMAgRU",
+      "amount": "0.01",
+      "fee": 2.5e-05,
+      "total_needed": 0.010025000000000001
+    }
+  },
+  "dogecoin_transaction": {
+    "success": true,
+    "data": {
+      "sender": "D6CcGKNNTp2DoEXe8rcwoqJXD532wLBSKR",
+      "recipient": "DN97QzDFjMTHv69pKUWGtDV1sgkewz5CSY",
+      "amount": "100",
+      "fee": 0.0025,
+      "total_needed": 100.0025
+    }
+  },
+  "tron_transaction": {
+    "success": true,
+    "data": {
+      "sender": "TUPvf4FK3TESGn17D3EHQydu9FVsbuy1vZ",
+      "recipient": "TVqhqaWg3YJgtSPqMx5EXurtPNAiSzXK9x",
+      "amount": "100",
+      "bandwidth_fee": 0.001,
+      "energy_fee": 0,
+      "total_needed": 100.001
+    }
+  },
+  "transaction_checkers": {
+    "success": false,
+    "data": {
+      "ltc_checker": false,
+      "doge_checker": false
+    }
+  },
+  "wallet_integration": {
+    "success": false,
+    "data": null
+  }
+}
