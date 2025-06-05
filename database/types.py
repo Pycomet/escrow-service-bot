@@ -38,3 +38,47 @@ class DisputeType:
     complaint: str
     is_resolved: bool
     created_at: str
+
+
+# New Wallet Types for Web3 Integration
+class WalletType:
+    _id: str                    # Unique wallet identifier
+    user_id: str               # Associated user ID (one-to-one mapping)
+    wallet_name: str           # User-friendly wallet name
+    mnemonic_encrypted: str    # Master encrypted mnemonic phrase (for all coins)
+    is_active: bool           # Whether wallet is active
+    created_at: str           # Creation timestamp
+    updated_at: str           # Last update timestamp
+
+
+class CoinAddressType:
+    _id: str                    # Unique address identifier
+    wallet_id: str             # Associated wallet ID
+    coin_symbol: str           # Coin symbol (BTC, ETH, LTC, DOGE, USDT, etc.)
+    network: str               # Network (bitcoin, ethereum, litecoin, etc.)
+    address: str               # Public address for this coin
+    private_key_encrypted: str # Encrypted private key for this coin
+    derivation_path: str       # HD wallet derivation path
+    is_default: bool          # Whether this is a default coin for all wallets
+    balance: str              # Current balance (cached)
+    balance_usd: str          # USD equivalent (cached)
+    last_balance_update: str  # Last balance update timestamp
+    created_at: str           # Creation timestamp
+
+
+class WalletTransactionType:
+    _id: str                 # Unique transaction identifier
+    wallet_id: str          # Associated wallet ID
+    coin_address_id: str    # Associated coin address ID
+    tx_hash: str            # Blockchain transaction hash
+    from_address: str       # Sender address
+    to_address: str         # Recipient address
+    amount: str             # Transaction amount
+    coin_symbol: str        # Coin symbol
+    fee: str               # Transaction fee
+    status: str            # Transaction status (pending, confirmed, failed)
+    block_number: int      # Block number
+    confirmations: int     # Number of confirmations
+    transaction_type: str  # Type: 'send', 'receive', 'deposit', 'withdrawal'
+    created_at: str        # Transaction timestamp
+    confirmed_at: str      # Confirmation timestamp

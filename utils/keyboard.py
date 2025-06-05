@@ -13,13 +13,16 @@ async def main_menu(update=None, context=None):
         ],
         [
             InlineKeyboardButton("📜 Trade History", callback_data="trade_history"),
-            InlineKeyboardButton("📋 Rules", callback_data="rules")
+            InlineKeyboardButton("🔐 My Wallets", callback_data="my_wallets")
         ],
         [
-            InlineKeyboardButton("👥 Community", callback_data="community"),
-            InlineKeyboardButton("🎯 Affiliate", callback_data="affiliate")
+            InlineKeyboardButton("📋 Rules", callback_data="rules"),
+            InlineKeyboardButton("👥 Community", callback_data="community")
         ],
-        [InlineKeyboardButton("❓ Support", callback_data="support")]
+        [
+            InlineKeyboardButton("🎯 Affiliate", callback_data="affiliate"),
+            InlineKeyboardButton("❓ Support", callback_data="support")
+        ]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -214,6 +217,63 @@ async def trade_type_menu():
             InlineKeyboardButton("🔒 Market Shop ", callback_data="trade_type_MarketShop")
         ],
         [InlineKeyboardButton("🔙 Cancel", callback_data="menu")]
+    ])
+    return keyboard
+
+
+# Wallet-related menu functions
+def wallet_menu():
+    """Return wallet management menu"""
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📊 View Balances", callback_data="wallet_balances"),
+            InlineKeyboardButton("➕ Create Wallet", callback_data="wallet_create")
+        ],
+        [
+            InlineKeyboardButton("📜 Transaction History", callback_data="wallet_transactions"),
+            InlineKeyboardButton("💸 Send Crypto", callback_data="wallet_send")
+        ],
+        [
+            InlineKeyboardButton("🔄 Refresh Balances", callback_data="wallet_refresh"),
+            InlineKeyboardButton("⚙️ Wallet Settings", callback_data="wallet_settings")
+        ],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+    ])
+    return keyboard
+
+def create_wallet_menu():
+    """Return wallet creation menu with supported networks"""
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="create_wallet_BTC"),
+            InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="create_wallet_ETH")
+        ],
+        [
+            InlineKeyboardButton("◎ Solana (SOL)", callback_data="create_wallet_SOL"),
+            InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="create_wallet_LTC")
+        ],
+        [
+            InlineKeyboardButton("Ð Dogecoin (DOGE)", callback_data="create_wallet_DOGE")
+        ],
+        [InlineKeyboardButton("🔙 Back to Wallets", callback_data="my_wallets")]
+    ])
+    return keyboard
+
+def wallet_details_menu(wallet_id: str):
+    """Return wallet details menu"""
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🔄 Refresh Balance", callback_data=f"refresh_wallet_{wallet_id}"),
+            InlineKeyboardButton("📜 Transactions", callback_data=f"wallet_txs_{wallet_id}")
+        ],
+        [
+            InlineKeyboardButton("💸 Send", callback_data=f"send_from_{wallet_id}"),
+            InlineKeyboardButton("📋 Receive", callback_data=f"receive_to_{wallet_id}")
+        ],
+        [
+            InlineKeyboardButton("⚙️ Settings", callback_data=f"wallet_settings_{wallet_id}"),
+            InlineKeyboardButton("🔙 Back to Wallets", callback_data="my_wallets")
+        ]
     ])
     return keyboard
 

@@ -1,8 +1,8 @@
 {
   "test_wallets": {
-    "solana": "9kuifgEPDZZ12RPPC4fvB2VFhzJjCtXicpyQTtf7UNWS",
-    "bsc": "0xAf21C4b6C5AbeCA8eFD730aF87A7A679e8d8f5C2",
-    "dogecoin": "DTBzNupnAKRtGNHJRr7ALb8HKfCEvyLpW3"
+    "solana": "Bck54iBPdbwUUHUPNrcjQYq5HCzsFGvnNLggiFx1wcCK",
+    "bsc": "0x471C92974A9ED29F619f304Aa3f9F7De1466d3c6",
+    "dogecoin": "DFgs8MiFYpeVcFx2HPhXKM11AgSn2CfQ39"
   },
   "solana_balance": {
     "success": true,
@@ -30,7 +30,7 @@
           "error": "InvalidParamsMessage { message: \"Invalid param: could not find account\" }"
         }
       ],
-      "sol_price": 156.73
+      "sol_price": 153.82
     }
   },
   "bsc_balance": {
@@ -52,13 +52,13 @@
           "balance": [
             {
               "publicKey": "0x0000000000000000000000000000000000000000",
-              "amount": "99207.517753129996783398"
+              "amount": "99207.517832941688783398"
             },
             "https://bscscan.com/address/0x0000000000000000000000000000000000000000"
           ]
         }
       ],
-      "bnb_price": 665.48
+      "bnb_price": 664.31
     }
   },
   "generic_balance": {
@@ -69,7 +69,7 @@
   "price_fetching": {
     "success": true,
     "data": {
-      "trx_price": 0.269868
+      "trx_price": 0.274678
     }
   }
 }

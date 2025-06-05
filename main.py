@@ -26,6 +26,7 @@ def register_handlers():
         from handlers.affiliate import register_handlers as register_affiliate
         from handlers.report import register_handlers as register_report
         from handlers.verdict import register_handlers as register_verdict
+        from handlers.wallet import register_handlers as register_wallet
         
         # Register handlers from each module
         register_start(application)
@@ -39,6 +40,7 @@ def register_handlers():
         register_affiliate(application)
         register_report(application)
         register_verdict(application)
+        register_wallet(application)
         
         logger.info("All handlers registered successfully")
     except Exception as e:

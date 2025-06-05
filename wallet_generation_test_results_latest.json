@@ -2,41 +2,41 @@
   "solana": {
     "success": true,
     "wallet_data": {
-      "mnemonic": "cook leopard pave goat minimum recipe blossom figure farm fix shine stay",
-      "private_key": "60067ace2c4e7afee2087866c18569a9b62104304970c35ed7c9bc435d30ba36",
-      "public_address": "31Kh7ydPZiKwerPjKWz8GSuecFuK1VWd3aK6xhXHot25"
+      "mnemonic": "foil tourist silly chair grass crane milk settle cigar wedding blast trumpet",
+      "private_key": "a7cb5d1cf20880898040c4e2d8cb7647c78aaf7ca5e6529ac3c038be58dfa503",
+      "public_address": "3K5nmJLKfoKLdzo8G1MvJm11bhQaLtoBLMPYm2wSFdMu"
     }
   },
   "bsc": {
     "success": true,
     "wallet_data": {
-      "mnemonic": "frown nose expose admit congress athlete steak bring since plunge voyage heavy",
-      "private_key": "f0a331757e4b41a7ed264acc9b680db8c6040b1d0933dbcbcb4527a119192747",
-      "address": "0x4AE1Fd80Cc546c3944eec3d03F029297b205EA06"
+      "mnemonic": "trumpet friend sphere circle palm member smile luxury fade blossom minute desert",
+      "private_key": "6280e641273de9f36305d85d4b291bdc702235f679fa58845869ab344c93833d",
+      "address": "0x8Ed422F88dC3ec55E77d275a14478b6199e54C3A"
     }
   },
   "litecoin": {
     "success": true,
     "wallet_data": {
-      "mnemonic": "obey acoustic tornado solve crouch join valve mutual weasel rotate someone supreme",
-      "private_key": "fb688c576d1d8461e826657e9aebf0285160623d76ee354cbfc4474a9227a4cf",
-      "bech32_address": "LUok8W4Q2uaYW11pejcKW4ce2vKHJpyG97"
+      "mnemonic": "retire boil castle staff pet force snow spell hope slow believe huge",
+      "private_key": "b4dde6338005fe3f85081994c0ebbd713e41a69607afb5cc5d3f7c8fbfae5dac",
+      "bech32_address": "LXgmExb1w5ixh3VrrThjbHHfFKxc1Zpy8w"
     }
   },
   "dogecoin": {
     "success": true,
     "wallet_data": {
-      "mnemonic": "toy bulb move calm post hat lunch smooth lunar mouse fee question",
-      "private_key": "7b4cf19b4f4bb18d583827c3a90ab215c5f60f2c17597221679db698cf0ab8f8",
-      "address": "DKzXPZ4ahExCZNKVHbuUWr6PvWpFKzpxGy"
+      "mnemonic": "invest trial shield cover spin youth mammal unusual frown zero link melt",
+      "private_key": "7e4adc3a8e1ff5ab55a3bdffc110c2d16b772803fc796201887d57d06c2078df",
+      "address": "DH7NMvmUdYCLHRoU83Acvd3vHs2WLFa2NB"
     }
   },
   "tron": {
     "success": true,
     "wallet_data": {
-      "mnemonic": "card sunset expand swift giggle carpet unknown praise burden tide witness wagon",
-      "private_key": "8a0c68e6f9873ff8ca2a138d11b0e02d20100c2c07d552559514a7616124dfe0",
-      "address": "TKLwmuRL9bRVdE4o92yw9NdoE7KCWxr72y"
+      "mnemonic": "fashion record helmet chunk super draft sniff pool round dentist service dog",
+      "private_key": "d5a261a3ed0e5d95b8037b9bf976249ca4d36f0a9e7b6f129b85044d8caaa166",
+      "address": "TMQdwefaUHxnZ43He9mDiJcsET89t3CCYy"
     }
   },
   "address_validation": true

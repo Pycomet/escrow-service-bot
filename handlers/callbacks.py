@@ -8,6 +8,7 @@ from handlers.join import join_handler
 from handlers.report import report_handler
 from handlers.rules import community_handler, rules_handler
 from handlers.review import review_handler
+from handlers.wallet import wallet_handler
 from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
@@ -86,6 +87,11 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.info("Showing trade history")
             await history_handler(update, context)
         
+        elif data == "my_wallets":
+            # Show wallet management
+            logger.info("Showing wallet management")
+            await wallet_handler(update, context)
+        
         elif data == "rules":
             # Show rules
             logger.info("Showing rules")
@@ -135,7 +141,9 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 "4. <b>What are the fees?</b>\n"
                 "Fees are clearly displayed before creating a trade.\n\n"
                 "5. <b>Is my payment secure?</b>\n"
-                "Yes, all payments are held securely in escrow until the trade is completed.",
+                "Yes, all payments are held securely in escrow until the trade is completed.\n\n"
+                "6. <b>Are my crypto wallets secure?</b>\n"
+                "Yes, all private keys are encrypted and stored securely. We use industry-standard encryption.",
                 parse_mode="html",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🔙 Back to Support", callback_data="support")
@@ -156,4 +164,4 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 def register_handlers(application):
     """Register handlers for the callbacks module"""
-    application.add_handler(CallbackQueryHandler(handle_menu_callback, pattern="^(menu|create_trade|join_trade|trade_history|rules|community|affiliate|support|report|faq)$"))
+    application.add_handler(CallbackQueryHandler(handle_menu_callback, pattern="^(menu|create_trade|join_trade|trade_history|my_wallets|rules|community|affiliate|support|report|faq)$"))

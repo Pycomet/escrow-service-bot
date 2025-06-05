@@ -50,6 +50,11 @@ app = Quart(__name__)
 client = MongoClient(DATABASE_URL)
 db = client[DATABASE_NAME]
 
+# Define collections
+wallets = db.wallets
+coin_addresses = db.coin_addresses  
+wallet_transactions = db.wallet_transactions
+
 # Configure logging to stdout for Cloud Run
 logging.basicConfig(
     level=logging.INFO,
