@@ -1,12 +1,12 @@
 from config import *
 from utils import *
 from functions import *
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import logging
 
 from utils.keyboard import trade_type_menu
-from utils.enums import TradeTypeEnums
+from utils.enums import TradeTypeEnums, CallbackDataEnums, EmojiEnums
 from handlers.trade_flows import TradeFlowHandler
 from utils.messages import Messages
 from functions.trade import TradeClient
@@ -27,10 +27,10 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
     
     if context.user_data.get("trade_creation"):
         await update.message.reply_text(
-            "❌ You already have a trade creation in progress. "
+            f"{EmojiEnums.CROSS_MARK.value} You already have a trade creation in progress. "
             "Please complete it or use /cancel to start over.",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]])
         )
         return
@@ -40,10 +40,10 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
         active_trade = TradeClient.get_most_recent_trade(user_obj)
         if active_trade and active_trade.get('is_active', False):
             await update.message.reply_text(
-                f"❌ You already have an active trade (#{active_trade['_id']}). "
+                f"{EmojiEnums.CROSS_MARK.value} You already have an active trade (#{active_trade['_id']}). "
                 "Please complete or cancel your current trade before starting a new one.",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]])
             )
             return
@@ -66,9 +66,9 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
     
     if not context.user_data.get("trade_creation", {}).get("step") == "select_trade_type":
         await query.message.edit_text(
-            "❌ Something went wrong. Please start over with /trade",
+            f"{EmojiEnums.CROSS_MARK.value} Something went wrong. Please start over with /trade",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]])
         )
         return
@@ -78,17 +78,17 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
     valid_enum_values = [e.value for e in TradeTypeEnums]
     if trade_type_value == "Disabled":
         await query.message.edit_text(
-            "❌ This feature is currently not available, will be back active soon!",
+            f"{EmojiEnums.CROSS_MARK.value} This feature is currently not available, will be back active soon!",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]])
         )
         return
     elif trade_type_value not in valid_enum_values:
         await query.message.edit_text(
-            "❌ Invalid trade type selected. Please start over with /trade",
+            f"{EmojiEnums.CROSS_MARK.value} Invalid trade type selected. Please start over with /trade",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]])
         )
         context.user_data.pop("trade_creation", None)
@@ -105,9 +105,9 @@ async def handle_trade_type_selection(update: Update, context: ContextTypes.DEFA
         logging.error(f"Trade flow setup failed for type: {trade_type_value}")
         try:
             await query.edit_message_text(
-                "❌ Failed to start trade setup. Please try again or contact support.",
+                f"{EmojiEnums.CROSS_MARK.value} Failed to start trade setup. Please try again or contact support.",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]])
             )
         except Exception as e:
@@ -118,13 +118,13 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Cancel the current trade creation process"""
     if "trade_creation" in context.user_data:
         context.user_data.pop("trade_creation")
-        message_text = "✅ Trade creation process has been cancelled."
+        message_text = f"{EmojiEnums.CHECK_MARK.value} Trade creation process has been cancelled."
     else:
         message_text = "ℹ️ You don't have any active trade creation process to cancel."
 
     reply_markup=InlineKeyboardMarkup([[
         InlineKeyboardButton("🆕 Start New Trade", callback_data="create_trade"),
-        InlineKeyboardButton("🏡 Main Menu", callback_data="menu")
+        InlineKeyboardButton("🏡 Main Menu", callback_data=CallbackDataEnums.MENU.value)
     ]])
 
     if update.callback_query:
@@ -201,51 +201,6 @@ async def dispatch_to_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # If absolutely sure it's an unhandled relevant callback for this dispatcher:
             # await query.answer("This option isn't available at this step.")
 
-async def handle_check_deposit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the check deposit callback by routing to the appropriate trade flow."""
-    query = update.callback_query
-    await query.answer()
-    
-    # trade_id is now expected to be part of the callback_data, e.g., "check_deposit_TRADEID"
-    trade_id = None
-    if query.data and query.data.startswith("check_deposit_"):
-        parts = query.data.split("_", 2)
-        if len(parts) > 2:
-            trade_id = parts[-1]
-    
-    if not trade_id: # Fallback if trade_id not in callback, try context (less reliable for this specific callback)
-        trade_id = context.user_data.get('trade_creation', {}).get('trade_id') or \
-                   context.user_data.get('active_trade_id_for_deposit_check')
-
-    trade_type = None
-    if trade_id:
-        trade = TradeClient.get_trade(trade_id)
-        if trade:
-            trade_type = trade.get("trade_type")
-            # Store trade_id in context if fetched this way, so flow method can access it if needed
-            context.user_data['active_trade_id_for_deposit_check'] = trade_id 
-        else:
-            await query.message.edit_text(f"❌ Trade with ID {trade_id} not found for deposit check.")
-            return
-    else: # If no trade_id could be determined at all
-        await query.message.edit_text("❌ Could not identify the trade for deposit check. Please try again.")
-        return
-
-    if not trade_type:
-        await query.message.edit_text("❌ Could not determine trade type for deposit check.")
-        return
-
-    success = await TradeFlowHandler.route_to_flow_method(update, context, trade_type, "handle_deposit_check")
-
-    if not success:
-        await query.message.edit_text(
-            "❌ Deposit check failed, is not applicable for this trade type, or deposit not found.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔄 Try Again", callback_data=f"check_deposit_{trade_id}" if trade_id else "check_deposit"),
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-            ]])
-        )
-
 def register_handlers(application):
     """Register handlers for the initiate trade module"""
     application.add_handler(CommandHandler("trade", initiate_trade_handler))
@@ -254,7 +209,8 @@ def register_handlers(application):
 
     application.add_handler(CallbackQueryHandler(handle_trade_type_selection, pattern="^trade_type_"))
     
-    application.add_handler(CallbackQueryHandler(handle_check_deposit_callback, pattern=r"^check_deposit(?:_\w+)?$"))
+    # Temporarily disabled - conflicts with specific flow handlers
+    # application.add_handler(CallbackQueryHandler(handle_check_deposit_callback, pattern=r"^check_deposit(?:_\w+)?$"))
 
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, 

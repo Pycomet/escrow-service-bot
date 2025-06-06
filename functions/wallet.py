@@ -365,6 +365,68 @@ class WalletManager:
             logger.error(f"Error getting {coin_symbol} address for wallet {wallet_id}: {e}")
             return None
 
+    def get_balance(self, address: str, coin_symbol: str) -> float:
+        """Get current balance for a specific address and coin"""
+        try:
+            # Find the coin address record
+            coin_address = db.coin_addresses.find_one({
+                "address": address,
+                "coin_symbol": coin_symbol
+            })
+            
+            if not coin_address:
+                logger.warning(f"No coin address record found for {address} ({coin_symbol})")
+                return 0.0
+            
+            # Use the refresh paradigm to get fresh balance data
+            import asyncio
+            
+            # Create event loop if none exists (for synchronous calls)
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                if not asyncio.get_running_loop():
+                    asyncio.set_event_loop(loop)
+            
+            # Refresh the balance using the existing paradigm
+            refresh_success = loop.run_until_complete(self._refresh_coin_balance(coin_address))
+            
+            if refresh_success:
+                # Get the updated balance from database after refresh
+                updated_coin_address = db.coin_addresses.find_one({
+                    "address": address,
+                    "coin_symbol": coin_symbol
+                })
+                
+                if updated_coin_address:
+                    balance_str = updated_coin_address.get('balance', '0.0')
+                    try:
+                        balance = float(balance_str)
+                        logger.info(f"Refreshed and retrieved balance for {address} ({coin_symbol}): {balance}")
+                        return balance
+                    except ValueError:
+                        logger.error(f"Invalid balance format after refresh: {balance_str}")
+                        return 0.0
+                else:
+                    logger.error(f"Could not find updated coin address after refresh")
+                    return 0.0
+            else:
+                logger.error(f"Failed to refresh balance for {address} ({coin_symbol})")
+                # Fallback to stored balance if refresh fails
+                balance_str = coin_address.get('balance', '0.0')
+                try:
+                    balance = float(balance_str)
+                    logger.warning(f"Using stale balance for {address} ({coin_symbol}): {balance}")
+                    return balance
+                except ValueError:
+                    logger.error(f"Invalid balance format in database: {balance_str}")
+                    return 0.0
+                
+        except Exception as e:
+            logger.error(f"Error getting balance for {address} ({coin_symbol}): {e}")
+            return 0.0
+
     async def refresh_wallet_balances(self, wallet_id: str) -> bool:
         """Refresh all coin balances in a wallet"""
         try:
@@ -392,16 +454,145 @@ class WalletManager:
             if not coin_config:
                 return False
 
-            # For now, simulate balance checking - in production, integrate with real APIs
+            # Use real blockchain APIs instead of simulation
             balance = 0.0
             
-            # Simulate some random balances for testing
-            if coin_symbol == 'BTC':
-                balance = 0.001
-            elif coin_symbol == 'ETH':
-                balance = 0.1
-            elif coin_symbol == 'USDT':
-                balance = 100.0
+            try:
+                if coin_symbol == 'SOL':
+                    # Use Solana balance checker
+                    from functions.scripts.solwalletbalance import get_finalized_sol_balance
+                    result = get_finalized_sol_balance(address)
+                    if result and len(result) > 0 and 'amount' in result[0]:
+                        balance = float(result[0]['amount'])
+                
+                elif coin_symbol == 'USDT' and coin_config.get('network') == 'solana':
+                    # USDT on Solana
+                    from functions.scripts.solwalletbalance import get_finalized_sol_balance, USDT_MINT_ADDRESS
+                    result = get_finalized_sol_balance(address, USDT_MINT_ADDRESS)
+                    if result and len(result) > 0 and 'amount' in result[0]:
+                        balance = float(result[0]['amount'])
+                
+                elif coin_symbol in ['ETH'] or (coin_symbol == 'USDT' and coin_config.get('network') == 'ethereum'):
+                    # Ethereum mainnet balance checker
+                    from web3 import Web3
+                    
+                    # Use public Ethereum RPC endpoints (you can replace with your own)
+                    ETH_RPC_URLS = [
+                        "https://eth-mainnet.g.alchemy.com/v2/demo",  # Alchemy demo
+                        "https://cloudflare-eth.com",  # Cloudflare
+                        "https://rpc.ankr.com/eth"  # Ankr
+                    ]
+                    
+                    # Try multiple RPC endpoints for reliability
+                    web3 = None
+                    for rpc_url in ETH_RPC_URLS:
+                        try:
+                            web3 = Web3(Web3.HTTPProvider(rpc_url))
+                            if web3.is_connected():
+                                break
+                        except Exception as rpc_error:
+                            logger.warning(f"Failed to connect to {rpc_url}: {rpc_error}")
+                            continue
+                    
+                    if not web3 or not web3.is_connected():
+                        logger.error("Could not connect to any Ethereum RPC")
+                        balance = 0.0
+                    else:
+                        if coin_symbol == 'ETH':
+                            # ETH balance
+                            balance_wei = web3.eth.get_balance(Web3.to_checksum_address(address))
+                            balance = float(web3.from_wei(balance_wei, 'ether'))
+                        
+                        elif coin_symbol == 'USDT':
+                            # USDT on Ethereum (correct contract address)
+                            ETHEREUM_USDT_CONTRACT = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+                            
+                            # ERC-20 ABI for balanceOf function
+                            ERC20_ABI = [
+                                {
+                                    "constant": True,
+                                    "inputs": [{"name": "_owner", "type": "address"}],
+                                    "name": "balanceOf",
+                                    "outputs": [{"name": "balance", "type": "uint256"}],
+                                    "payable": False,
+                                    "stateMutability": "view",
+                                    "type": "function",
+                                },
+                                {
+                                    "constant": True,
+                                    "inputs": [],
+                                    "name": "decimals",
+                                    "outputs": [{"name": "", "type": "uint8"}],
+                                    "payable": False,
+                                    "stateMutability": "view",
+                                    "type": "function",
+                                }
+                            ]
+                            
+                            contract = web3.eth.contract(
+                                address=Web3.to_checksum_address(ETHEREUM_USDT_CONTRACT), 
+                                abi=ERC20_ABI
+                            )
+                            
+                            try:
+                                # Get USDT balance (USDT has 6 decimals)
+                                balance_raw = contract.functions.balanceOf(Web3.to_checksum_address(address)).call()
+                                balance = balance_raw / (10 ** 6)  # USDT has 6 decimals
+                            except Exception as contract_error:
+                                logger.error(f"Error calling USDT contract: {contract_error}")
+                                balance = 0.0
+                
+                elif coin_symbol == 'BNB':
+                    # BNB on BSC - use existing BSC script
+                    from functions.scripts.bsc_wallet_balance import get_finalized_bsc_balance
+                    result = get_finalized_bsc_balance(address)
+                    if result and len(result) > 0 and 'amount' in result[0]:
+                        balance = float(result[0]['amount'])
+                
+                elif coin_symbol == 'DOGE':
+                    # Dogecoin balance checker
+                    from functions.scripts.doge_transaction_checker import dogeTransactionChecker
+                    result = dogeTransactionChecker(address)
+                    if result and len(result) > 0 and 'amount' in result[0]:
+                        balance = float(result[0]['amount'])
+                
+                elif coin_symbol == 'LTC':
+                    # Litecoin balance checker
+                    from functions.scripts.ltc_transaction_checker import ltcTransactionChecker
+                    result = ltcTransactionChecker(address)
+                    if result and len(result) > 0 and 'amount' in result[0]:
+                        balance = float(result[0]['amount'])
+                
+                elif coin_symbol == 'BTC':
+                    # Bitcoin balance checker - using similar API to LTC/DOGE
+                    import requests
+                    url = f"https://api.blockcypher.com/v1/btc/main/addrs/{address}/balance"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        balance_satoshi = data.get('balance', 0)
+                        balance = balance_satoshi / 1e8  # Convert satoshi to BTC
+                
+                else:
+                    logger.warning(f"No balance checker implemented for {coin_symbol}, using fallback")
+                    # Fallback to simulate some balance for testing
+                    if coin_symbol == 'BTC':
+                        balance = 0.001
+                    elif coin_symbol == 'ETH':
+                        balance = 0.1
+                    elif coin_symbol == 'USDT':
+                        balance = 100.0
+                
+                logger.info(f"Retrieved balance for {coin_symbol} address {address}: {balance}")
+                
+            except Exception as api_error:
+                logger.error(f"Error calling blockchain API for {coin_symbol}: {api_error}")
+                # Fallback to current stored balance on API error
+                current_balance = coin_address.get('balance', '0')
+                try:
+                    balance = float(current_balance)
+                except ValueError:
+                    balance = 0.0
             
             # Update balance in database
             db.coin_addresses.update_one(

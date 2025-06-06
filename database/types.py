@@ -29,6 +29,10 @@ class TradeType:
     chat_id: str
     created_at: str
     updated_at: str
+    # New fields for wallet integration
+    receiving_address: str      # Wallet address for receiving crypto (ETH/USDT)
+    seller_wallet_id: str      # Seller's wallet ID (for ETH/USDT trades)
+    is_wallet_trade: bool      # Whether this uses wallet integration
 
 
 class DisputeType:

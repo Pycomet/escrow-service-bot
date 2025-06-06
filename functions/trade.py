@@ -5,6 +5,7 @@ from typing import Optional
 from .utils import generate_id
 from .user import UserClient
 from payments import BtcPayAPI
+from .wallet import WalletManager
 
 client = BtcPayAPI()
 
@@ -31,13 +32,16 @@ class TradeClient:
             "is_active": False,
             "is_paid": False,
             "price": 0,
-            "currency": "USD",
             "invoice_id": "",
             "is_completed": False,
             "chat": chat,
             "trade_type": trade_type,
             "created_at": datetime.now(),
             "updated_at": datetime.now(),
+            # Initialize wallet fields
+            "receiving_address": "",
+            "seller_wallet_id": "",
+            "is_wallet_trade": False,
         }
 
         db.trades.insert_one(trade)
@@ -155,21 +159,78 @@ class TradeClient:
 
     @staticmethod
     def get_invoice_url(trade: TradeType) -> str:
-        "Get Payment Url"
+        "Get Payment Url - supports both BTCPay (BTC/LTC) and wallet-based (ETH/USDT)"
         active_trade: TradeType = db.trades.find_one({"_id": trade["_id"]})
         
-        if active_trade['invoice_id'] == "":
-            try:
-                url, invoice_id = client.create_invoice(active_trade)
-                if url is not None:
-                    TradeClient.add_invoice_id(trade, str(invoice_id))
-                    return url
-            except Exception as e:
-                app.logger.info(e)
-                print(f"Error creating invoice: {e}")
+        # Determine if this is a wallet-based trade (ETH/USDT)
+        is_wallet_currency = active_trade.get('currency') in ['ETH', 'USDT']
+        
+        if is_wallet_currency:
+            # Handle ETH/USDT trades with wallet integration
+            return TradeClient._get_wallet_based_payment_info(active_trade)
         else:
-            return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
+            # Handle BTC/LTC trades with BTCPay
+            if active_trade['invoice_id'] == "":
+                try:
+                    url, invoice_id = client.create_invoice(active_trade)
+                    if url is not None:
+                        TradeClient.add_invoice_id(trade, str(invoice_id))
+                        return url
+                except Exception as e:
+                    app.logger.info(e)
+                    print(f"Error creating invoice: {e}")
+            else:
+                return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
         return None
+
+    @staticmethod
+    def _get_wallet_based_payment_info(trade: TradeType) -> str:
+        """Generate wallet-based payment info for ETH/USDT trades"""
+        try:
+            logger.info(f"Generating wallet payment info for trade {trade['_id']} with currency {trade['currency']}")
+            
+            # Get seller's wallet or create one if it doesn't exist
+            seller_wallet = WalletManager.get_user_wallet(trade['seller_id'])
+            if not seller_wallet:
+                logger.info(f"Creating new wallet for seller {trade['seller_id']}")
+                seller_wallet = WalletManager.create_wallet_for_user(trade['seller_id'])
+                if not seller_wallet:
+                    logger.error(f"Failed to create wallet for seller {trade['seller_id']}")
+                    return None
+            
+            logger.info(f"Found/created wallet {seller_wallet['_id']} for seller {trade['seller_id']}")
+            
+            # Get the appropriate address for the trade currency
+            coin_symbol = trade['currency']
+            coin_address = WalletManager.get_wallet_coin_address(seller_wallet['_id'], coin_symbol)
+            
+            if not coin_address:
+                logger.error(f"No {coin_symbol} address found for seller's wallet {seller_wallet['_id']}")
+                return None
+            
+            logger.info(f"Found {coin_symbol} address: {coin_address['address']}")
+            
+            # Update trade with wallet information
+            db.trades.update_one(
+                {"_id": trade["_id"]}, 
+                {
+                    "$set": {
+                        "receiving_address": coin_address['address'],
+                        "seller_wallet_id": seller_wallet['_id'],
+                        "is_wallet_trade": True,
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            
+            logger.info(f"Updated trade {trade['_id']} with wallet info")
+            
+            # Return the receiving address (for now, later we can create a custom payment page)
+            return coin_address['address']
+            
+        except Exception as e:
+            logger.error(f"Error generating wallet payment info: {e}")
+            return None
 
     @staticmethod
     def check_trade(user: UserType, trade_id: str) -> str | TradeType:
@@ -369,4 +430,47 @@ class TradeClient:
             return True
         except Exception as e:
             logger.error(f"Error confirming fiat payment: {e}")
+            return False
+
+    @staticmethod
+    def cancel_trade(trade_id: str, user_id: str) -> bool:
+        """Cancel a trade"""
+        try:
+            # Get the trade to verify it exists and user has permission
+            trade = TradeClient.get_trade(trade_id)
+            if not trade:
+                logger.error(f"Trade {trade_id} not found for cancellation")
+                return False
+            
+            # Check if user is authorized (seller or buyer)
+            seller_id = str(trade.get('seller_id', ''))
+            buyer_id = str(trade.get('buyer_id', ''))
+            
+            if user_id not in [seller_id, buyer_id]:
+                logger.error(f"User {user_id} not authorized to cancel trade {trade_id}")
+                return False
+            
+            # Update trade to cancelled status
+            result = db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "is_active": False,
+                        "is_cancelled": True,
+                        "cancelled_by": user_id,
+                        "cancelled_at": datetime.now(),
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                logger.info(f"Trade {trade_id} cancelled successfully by user {user_id}")
+                return True
+            else:
+                logger.error(f"Failed to update trade {trade_id} to cancelled status")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error cancelling trade {trade_id}: {e}")
             return False

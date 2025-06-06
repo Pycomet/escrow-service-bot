@@ -3,25 +3,28 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update, ReplyKe
 from telegram.ext import ContextTypes
 from typing import Optional
 import emoji
+from utils.enums import (
+    CryptoCurrencyEnums, FiatCurrencyEnums, CallbackDataEnums, EmojiEnums, TradeTypeEnums
+)
 
 async def main_menu(update=None, context=None):
     """Create the main menu keyboard"""
     keyboard = [
         [
-            InlineKeyboardButton("💰 Create Trade", callback_data="create_trade"),
-            InlineKeyboardButton("🤝 Join Trade", callback_data="join_trade")
+            InlineKeyboardButton(f"{EmojiEnums.MONEY_BAG.value} Create Trade", callback_data=CallbackDataEnums.CREATE_TRADE.value),
+            InlineKeyboardButton(f"{EmojiEnums.HANDSHAKE.value} Join Trade", callback_data=CallbackDataEnums.JOIN_TRADE.value)
         ],
         [
-            InlineKeyboardButton("📜 Trade History", callback_data="trade_history"),
-            InlineKeyboardButton("🔐 My Wallets", callback_data="my_wallets")
+            InlineKeyboardButton(f"{EmojiEnums.SCROLL.value} Trade History", callback_data=CallbackDataEnums.TRADE_HISTORY.value),
+            InlineKeyboardButton(f"{EmojiEnums.LOCK.value} My Wallets", callback_data=CallbackDataEnums.MY_WALLETS.value)
         ],
         [
-            InlineKeyboardButton("📋 Rules", callback_data="rules"),
-            InlineKeyboardButton("👥 Community", callback_data="community")
+            InlineKeyboardButton(f"{EmojiEnums.RULES.value} Rules", callback_data=CallbackDataEnums.RULES.value),
+            InlineKeyboardButton(f"{EmojiEnums.COMMUNITY.value} Community", callback_data=CallbackDataEnums.COMMUNITY.value)
         ],
         [
-            InlineKeyboardButton("🎯 Affiliate", callback_data="affiliate"),
-            InlineKeyboardButton("❓ Support", callback_data="support")
+            InlineKeyboardButton(f"{EmojiEnums.TARGET.value} Affiliate", callback_data=CallbackDataEnums.AFFILIATE.value),
+            InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} Support", callback_data=CallbackDataEnums.SUPPORT.value)
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -36,7 +39,6 @@ def group_menu():
     ])
     return keyboard
 
-
 def trade_menu():
     "Return Join Or Sell"
     keyboard = ReplyKeyboardMarkup([
@@ -45,7 +47,6 @@ def trade_menu():
         [KeyboardButton("Community 🌐"), KeyboardButton("FAQs ❓")]
     ], resize_keyboard=True)
     return keyboard
-
 
 def seller_menu():
     "Return Seller Options"
@@ -57,7 +58,6 @@ def seller_menu():
     ], resize_keyboard=True)
     return keyboard
 
-
 def buyer_menu():
     "Return Buyer Options"
     keyboard = ReplyKeyboardMarkup([
@@ -67,7 +67,6 @@ def buyer_menu():
         [KeyboardButton(emoji.emojize("Rules :scroll:"))]
     ], resize_keyboard=True)
     return keyboard
-
 
 def agent_menu(balance):
     "Return Agent Options"
@@ -106,7 +105,6 @@ def give_verdict():
     ])
     return keyboard
 
-
 def confirm(payment_url: str):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(text="💸 Make Payment", url=payment_url)],
@@ -127,7 +125,6 @@ def confirm_goods():
     ])
     return keyboard
 
-
 def refunds():
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
@@ -145,7 +142,6 @@ def refunds():
     ])
     return keyboard
 
-
 def select_trade():
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
@@ -160,7 +156,6 @@ def select_trade():
     ])
     return keyboard
 
-
 def review_menu():
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(
@@ -170,27 +165,25 @@ def review_menu():
     ])
     return keyboard
 
-
 def currency_menu(type: Optional[str]):
-    """Return currency selection menu"""
-
+    """Return currency selection menu using enums"""
     if type == "crypto":
         currencies = [
-            ("₮ USDT", "currency_USDT"),
-            ("₿ BTC", "currency_BTC"),
-            ("Ξ ETH", "currency_ETH"),
-            ("◎ SOL", "currency_SOL"),
-            ("🟡 BNB", "currency_BNB"),
-            ("Ł LTC", "currency_LTC"),
-            ("Ð DOGE", "currency_DOGE"),
-            ("ⓣ TRX", "currency_TRX")
+            (f"{EmojiEnums.TETHER.value} {CryptoCurrencyEnums.USDT.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.USDT.value}"),
+            (f"{EmojiEnums.BITCOIN.value} {CryptoCurrencyEnums.BTC.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BTC.value}"),
+            (f"{EmojiEnums.ETHEREUM.value} {CryptoCurrencyEnums.ETH.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.ETH.value}"),
+            (f"{EmojiEnums.SOLANA.value} {CryptoCurrencyEnums.SOL.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.SOL.value}"),
+            (f"{EmojiEnums.YELLOW_CIRCLE.value} {CryptoCurrencyEnums.BNB.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BNB.value}"),
+            (f"{EmojiEnums.LITECOIN.value} {CryptoCurrencyEnums.LTC.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.LTC.value}"),
+            (f"{EmojiEnums.DOGECOIN.value} {CryptoCurrencyEnums.DOGE.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.DOGE.value}"),
+            (f"{EmojiEnums.TRON.value} {CryptoCurrencyEnums.TRX.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.TRX.value}")
         ]
     else:
         currencies = [
-            ("🇺🇸 USD", "currency_USD"),
-            ("🇪🇺 EUR", "currency_EUR"),
-            ("🇬🇧 GBP", "currency_GBP"),
-            ("🇯🇵 JPY", "currency_JPY")
+            (f"🇺🇸 {FiatCurrencyEnums.USD.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{FiatCurrencyEnums.USD.value}"),
+            (f"🇪🇺 {FiatCurrencyEnums.EUR.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{FiatCurrencyEnums.EUR.value}"),
+            (f"🇬🇧 {FiatCurrencyEnums.GBP.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{FiatCurrencyEnums.GBP.value}"),
+            (f"🇯🇵 {FiatCurrencyEnums.JPY.value}", f"{CallbackDataEnums.CURRENCY_PREFIX.value}{FiatCurrencyEnums.JPY.value}")
         ]
 
     # Build buttons (2 per row)
@@ -200,44 +193,38 @@ def currency_menu(type: Optional[str]):
     ]
 
     # Add the cancel button at the end
-    buttons.append([InlineKeyboardButton("🔙 Cancel", callback_data="menu")])
+    buttons.append([InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Cancel", callback_data=CallbackDataEnums.MENU.value)])
 
     return InlineKeyboardMarkup(buttons)
 
-
 async def trade_type_menu():
-    """Return trade type selection menu"""
+    """Return trade type selection menu using enums"""
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("💰 Crypto → Fiat", callback_data="trade_type_CryptoToFiat"),
-            InlineKeyboardButton("💱 Crypto → Crypto", callback_data="trade_type_CryptoToCrypto")
+            InlineKeyboardButton(f"{EmojiEnums.MONEY_BAG.value} Crypto → Fiat", callback_data=f"{CallbackDataEnums.TRADE_TYPE_PREFIX.value}{TradeTypeEnums.CRYPTO_FIAT.value}"),
+            InlineKeyboardButton("💱 Crypto → Crypto", callback_data=f"{CallbackDataEnums.TRADE_TYPE_PREFIX.value}{TradeTypeEnums.CRYPTO_CRYPTO.value}")
         ],
         [
-            InlineKeyboardButton("🛒 Crypto → Product", callback_data="trade_type_CryptoToProduct"),
-            InlineKeyboardButton("🔒 Market Shop ", callback_data="trade_type_MarketShop")
+            InlineKeyboardButton("🛒 Crypto → Product", callback_data=f"{CallbackDataEnums.TRADE_TYPE_PREFIX.value}{TradeTypeEnums.CRYPTO_PRODUCT.value}"),
+            InlineKeyboardButton("🔒 Market Shop ", callback_data=f"{CallbackDataEnums.TRADE_TYPE_PREFIX.value}{TradeTypeEnums.MARKET_SHOP.value}")
         ],
-        [InlineKeyboardButton("🔙 Cancel", callback_data="menu")]
+        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Cancel", callback_data=CallbackDataEnums.MENU.value)]
     ])
     return keyboard
-
 
 # Wallet-related menu functions
 def wallet_menu():
     """Return wallet management menu"""
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📊 View Balances", callback_data="wallet_balances"),
-            InlineKeyboardButton("➕ Create Wallet", callback_data="wallet_create")
+            InlineKeyboardButton("📊 View Balances", callback_data=CallbackDataEnums.WALLET_BALANCES.value),
+            InlineKeyboardButton("➕ Create Wallet", callback_data=CallbackDataEnums.WALLET_CREATE.value)
         ],
         [
-            InlineKeyboardButton("📜 Transaction History", callback_data="wallet_transactions"),
-            InlineKeyboardButton("💸 Send Crypto", callback_data="wallet_send")
+            InlineKeyboardButton("📜 Transaction History", callback_data=CallbackDataEnums.WALLET_TRANSACTIONS.value),
+            InlineKeyboardButton(f"{EmojiEnums.REFRESH.value} Refresh Balances", callback_data=CallbackDataEnums.WALLET_REFRESH.value)
         ],
-        [
-            InlineKeyboardButton("🔄 Refresh Balances", callback_data="wallet_refresh"),
-            InlineKeyboardButton("⚙️ Wallet Settings", callback_data="wallet_settings")
-        ],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
     ])
     return keyboard
 
@@ -245,17 +232,17 @@ def create_wallet_menu():
     """Return wallet creation menu with supported networks"""
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("₿ Bitcoin (BTC)", callback_data="create_wallet_BTC"),
-            InlineKeyboardButton("Ξ Ethereum (ETH)", callback_data="create_wallet_ETH")
+            InlineKeyboardButton(f"{EmojiEnums.BITCOIN.value} Bitcoin (BTC)", callback_data="create_wallet_BTC"),
+            InlineKeyboardButton(f"{EmojiEnums.ETHEREUM.value} Ethereum (ETH)", callback_data="create_wallet_ETH")
         ],
         [
-            InlineKeyboardButton("◎ Solana (SOL)", callback_data="create_wallet_SOL"),
-            InlineKeyboardButton("Ł Litecoin (LTC)", callback_data="create_wallet_LTC")
+            InlineKeyboardButton(f"{EmojiEnums.SOLANA.value} Solana (SOL)", callback_data="create_wallet_SOL"),
+            InlineKeyboardButton(f"{EmojiEnums.LITECOIN.value} Litecoin (LTC)", callback_data="create_wallet_LTC")
         ],
         [
-            InlineKeyboardButton("Ð Dogecoin (DOGE)", callback_data="create_wallet_DOGE")
+            InlineKeyboardButton(f"{EmojiEnums.DOGECOIN.value} Dogecoin (DOGE)", callback_data="create_wallet_DOGE")
         ],
-        [InlineKeyboardButton("🔙 Back to Wallets", callback_data="my_wallets")]
+        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallets", callback_data=CallbackDataEnums.MY_WALLETS.value)]
     ])
     return keyboard
 
@@ -263,17 +250,69 @@ def wallet_details_menu(wallet_id: str):
     """Return wallet details menu"""
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🔄 Refresh Balance", callback_data=f"refresh_wallet_{wallet_id}"),
+            InlineKeyboardButton(f"{EmojiEnums.REFRESH.value} Refresh Balance", callback_data=f"refresh_wallet_{wallet_id}"),
             InlineKeyboardButton("📜 Transactions", callback_data=f"wallet_txs_{wallet_id}")
         ],
         [
-            InlineKeyboardButton("💸 Send", callback_data=f"send_from_{wallet_id}"),
-            InlineKeyboardButton("📋 Receive", callback_data=f"receive_to_{wallet_id}")
-        ],
-        [
-            InlineKeyboardButton("⚙️ Settings", callback_data=f"wallet_settings_{wallet_id}"),
-            InlineKeyboardButton("🔙 Back to Wallets", callback_data="my_wallets")
+            InlineKeyboardButton(f"{EmojiEnums.RECEIVE.value} Receive", callback_data=f"receive_to_{wallet_id}"),
+            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallets", callback_data=CallbackDataEnums.MY_WALLETS.value)
         ]
     ])
     return keyboard
+
+def confirmation_menu(action: str, item_id: str = None):
+    """Generic confirmation menu"""
+    confirm_data = f"confirm_{action}_{item_id}" if item_id else f"confirm_{action}"
+    cancel_data = f"cancel_{action}_{item_id}" if item_id else f"cancel_{action}"
+    
+    keyboard = InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(f"{EmojiEnums.CHECK_MARK.value} Yes, Confirm", callback_data=confirm_data),
+            InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} Cancel", callback_data=cancel_data)
+        ]
+    ])
+    return keyboard
+
+def back_to_menu():
+    """Simple back to menu button"""
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+    ])
+    return keyboard
+
+def deposit_confirmation_menu(trade_id: str):
+    """Keyboard for deposit confirmation"""
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{EmojiEnums.CHECK_MARK.value} I've Made Deposit", callback_data=f"deposit_made_{trade_id}")],
+        [InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} Cancel Trade", callback_data=f"cancel_trade_{trade_id}")],
+        [InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} Support", callback_data=f"support_trade_{trade_id}")]
+    ])
+    return keyboard
+
+def trade_actions_menu(trade_id: str, user_role: str):
+    """Dynamic trade actions menu based on user role"""
+    keyboard = []
+    
+    if user_role == "seller":
+        keyboard.append([
+            InlineKeyboardButton("📋 Trade Details", callback_data=f"trade_details_{trade_id}"),
+            InlineKeyboardButton("🔄 Refresh Status", callback_data=f"refresh_trade_{trade_id}")
+        ])
+        keyboard.append([
+            InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} Cancel Trade", callback_data=f"cancel_trade_{trade_id}"),
+            InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} Support", callback_data=f"support_trade_{trade_id}")
+        ])
+    elif user_role == "buyer":
+        keyboard.append([
+            InlineKeyboardButton("📋 Trade Details", callback_data=f"trade_details_{trade_id}"),
+            InlineKeyboardButton("💰 Make Payment", callback_data=f"make_payment_{trade_id}")
+        ])
+        keyboard.append([
+            InlineKeyboardButton(f"{EmojiEnums.CHECK_MARK.value} Goods Received", callback_data=f"goods_received_{trade_id}"),
+            InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} Support", callback_data=f"support_trade_{trade_id}")
+        ])
+    
+    keyboard.append([InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)])
+    
+    return InlineKeyboardMarkup(keyboard)
 

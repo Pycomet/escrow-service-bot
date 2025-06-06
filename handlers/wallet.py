@@ -1,104 +1,101 @@
 from config import *
 from utils import *
 from functions import *
-from functions.wallet import WalletManager
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 import logging
 import asyncio
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes, CallbackQueryHandler
+from functions.wallet import WalletManager
+from utils.messages import Messages
+from utils.keyboard import wallet_menu, back_to_menu, wallet_details_menu
+from utils.enums import EmojiEnums, CallbackDataEnums
 
 logger = logging.getLogger(__name__)
 
 async def wallet_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle wallet-related commands and callbacks"""
+    """Handle wallet management main page"""
     try:
-        is_callback = bool(update.callback_query)
-        message = update.callback_query.message if is_callback else update.message
-        user_id = str(update.effective_user.id)
-        
-        if is_callback:
-            await update.callback_query.answer()
+        query = update.callback_query
+        await query.answer()
+        user_id = str(query.from_user.id)
         
         # Get user's wallet
-        user_wallet = WalletManager.get_user_wallet(user_id)
+        wallet = WalletManager.get_user_wallet(user_id)
         
-        if not user_wallet:
-            # No wallet found - offer to create one
-            await send_message_or_edit(
-                message,
-                "🔐 <b>My Wallet</b>\n\n"
-                "You don't have a wallet yet. Create your first wallet to get started!\n\n"
-                "Your wallet will include addresses for:\n"
-                "• Bitcoin (BTC)\n"
-                "• Litecoin (LTC)\n"
-                "• Dogecoin (DOGE)\n"
-                "• Ethereum (ETH)\n"
-                "• Solana (SOL)\n"
-                "• Tether USDT (ERC-20)\n\n"
-                "🔐 All private keys will be encrypted and stored securely.",
-                InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🆕 Create My Wallet", callback_data="wallet_create")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-                ]),
-                is_callback,
-                parse_mode="HTML"
+        if not wallet:
+            # User doesn't have a wallet yet
+            await query.edit_message_text(
+                f"{EmojiEnums.LOCK.value} <b>Welcome to Wallet Management!</b>\n\n"
+                "You don't have a wallet yet. Create one to:\n\n"
+                f"{EmojiEnums.BITCOIN.value} Store and manage multiple cryptocurrencies\n"
+                f"{EmojiEnums.HANDSHAKE.value} Use for escrow trades (ETH/USDT)\n"
+                f"{EmojiEnums.LOCK.value} Keep your funds secure with encryption\n"
+                "🪙 All coins in one convenient wallet\n\n"
+                "Ready to get started?",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Create My Wallet", callback_data="wallet_create")],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+                ])
             )
             return
         
-        # Get coin addresses for the wallet
-        coin_addresses = WalletManager.get_wallet_coin_addresses(user_wallet['_id'])
+        # Get coin addresses
+        coin_addresses = WalletManager.get_wallet_coin_addresses(wallet['_id'])
         
-        # Show wallet overview
-        wallet_text = f"🔐 <b>My Wallet</b>\n\n"
-        wallet_text += f"💼 <b>Wallet Name:</b> {user_wallet['wallet_name']}\n"
-        wallet_text += f"🆔 <b>Wallet ID:</b> <code>{user_wallet['_id']}</code>\n"
-        wallet_text += f"🕐 <b>Created:</b> {user_wallet['created_at'][:10]}\n\n"
+        # Build wallet overview message
+        wallet_text = f"{EmojiEnums.LOCK.value} <b>My Wallet Overview</b>\n\n"
+        wallet_text += f"💼 <b>Wallet:</b> {wallet['wallet_name']}\n"
+        wallet_text += f"🆔 <b>ID:</b> <code>{wallet['_id'][:12]}...</code>\n"
+        wallet_text += f"🕐 <b>Created:</b> {wallet['created_at'][:16]}\n\n"
         
         if coin_addresses:
-            wallet_text += "💰 <b>Your Coin Addresses:</b>\n\n"
+            wallet_text += f"💰 <b>Supported Coins ({len(coin_addresses)}):</b>\n"
+            
+            # Group coins by balance status
+            coins_with_balance = []
+            coins_zero_balance = []
+            
             for coin_address in coin_addresses:
                 coin_symbol = coin_address['coin_symbol']
-                address = coin_address['address']
-                balance = coin_address.get('balance', '0')
+                balance = float(coin_address.get('balance', 0))
                 
-                # Truncate address for display
-                display_address = f"{address[:8]}...{address[-6:]}"
-                
-                # Add coin emoji
                 coin_emoji = {
-                    'BTC': '₿', 'LTC': 'Ł', 'DOGE': 'Ð', 'ETH': 'Ξ', 
-                    'SOL': '◎', 'USDT': '₮', 'BNB': '🟡', 'TRX': 'ⓣ'
+                    'BTC': EmojiEnums.BITCOIN.value,
+                    'LTC': EmojiEnums.LITECOIN.value,
+                    'DOGE': EmojiEnums.DOGECOIN.value,
+                    'ETH': EmojiEnums.ETHEREUM.value,
+                    'SOL': EmojiEnums.SOLANA.value,
+                    'USDT': EmojiEnums.TETHER.value,
+                    'BNB': EmojiEnums.YELLOW_CIRCLE.value,
+                    'TRX': EmojiEnums.TRON.value
                 }.get(coin_symbol, '🪙')
                 
-                wallet_text += f"{coin_emoji} <b>{coin_symbol}</b>\n"
-                wallet_text += f"   📍 <code>{display_address}</code>\n"
-                wallet_text += f"   💰 {balance} {coin_symbol}\n\n"
+                coin_info = f"{coin_emoji} <b>{coin_symbol}:</b> {balance}"
+                
+                if balance > 0:
+                    coins_with_balance.append(coin_info)
+                else:
+                    coins_zero_balance.append(coin_info)
+            
+            # Show coins with balance first
+            for coin_info in coins_with_balance:
+                wallet_text += f"  {coin_info}\n"
+            for coin_info in coins_zero_balance:
+                wallet_text += f"  {coin_info}\n"
+                
+            if not any(float(ca.get('balance', 0)) > 0 for ca in coin_addresses):
+                wallet_text += f"\n{EmojiEnums.WARNING.value} <i>All balances are zero. Start by receiving some crypto!</i>"
         else:
-            wallet_text += "❌ No coin addresses found. Please contact support.\n\n"
+            wallet_text += f"{EmojiEnums.WARNING.value} <b>No coin addresses found</b>\n"
+            wallet_text += "This shouldn't happen. Please contact support."
         
-        # Create keyboard with wallet options
-        keyboard = [
-            [
-                InlineKeyboardButton("🔄 Refresh Balances", callback_data=f"wallet_refresh_{user_wallet['_id']}"),
-                InlineKeyboardButton("📊 Detailed View", callback_data=f"wallet_details_{user_wallet['_id']}")
-            ],
-            [
-                InlineKeyboardButton("📜 Transaction History", callback_data=f"wallet_transactions_{user_wallet['_id']}"),
-                InlineKeyboardButton("💸 Send Crypto", callback_data=f"wallet_send_{user_wallet['_id']}")
-            ],
-            [
-                InlineKeyboardButton("➕ Add Coin", callback_data=f"wallet_add_coin_{user_wallet['_id']}"),
-                InlineKeyboardButton("⚙️ Settings", callback_data=f"wallet_settings_{user_wallet['_id']}")
-            ],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-        ]
+        keyboard = InlineKeyboardMarkup(wallet_menu().inline_keyboard)
         
-        await send_message_or_edit(
-            message,
+        await query.edit_message_text(
             wallet_text,
-            InlineKeyboardMarkup(keyboard),
-            is_callback,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            reply_markup=keyboard
         )
         
     except Exception as e:
@@ -114,12 +111,7 @@ async def wallet_create_handler(update: Update, context: ContextTypes.DEFAULT_TY
         
         # Show loading message
         await query.edit_message_text(
-            "⏳ <b>Creating Your Multi-Currency Wallet</b>\n\n"
-            "Please wait while we set up your secure wallet...\n\n"
-            "🔐 Generating master mnemonic phrase\n"
-            "🪙 Creating addresses for default coins\n"
-            "🛡️ Encrypting all private data\n"
-            "💾 Saving to secure database",
+            Messages.wallet_creating(),
             parse_mode="HTML"
         )
         
@@ -130,45 +122,24 @@ async def wallet_create_handler(update: Update, context: ContextTypes.DEFAULT_TY
             # Get created coin addresses
             coin_addresses = WalletManager.get_wallet_coin_addresses(wallet['_id'])
             
-            success_text = (
-                f"✅ <b>Wallet Created Successfully!</b>\n\n"
-                f"💼 <b>Wallet Name:</b> {wallet['wallet_name']}\n"
-                f"🆔 <b>Wallet ID:</b> <code>{wallet['_id']}</code>\n\n"
-                f"🪙 <b>Created {len(coin_addresses)} coin addresses:</b>\n"
-            )
-            
-            for coin_address in coin_addresses[:6]:  # Show first 6
-                coin_symbol = coin_address['coin_symbol']
-                address = coin_address['address']
-                display_address = f"{address[:10]}...{address[-6:]}"
-                success_text += f"• {coin_symbol}: <code>{display_address}</code>\n"
-            
-            success_text += (
-                f"\n🔐 <b>Security Features:</b>\n"
-                f"• All private keys encrypted with AES-256\n"
-                f"• Master mnemonic securely stored\n"
-                f"• One wallet, multiple currencies\n\n"
-                f"⚠️ <b>Important:</b> Keep your account secure!"
-            )
+            success_text = Messages.wallet_created_success(wallet, coin_addresses)
             
             await query.edit_message_text(
                 success_text,
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📊 View My Wallet", callback_data="my_wallets")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                    [InlineKeyboardButton("📊 View My Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
                 ])
             )
         else:
             # Error message
             await query.edit_message_text(
-                "❌ <b>Failed to Create Wallet</b>\n\n"
-                "An error occurred while creating your wallet. "
-                "Please try again or contact support if the problem persists.",
+                Messages.wallet_creation_failed(),
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔄 Try Again", callback_data="wallet_create")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                    [InlineKeyboardButton("🔄 Try Again", callback_data=CallbackDataEnums.WALLET_CREATE.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
                 ])
             )
         
@@ -177,7 +148,7 @@ async def wallet_create_handler(update: Update, context: ContextTypes.DEFAULT_TY
         await handle_error(update, "wallet creation")
 
 async def wallet_refresh_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle wallet balance refresh"""
+    """Handle wallet balance refresh with specific wallet ID"""
     try:
         query = update.callback_query
         await query.answer()
@@ -187,8 +158,7 @@ async def wallet_refresh_handler(update: Update, context: ContextTypes.DEFAULT_T
         
         # Show loading message
         await query.edit_message_text(
-            "🔄 <b>Refreshing Wallet Balances</b>\n\n"
-            "Please wait while we fetch the latest balance information from the blockchain...",
+            Messages.wallet_refreshing(),
             parse_mode="HTML"
         )
         
@@ -198,23 +168,20 @@ async def wallet_refresh_handler(update: Update, context: ContextTypes.DEFAULT_T
         
         if success:
             await query.edit_message_text(
-                "✅ <b>Balances Refreshed!</b>\n\n"
-                "Your wallet balances have been updated with the latest information from the blockchain.",
+                Messages.wallet_refreshed_success(),
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📊 View Updated Wallet", callback_data="my_wallets")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                    [InlineKeyboardButton("📊 View Updated Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
                 ])
             )
         else:
             await query.edit_message_text(
-                "⚠️ <b>Refresh Partially Complete</b>\n\n"
-                "Some balances may not have been updated due to network issues. "
-                "You can try refreshing again in a moment.",
+                Messages.wallet_refresh_partial(),
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("🔄 Try Again", callback_data=f"wallet_refresh_{wallet_id}")],
-                    [InlineKeyboardButton("📊 View Wallet", callback_data="my_wallets")]
+                    [InlineKeyboardButton("📊 View Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)]
                 ])
             )
         
@@ -236,9 +203,9 @@ async def wallet_details_handler(update: Update, context: ContextTypes.DEFAULT_T
         wallet = WalletManager.get_user_wallet(user_id)
         if not wallet or wallet['_id'] != wallet_id:
             await query.edit_message_text(
-                "❌ Wallet not found or access denied.",
+                Messages.wallet_not_found(),
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Wallets", callback_data="my_wallets")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallets", callback_data=CallbackDataEnums.MY_WALLETS.value)
                 ]])
             )
             return
@@ -247,45 +214,203 @@ async def wallet_details_handler(update: Update, context: ContextTypes.DEFAULT_T
         coin_addresses = WalletManager.get_wallet_coin_addresses(wallet_id)
         
         # Format wallet details
-        details_text = f"📊 <b>Wallet Details</b>\n\n"
-        details_text += f"💼 <b>Name:</b> {wallet['wallet_name']}\n"
-        details_text += f"🆔 <b>ID:</b> <code>{wallet['_id']}</code>\n"
-        details_text += f"👤 <b>Owner:</b> {wallet['user_id']}\n"
-        details_text += f"🕐 <b>Created:</b> {wallet['created_at'][:16]}\n\n"
+        details_text = Messages.wallet_details(wallet, coin_addresses)
         
-        if coin_addresses:
-            details_text += f"💰 <b>Coin Addresses ({len(coin_addresses)}):</b>\n\n"
-            for coin_address in coin_addresses:
-                coin_symbol = coin_address['coin_symbol']
-                address = coin_address['address']
-                balance = coin_address.get('balance', '0')
-                
-                coin_emoji = {
-                    'BTC': '₿', 'LTC': 'Ł', 'DOGE': 'Ð', 'ETH': 'Ξ', 
-                    'SOL': '◎', 'USDT': '₮', 'BNB': '🟡', 'TRX': 'ⓣ'
-                }.get(coin_symbol, '🪙')
-                
-                details_text += f"{coin_emoji} <b>{coin_symbol}</b>\n"
-                details_text += f"   💰 Balance: {balance}\n"
-                details_text += f"   📍 <code>{address}</code>\n\n"
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("🔄 Refresh", callback_data=f"wallet_refresh_{wallet_id}"),
-                InlineKeyboardButton("📋 Copy Address", callback_data=f"wallet_copy_{wallet_id}")
-            ],
-            [InlineKeyboardButton("🔙 Back to Wallet", callback_data="my_wallets")]
-        ]
+        keyboard = wallet_details_menu(wallet_id)
         
         await query.edit_message_text(
             details_text,
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=keyboard
         )
         
     except Exception as e:
         logger.error(f"Error showing wallet details: {e}")
         await handle_error(update, "wallet details")
+
+async def wallet_balances_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle wallet balances view - same as main wallet handler but focused on balances"""
+    try:
+        query = update.callback_query
+        await query.answer()
+        user_id = str(query.from_user.id)
+        
+        # Get user's wallet
+        wallet = WalletManager.get_user_wallet(user_id)
+        
+        if not wallet:
+            await query.edit_message_text(
+                f"{EmojiEnums.WARNING.value} <b>No Wallet Found</b>\n\n"
+                "You need to create a wallet first before viewing balances.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Create Wallet", callback_data=CallbackDataEnums.WALLET_CREATE.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+                ])
+            )
+            return
+        
+        # Get coin addresses
+        coin_addresses = WalletManager.get_wallet_coin_addresses(wallet['_id'])
+        
+        # Build detailed balance message
+        balance_text = f"📊 <b>Wallet Balance Overview</b>\n\n"
+        balance_text += f"💼 <b>Wallet:</b> {wallet['wallet_name']}\n"
+        balance_text += f"🆔 <b>ID:</b> <code>{wallet['_id'][:12]}...</code>\n\n"
+        
+        if coin_addresses:
+            total_value = 0
+            balance_text += f"💰 <b>Your Balances:</b>\n\n"
+            
+            for coin_address in coin_addresses:
+                coin_symbol = coin_address['coin_symbol']
+                balance = float(coin_address.get('balance', 0))
+                
+                coin_emoji = {
+                    'BTC': EmojiEnums.BITCOIN.value,
+                    'LTC': EmojiEnums.LITECOIN.value,
+                    'DOGE': EmojiEnums.DOGECOIN.value,
+                    'ETH': EmojiEnums.ETHEREUM.value,
+                    'SOL': EmojiEnums.SOLANA.value,
+                    'USDT': EmojiEnums.TETHER.value,
+                    'BNB': EmojiEnums.YELLOW_CIRCLE.value,
+                    'TRX': EmojiEnums.TRON.value
+                }.get(coin_symbol, '🪙')
+                
+                status_icon = "🟢" if balance > 0 else "⚪"
+                balance_text += f"{status_icon} {coin_emoji} <b>{coin_symbol}:</b> {balance}\n"
+                
+                if balance > 0:
+                    total_value += 1  # Just count non-zero balances for now
+            
+            balance_text += f"\n📈 <b>Summary:</b>\n"
+            balance_text += f"• Total coins: {len(coin_addresses)}\n"
+            balance_text += f"• With balance: {total_value}\n"
+            balance_text += f"• Last updated: Just now\n"
+            
+        else:
+            balance_text += f"{EmojiEnums.WARNING.value} No coin addresses found."
+        
+        await query.edit_message_text(
+            balance_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(f"{EmojiEnums.REFRESH.value} Refresh Now", callback_data=f"wallet_refresh_{wallet['_id']}"),
+                    InlineKeyboardButton("📋 Details", callback_data=f"wallet_details_{wallet['_id']}")
+                ],
+                [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)]
+            ])
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in wallet balances handler: {e}")
+        await handle_error(update, "wallet balance view")
+
+async def wallet_refresh_general_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle general wallet refresh (without specific wallet ID)"""
+    try:
+        query = update.callback_query
+        await query.answer()
+        user_id = str(query.from_user.id)
+        
+        # Get user's wallet
+        wallet = WalletManager.get_user_wallet(user_id)
+        
+        if not wallet:
+            await query.edit_message_text(
+                f"{EmojiEnums.WARNING.value} <b>No Wallet Found</b>\n\n"
+                "You need to create a wallet first before refreshing balances.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Create Wallet", callback_data=CallbackDataEnums.WALLET_CREATE.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+                ])
+            )
+            return
+        
+        # Show loading message
+        await query.edit_message_text(
+            Messages.wallet_refreshing(),
+            parse_mode="HTML"
+        )
+        
+        # Refresh balances
+        wallet_manager = WalletManager()
+        success = await wallet_manager.refresh_wallet_balances(wallet['_id'])
+        
+        if success:
+            await query.edit_message_text(
+                Messages.wallet_refreshed_success(),
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📊 View Balances", callback_data=CallbackDataEnums.WALLET_BALANCES.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)]
+                ])
+            )
+        else:
+            await query.edit_message_text(
+                Messages.wallet_refresh_partial(),
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔄 Try Again", callback_data=CallbackDataEnums.WALLET_REFRESH.value)],
+                    [InlineKeyboardButton("📊 View Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)]
+                ])
+            )
+        
+    except Exception as e:
+        logger.error(f"Error refreshing wallet (general): {e}")
+        await handle_error(update, "wallet refresh")
+
+async def wallet_transactions_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle wallet transaction history view"""
+    try:
+        query = update.callback_query
+        await query.answer()
+        user_id = str(query.from_user.id)
+        
+        # Get user's wallet
+        wallet = WalletManager.get_user_wallet(user_id)
+        
+        if not wallet:
+            await query.edit_message_text(
+                f"{EmojiEnums.WARNING.value} <b>No Wallet Found</b>\n\n"
+                "You need to create a wallet first before viewing transaction history.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("➕ Create Wallet", callback_data=CallbackDataEnums.WALLET_CREATE.value)],
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+                ])
+            )
+            return
+        
+        # For now, show a placeholder since transaction history isn't fully implemented
+        transactions_text = f"📜 <b>Transaction History</b>\n\n"
+        transactions_text += f"💼 <b>Wallet:</b> {wallet['wallet_name']}\n"
+        transactions_text += f"🆔 <b>ID:</b> <code>{wallet['_id'][:12]}...</code>\n\n"
+        transactions_text += f"📊 <b>Transaction History:</b>\n\n"
+        transactions_text += f"🔍 <i>No transactions found yet.</i>\n\n"
+        transactions_text += f"💡 <b>Note:</b> Transaction history will appear here when you:\n"
+        transactions_text += f"• Receive cryptocurrency\n"
+        transactions_text += f"• Send cryptocurrency\n"
+        transactions_text += f"• Use wallet for escrow trades\n\n"
+        transactions_text += f"Start by receiving some crypto to your wallet addresses!"
+        
+        await query.edit_message_text(
+            transactions_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("📊 View Balances", callback_data=CallbackDataEnums.WALLET_BALANCES.value),
+                    InlineKeyboardButton(f"{EmojiEnums.REFRESH.value} Refresh", callback_data=CallbackDataEnums.WALLET_REFRESH.value)
+                ],
+                [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Wallet", callback_data=CallbackDataEnums.MY_WALLETS.value)]
+            ])
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in wallet transactions handler: {e}")
+        await handle_error(update, "wallet transaction history")
 
 async def send_message_or_edit(message, text, reply_markup, is_callback=False, parse_mode=None):
     """Helper function to either send a new message or edit existing one"""
@@ -302,21 +427,15 @@ async def handle_error(update: Update, operation: str):
     """Handle errors gracefully"""
     try:
         message = update.callback_query.message if update.callback_query else update.message
-        if message:
-            await send_message_or_edit(
-                message,
-                f"❌ An error occurred during {operation}. Please try again later.",
-                InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-                ]]),
-                bool(update.callback_query)
-            )
+        
+        await send_message_or_edit(
+            message, 
+            f"{EmojiEnums.CROSS_MARK.value} <b>Error in {operation}</b>\n\n"
+            "Something went wrong. Please try again or contact support if the problem persists.",
+            back_to_menu(),
+            is_callback=bool(update.callback_query),
+            parse_mode="HTML"
+        )
+        
     except Exception as e:
-        logger.error(f"Error sending error message: {e}")
-
-def register_handlers(application):
-    """Register handlers for the wallet module"""
-    application.add_handler(CallbackQueryHandler(wallet_handler, pattern="^my_wallets$"))
-    application.add_handler(CallbackQueryHandler(wallet_create_handler, pattern="^wallet_create$"))
-    application.add_handler(CallbackQueryHandler(wallet_refresh_handler, pattern="^wallet_refresh_"))
-    application.add_handler(CallbackQueryHandler(wallet_details_handler, pattern="^wallet_details_")) 
+        logger.error(f"Error in error handler: {e}") 

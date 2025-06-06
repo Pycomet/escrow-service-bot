@@ -1,10 +1,14 @@
+import logging
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler
+from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.messages import Messages
+from utils.trade_status import get_trade_status, format_trade_status
+from functions.trade import TradeClient
+from functions.user import UserClient
 from config import *
 from utils import *
 from functions import *
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from utils.trade_status import get_trade_status, format_trade_status
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +40,9 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not trades:
             await send_message_or_edit(
                 message,
-                "❌ You don't have any trade history yet.",
+                f"{EmojiEnums.CROSS_MARK.value} You don't have any trade history yet.",
                 InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]]),
                 is_callback
             )
@@ -66,7 +70,7 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     currency = str(trade[2]) if len(trade) > 2 else 'Unknown'
                     # For list format, we'll use a simple pending/completed status
                     status = 'completed' if len(trade) > 3 and trade[3] else 'pending'
-                    status_emoji = '✅' if status == 'completed' else '⏳'
+                    status_emoji = EmojiEnums.CHECK_MARK.value if status == 'completed' else EmojiEnums.HOURGLASS.value
                 
                 keyboard.append([
                     InlineKeyboardButton(
@@ -78,11 +82,11 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.error(f"Error processing trade in history: {e}")
                 continue
         
-        keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")])
+        keyboard.append([InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)])
         
         await send_message_or_edit(
             message,
-            "📋 Your Trade History:\n\nSelect a trade to view details:",
+            f"{EmojiEnums.CLIPBOARD.value} Your Trade History:\n\nSelect a trade to view details:",
             InlineKeyboardMarkup(keyboard),
             is_callback
         )
@@ -95,9 +99,9 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if message:
                 await send_message_or_edit(
                     message,
-                    "❌ An error occurred while fetching your trade history. Please try again later.",
+                    f"{EmojiEnums.CROSS_MARK.value} An error occurred while fetching your trade history. Please try again later.",
                     InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]]),
                     bool(update.callback_query)
                 )
@@ -120,9 +124,9 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
             
             if not trade:
                 await query.message.edit_text(
-                    "❌ Trade not found. Please try again.",
+                    f"{EmojiEnums.CROSS_MARK.value} Trade not found. Please try again.",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
                 return
@@ -132,7 +136,7 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
             formatted_status = format_trade_status(status)
             
             details = (
-                f"📋 <b>Trade Details</b>\n\n"
+                f"{EmojiEnums.CLIPBOARD.value} <b>Trade Details</b>\n\n"
                 f"ID: <code>{trade.get('_id', 'Unknown')}</code>\n"
                 f"Type: {trade.get('trade_type', 'Unknown')}\n"
                 f"Status: {status_emoji} {formatted_status}\n"
@@ -145,14 +149,14 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
                 details += f"Description: {trade['description']}\n\n"
             
             # Add action buttons based on trade status
-            keyboard = [[InlineKeyboardButton("🔙 Back to History", callback_data="history")]]
+            keyboard = [[InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to History", callback_data="history")]]
             
             # Only show action buttons for non-completed trades
             if status not in ['completed', 'cancelled']:
                 if str(trade.get("seller_id")) == str(query.from_user.id):
-                    keyboard.append([InlineKeyboardButton("❌ Cancel Trade", callback_data=f"delete_trade_{trade_id}")])
+                    keyboard.append([InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} Cancel Trade", callback_data=f"delete_trade_{trade_id}")])
                 elif str(trade.get("buyer_id")) == str(query.from_user.id):
-                    keyboard.append([InlineKeyboardButton("⚠️ Report Issue", callback_data=f"report_trade_{trade_id}")])
+                    keyboard.append([InlineKeyboardButton(f"{EmojiEnums.WARNING.value} Report Issue", callback_data=f"report_trade_{trade_id}")])
             
             await query.message.edit_text(
                 details,
@@ -169,9 +173,9 @@ async def handle_trade_view_callback(update: Update, context: ContextTypes.DEFAU
         try:
             if query and query.message:
                 await query.message.edit_text(
-                    "❌ An error occurred while viewing trade details. Please try again later.",
+                    f"{EmojiEnums.CROSS_MARK.value} An error occurred while viewing trade details. Please try again later.",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
         except Exception as e2:

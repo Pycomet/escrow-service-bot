@@ -10,6 +10,7 @@ from .affiliate import *
 from .webhook import *
 from .report import *
 from .verdict import *
+from .wallet import *
 
 __all__ = [
     'start',
@@ -23,7 +24,8 @@ __all__ = [
     'affiliate',
     'webhook',
     'report',
-    'verdict'
+    'verdict',
+    'wallet'
 ]
 
 # Register handlers

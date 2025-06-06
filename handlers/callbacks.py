@@ -6,38 +6,49 @@ from handlers.history import history_handler
 from handlers.initiate_trade import initiate_trade_handler
 from handlers.join import join_handler
 from handlers.report import report_handler
-from handlers.rules import community_handler, rules_handler
+from handlers.rules import community_rules_handler, rules_handler
 from handlers.review import review_handler
-from handlers.wallet import wallet_handler
+from handlers.wallet import (
+    wallet_handler, 
+    wallet_create_handler, 
+    wallet_refresh_handler, 
+    wallet_details_handler, 
+    wallet_balances_handler, 
+    wallet_refresh_general_handler, 
+    wallet_transactions_handler
+)
+from handlers.trade_flows.fiat import CryptoFiatFlow
 from utils import *
 from functions import *
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import CallbackQueryHandler, ContextTypes
 import logging
-from utils.keyboard import trade_type_menu
+from utils.keyboard import trade_type_menu, main_menu, back_to_menu
+from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.messages import Messages
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Callback Handlers
 async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle menu-related callback queries"""
+    """Handle main menu navigation callbacks"""
     query = update.callback_query
     await query.answer()
     
     data = query.data
+    logger.info(f"Menu callback received: {data}")
     
     try:
-        if data == "menu":
+        if data == CallbackDataEnums.MENU.value:
             # Show main menu
             await query.edit_message_text(
-                "🤖 <b>Welcome to the Escrow Service Bot!</b>\n\n"
-                "What would you like to do?",
+                Messages.main_menu_welcome(),
                 parse_mode="html",
                 reply_markup=await main_menu(update, context)
             )
         
-        elif data == "create_trade":
+        elif data == CallbackDataEnums.CREATE_TRADE.value:
             # Start trade creation process using edit_message instead of expecting a reply_text
             logger.info("Starting trade creation process")
             user_id = update.effective_user.id
@@ -45,10 +56,9 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             # Check if user already has a trade creation in progress
             if context.user_data.get("trade_creation"):
                 await query.edit_message_text(
-                    "❌ You already have a trade creation in progress. "
-                    "Please complete it or use /cancel to start over.",
+                    Messages.trade_creation_in_progress(),
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
                 return
@@ -57,10 +67,9 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             active_trade = trades_db.get_active_trade_by_user_id(str(user_id))
             if active_trade:
                 await query.edit_message_text(
-                    f"❌ You already have an active trade (#{active_trade['_id']}). "
-                    "Please complete or cancel your current trade before starting a new one.",
+                    Messages.active_trade_exists(active_trade['_id']),
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
                 return
@@ -69,56 +78,54 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             keyboard = await trade_type_menu()
             
             await query.edit_message_text(
-                "📝 Let's create a new trade!\n\n"
-                "Please select the type of trade you want to create:",
+                Messages.trade_creation_start(),
                 reply_markup=keyboard
             )
             
             # Set state to wait for trade type selection
             context.user_data["trade_creation"] = {"step": "select_trade_type"}
         
-        elif data == "join_trade":
+        elif data == CallbackDataEnums.JOIN_TRADE.value:
             # Start trade joining process
             logger.info("Starting trade joining process")
             await join_handler(update, context)
         
-        elif data == "trade_history":
+        elif data == CallbackDataEnums.TRADE_HISTORY.value:
             # Show trade history
             logger.info("Showing trade history")
             await history_handler(update, context)
         
-        elif data == "my_wallets":
+        elif data == CallbackDataEnums.MY_WALLETS.value:
             # Show wallet management
             logger.info("Showing wallet management")
             await wallet_handler(update, context)
         
-        elif data == "rules":
+        elif data == CallbackDataEnums.RULES.value:
             # Show rules
             logger.info("Showing rules")
             await rules_handler(update, context)
         
-        elif data == "community":
+        elif data == CallbackDataEnums.COMMUNITY.value:
             # Show community links
             logger.info("Showing community links")
-            await community_handler(update, context)
+            await community_rules_handler(update, context)
         
-        elif data == "affiliate":
+        elif data == CallbackDataEnums.AFFILIATE.value:
             # Show affiliate program
             logger.info("Showing affiliate program")
             await affiliate_handler(update, context)
         
-        elif data == "support":
+        elif data == CallbackDataEnums.SUPPORT.value:
             # Show support options
             logger.info("Showing support options")
             await query.edit_message_text(
-                "🆘 <b>Need Help?</b>\n\n"
-                "We're here to help! Choose an option below:",
+                Messages.support_menu(),
                 parse_mode="html",
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📝 Report an Issue", callback_data="report")],
-                    [InlineKeyboardButton("❓ FAQ", callback_data="faq")],
+                    [InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} FAQ", callback_data="faq")],
                     [InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}")],
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
+                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
                 ])
             )
         
@@ -131,22 +138,10 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             # Show FAQ
             logger.info("Showing FAQ")
             await query.edit_message_text(
-                "❓ <b>Frequently Asked Questions</b>\n\n"
-                "1. <b>How does the escrow service work?</b>\n"
-                "The escrow service holds the buyer's payment until the goods/services are delivered and approved.\n\n"
-                "2. <b>What happens if there's a dispute?</b>\n"
-                "Both parties can submit evidence, and our team will review the case fairly.\n\n"
-                "3. <b>How long does a trade take?</b>\n"
-                "Most trades are completed within 24-48 hours, depending on delivery time.\n\n"
-                "4. <b>What are the fees?</b>\n"
-                "Fees are clearly displayed before creating a trade.\n\n"
-                "5. <b>Is my payment secure?</b>\n"
-                "Yes, all payments are held securely in escrow until the trade is completed.\n\n"
-                "6. <b>Are my crypto wallets secure?</b>\n"
-                "Yes, all private keys are encrypted and stored securely. We use industry-standard encryption.",
+                Messages.faq(),
                 parse_mode="html",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Support", callback_data="support")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Support", callback_data=CallbackDataEnums.SUPPORT.value)
                 ]])
             )
         
@@ -154,14 +149,202 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         logger.error(f"Error in menu callback: {e}")
         try:
             await query.edit_message_text(
-                "❌ An error occurred. Please try again or contact support.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-                ]])
+                Messages.generic_error(),
+                reply_markup=back_to_menu()
             )
         except Exception:
             pass
 
+async def handle_deposit_check_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle deposit check callbacks by routing to appropriate trade flow"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Deposit check callback received: {query.data}")
+    
+    # Extract trade_id from callback_data
+    if query.data and query.data.startswith("check_deposit_"):
+        trade_id = query.data.split("_", 2)[-1]
+        logger.info(f"Trade ID extracted: {trade_id}")
+        
+        # Get trade to determine type
+        trade = TradeClient.get_trade(trade_id)
+        if not trade:
+            logger.error(f"Trade {trade_id} not found")
+            await query.bot.send_message(
+                query.message.chat_id,
+                Messages.trade_not_found(trade_id)
+            )
+            return
+        
+        trade_type = trade.get("trade_type")
+        logger.info(f"Trade type: {trade_type}")
+        
+        # Route to appropriate flow handler
+        if trade_type == "CryptoToFiat":
+            await CryptoFiatFlow.handle_deposit_check(update, context)
+        else:
+            logger.warning(f"No deposit check handler for trade type: {trade_type}")
+            await query.bot.send_message(
+                query.message.chat_id,
+                Messages.deposit_check_not_implemented(trade_type)
+            )
+    else:
+        logger.error(f"Invalid deposit check callback data: {query.data}")
+        await query.bot.send_message(
+            query.message.chat_id,
+            Messages.invalid_deposit_check()
+        )
+
+async def handle_cancel_trade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle cancel trade callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Cancel trade callback received: {query.data}")
+    
+    # Extract trade_id from callback_data
+    if query.data and query.data.startswith("cancel_trade_"):
+        trade_id = query.data.split("_", 2)[-1]
+        logger.info(f"Cancelling trade ID: {trade_id}")
+        
+        # Get trade to verify ownership
+        trade = TradeClient.get_trade(trade_id)
+        if not trade:
+            logger.error(f"Trade {trade_id} not found")
+            await query.edit_message_text(
+                Messages.trade_not_found(trade_id),
+                reply_markup=back_to_menu()
+            )
+            return
+        
+        user_id = str(query.from_user.id)
+        seller_id = trade.get('seller_id')
+        buyer_id = trade.get('buyer_id')
+        
+        # Check if user is authorized to cancel
+        if user_id not in [seller_id, buyer_id]:
+            await query.edit_message_text(
+                Messages.trade_cancel_not_authorized(trade_id),
+                reply_markup=back_to_menu()
+            )
+            return
+        
+        # Show confirmation dialog
+        from utils.keyboard import confirmation_menu
+        await query.edit_message_text(
+            Messages.trade_cancel_confirmation(trade_id),
+            parse_mode="html",
+            reply_markup=confirmation_menu("cancel_trade", trade_id)
+        )
+        
+    else:
+        logger.error(f"Invalid cancel trade callback data: {query.data}")
+        await query.edit_message_text(
+            Messages.generic_error(),
+            reply_markup=back_to_menu()
+        )
+
+async def handle_confirm_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle confirmation of trade cancellation"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Confirm cancel callback received: {query.data}")
+    
+    if query.data and query.data.startswith("confirm_cancel_trade_"):
+        trade_id = query.data.split("_", 3)[-1]
+        logger.info(f"Confirming cancellation of trade ID: {trade_id}")
+        
+        try:
+            # Cancel the trade
+            success = TradeClient.cancel_trade(
+                trade_id=trade_id,
+                cancelled_by=str(query.from_user.id),
+                reason="User requested cancellation"
+            )
+            
+            if success:
+                await query.edit_message_text(
+                    Messages.trade_cancelled_success(trade_id),
+                    parse_mode="html",
+                    reply_markup=back_to_menu()
+                )
+            else:
+                await query.edit_message_text(
+                    Messages.trade_cancel_failed(trade_id),
+                    parse_mode="html",
+                    reply_markup=back_to_menu()
+                )
+                
+        except Exception as e:
+            logger.error(f"Error cancelling trade {trade_id}: {e}")
+            await query.edit_message_text(
+                Messages.trade_cancel_failed(trade_id),
+                parse_mode="html",
+                reply_markup=back_to_menu()
+            )
+    
+    elif query.data and query.data.startswith("cancel_cancel_trade_"):
+        # User cancelled the cancellation
+        trade_id = query.data.split("_", 3)[-1]
+        await query.edit_message_text(
+            f"{EmojiEnums.CHECK_MARK.value} <b>Cancellation Aborted</b>\n\n"
+            f"Trade #{trade_id} will continue as normal.",
+            parse_mode="html",
+            reply_markup=back_to_menu()
+        )
+
+async def handle_support_trade_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle support requests for specific trades"""
+    query = update.callback_query
+    await query.answer()
+    
+    logger.info(f"Support trade callback received: {query.data}")
+    
+    if query.data and query.data.startswith("support_trade_"):
+        trade_id = query.data.split("_", 2)[-1]
+        logger.info(f"Support requested for trade ID: {trade_id}")
+        
+        # Get trade to verify existence
+        trade = TradeClient.get_trade(trade_id)
+        if not trade:
+            await query.edit_message_text(
+                Messages.trade_not_found(trade_id),
+                reply_markup=back_to_menu()
+            )
+            return
+        
+        # Show support options for this trade
+        await query.edit_message_text(
+            Messages.support_trade_options(trade_id),
+            parse_mode="html",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🚨 Report Issue", callback_data=f"report_trade_issue_{trade_id}")],
+                [InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}")],
+                [InlineKeyboardButton("📝 Trade Details", callback_data=f"trade_details_{trade_id}")],
+                [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
+            ])
+        )
+
 def register_handlers(application):
-    """Register handlers for the callbacks module"""
-    application.add_handler(CallbackQueryHandler(handle_menu_callback, pattern="^(menu|create_trade|join_trade|trade_history|my_wallets|rules|community|affiliate|support|report|faq)$"))
+    """Register all callback handlers"""
+    # Main menu callbacks
+    application.add_handler(CallbackQueryHandler(handle_menu_callback, pattern=f"^({CallbackDataEnums.MENU.value}|{CallbackDataEnums.CREATE_TRADE.value}|{CallbackDataEnums.JOIN_TRADE.value}|{CallbackDataEnums.TRADE_HISTORY.value}|{CallbackDataEnums.MY_WALLETS.value}|{CallbackDataEnums.RULES.value}|{CallbackDataEnums.COMMUNITY.value}|{CallbackDataEnums.AFFILIATE.value}|{CallbackDataEnums.SUPPORT.value}|report|faq)$"))
+    
+    # Wallet callbacks
+    application.add_handler(CallbackQueryHandler(wallet_handler, pattern=CallbackDataEnums.MY_WALLETS.value))
+    application.add_handler(CallbackQueryHandler(wallet_create_handler, pattern=CallbackDataEnums.WALLET_CREATE.value))
+    application.add_handler(CallbackQueryHandler(wallet_refresh_handler, pattern="^wallet_refresh_"))
+    application.add_handler(CallbackQueryHandler(wallet_details_handler, pattern="^wallet_details_"))
+    application.add_handler(CallbackQueryHandler(wallet_balances_handler, pattern=CallbackDataEnums.WALLET_BALANCES.value))
+    application.add_handler(CallbackQueryHandler(wallet_refresh_general_handler, pattern=CallbackDataEnums.WALLET_REFRESH.value))
+    application.add_handler(CallbackQueryHandler(wallet_transactions_handler, pattern=CallbackDataEnums.WALLET_TRANSACTIONS.value))
+    
+    # Trade action callbacks
+    application.add_handler(CallbackQueryHandler(handle_deposit_check_callback, pattern="^check_deposit_"))
+    application.add_handler(CallbackQueryHandler(handle_cancel_trade_callback, pattern="^cancel_trade_"))
+    application.add_handler(CallbackQueryHandler(handle_confirm_cancel_callback, pattern="^(confirm|cancel)_cancel_trade_"))
+    application.add_handler(CallbackQueryHandler(handle_support_trade_callback, pattern="^support_trade_"))
+    
+    logger.info("Callback handlers registered successfully")

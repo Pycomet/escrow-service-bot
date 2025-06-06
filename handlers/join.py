@@ -1,9 +1,13 @@
+import logging
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import ContextTypes
+from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.messages import Messages
+from functions.trade import TradeClient
+from functions.user import UserClient
 from config import *
 from utils import *
 from functions import *
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters, CallbackQueryHandler
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +33,9 @@ async def join_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await send_message_or_edit(
             message,
-            "🔍 Please enter the Trade ID you want to join:",
+            f"{EmojiEnums.MAGNIFYING_GLASS.value} Please enter the Trade ID you want to join:",
             InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]]),
             is_callback
         )
@@ -46,9 +50,9 @@ async def join_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if message:
                 await send_message_or_edit(
                     message,
-                    "❌ An error occurred. Please try again later.",
+                    f"{EmojiEnums.CROSS_MARK.value} An error occurred. Please try again later.",
                     InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]]),
                     bool(update.callback_query)
                 )
@@ -74,9 +78,9 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         trade = trades_db.get_trade(trade_id)
         if not trade:
             await update.message.reply_text(
-                "❌ Trade not found. Please check the ID and try again.",
+                f"{EmojiEnums.CROSS_MARK.value} Trade not found. Please check the ID and try again.",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]])
             )
             return
@@ -85,9 +89,9 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status = str(trade.get('status', '')).lower()
         if status != "pending":
             await update.message.reply_text(
-                f"❌ This trade is no longer available for joining (Status: {status}).",
+                f"{EmojiEnums.CROSS_MARK.value} This trade is no longer available for joining (Status: {status}).",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]])
             )
             return
@@ -97,9 +101,9 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buyer_id = str(trade.get('buyer_id', ''))
         if str(user_id) in [seller_id, buyer_id]:
             await update.message.reply_text(
-                "❌ You are already involved in this trade.",
+                f"{EmojiEnums.CROSS_MARK.value} You are already involved in this trade.",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                 ]])
             )
             return
@@ -129,16 +133,16 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             details,
             parse_mode="html",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("✅ Yes, Join Trade", callback_data=f"confirm_join_{trade_id}")],
-                [InlineKeyboardButton("❌ No, Cancel", callback_data="menu")]
+                [InlineKeyboardButton(f"{EmojiEnums.CHECK_MARK.value} Yes, Join Trade", callback_data=f"confirm_join_{trade_id}")],
+                [InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} No, Cancel", callback_data=CallbackDataEnums.MENU.value)]
             ])
         )
     except Exception as e:
         logger.error(f"Error in handle_trade_id: {e}")
         await update.message.reply_text(
-            "❌ An error occurred while processing the trade ID. Please try again later.",
+            f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing the trade ID. Please try again later.",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
             ]])
         )
 
@@ -167,7 +171,7 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                     try:
                         await context.bot.send_message(
                             chat_id=trade['seller_id'],
-                            text=f"✅ A new buyer has joined your trade #{trade_id}.",
+                            text=f"{EmojiEnums.CHECK_MARK.value} A new buyer has joined your trade #{trade_id}.",
                             parse_mode="html"
                         )
                     except Exception as e:
@@ -175,19 +179,19 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 
                 # Confirm to buyer
                 await query.message.edit_text(
-                    f"✅ You have successfully joined trade #{trade_id}.\n\n"
+                    f"{EmojiEnums.CHECK_MARK.value} You have successfully joined trade #{trade_id}.\n\n"
                     "Please proceed with the payment to complete the trade.",
                     parse_mode="html",
                     reply_markup=InlineKeyboardMarkup([[
                         InlineKeyboardButton("💳 Make Payment", callback_data=f"pay_{trade_id}"),
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
             else:
                 await query.message.edit_text(
-                    "❌ Failed to join trade. The trade may no longer be available.",
+                    f"{EmojiEnums.CROSS_MARK.value} Failed to join trade. The trade may no longer be available.",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
     except Exception as e:
@@ -195,9 +199,9 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             if query and query.message:
                 await query.message.edit_text(
-                    "❌ An error occurred while joining the trade. Please try again later.",
+                    f"{EmojiEnums.CROSS_MARK.value} An error occurred while joining the trade. Please try again later.",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
                     ]])
                 )
         except Exception as e2:
