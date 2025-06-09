@@ -60,7 +60,7 @@ class WalletManager:
             'decimals': 18,
             'network': 'ethereum',
             'network_type': 'ethereum',
-            'rpc_url': os.getenv('ETH_RPC_URL', 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY'),
+            'rpc_url': os.getenv('ETH_RPC_URL', 'https://mainnet.infura.io/v3/104abeafa90045c490605995b21684c1'),
             'is_token': False
         },
         'SOL': {
@@ -108,11 +108,6 @@ class WalletManager:
         """Initialize wallet manager with encryption key"""
         self.encryption_key = self._get_or_create_encryption_key()
         self.fernet = Fernet(self.encryption_key)
-        
-        # Initialize Web3 connections if available
-        self.web3_connections = {}
-        if WEB3_AVAILABLE:
-            self._initialize_web3_connections()
 
     def _get_or_create_encryption_key(self) -> bytes:
         """Get or create encryption key for wallet data"""
@@ -127,17 +122,6 @@ class WalletManager:
         key = Fernet.generate_key()
         logger.warning(f"Generated new encryption key. Store this securely: {base64.urlsafe_b64encode(key).decode()}")
         return key
-
-    def _initialize_web3_connections(self):
-        """Initialize Web3 connections for supported networks"""
-        try:
-            # Ethereum connection
-            eth_config = self.SUPPORTED_COINS['ETH']
-            if eth_config.get('rpc_url') and 'YOUR_INFURA_KEY' not in eth_config['rpc_url']:
-                self.web3_connections['ethereum'] = Web3(Web3.HTTPProvider(eth_config['rpc_url']))
-                
-        except Exception as e:
-            logger.error(f"Error initializing Web3 connections: {e}")
 
     def _encrypt_data(self, data: str) -> str:
         """Encrypt sensitive data"""
@@ -476,22 +460,39 @@ class WalletManager:
                     # Ethereum mainnet balance checker
                     from web3 import Web3
                     
-                    # Use public Ethereum RPC endpoints (you can replace with your own)
+                    # Determine the primary RPC URL from config, handling tokens
+                    primary_rpc_url = None
+                    if coin_config.get('is_token') and coin_config.get('parent_coin'):
+                        parent_config = self.SUPPORTED_COINS.get(coin_config['parent_coin'], {})
+                        primary_rpc_url = parent_config.get('rpc_url')
+                    else:
+                        primary_rpc_url = coin_config.get('rpc_url')
+                    
+                    # Public fallbacks
                     ETH_RPC_URLS = [
                         "https://eth-mainnet.g.alchemy.com/v2/demo",  # Alchemy demo
                         "https://cloudflare-eth.com",  # Cloudflare
                         "https://rpc.ankr.com/eth"  # Ankr
                     ]
                     
+                    # Create a list of RPCs to try, prioritizing the one from config
+                    rpcs_to_try = []
+                    if primary_rpc_url and 'YOUR_INFURA_KEY' not in primary_rpc_url:
+                        rpcs_to_try.append(primary_rpc_url)
+                    
+                    rpcs_to_try.extend(ETH_RPC_URLS)
+                    
                     # Try multiple RPC endpoints for reliability
                     web3 = None
-                    for rpc_url in ETH_RPC_URLS:
+                    for rpc_url in rpcs_to_try:
                         try:
                             web3 = Web3(Web3.HTTPProvider(rpc_url))
                             if web3.is_connected():
+                                logger.info(f"Connected to Ethereum RPC: {rpc_url}")
                                 break
                         except Exception as rpc_error:
                             logger.warning(f"Failed to connect to {rpc_url}: {rpc_error}")
+                            web3 = None # Ensure web3 is None if connection fails
                             continue
                     
                     if not web3 or not web3.is_connected():

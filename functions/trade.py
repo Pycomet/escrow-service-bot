@@ -181,7 +181,8 @@ class TradeClient:
                     print(f"Error creating invoice: {e}")
             else:
                 return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
-        return None
+            
+            return None
 
     @staticmethod
     def _get_wallet_based_payment_info(trade: TradeType) -> str:
@@ -230,7 +231,7 @@ class TradeClient:
             
         except Exception as e:
             logger.error(f"Error generating wallet payment info: {e}")
-            return None
+        return None
 
     @staticmethod
     def check_trade(user: UserType, trade_id: str) -> str | TradeType:
