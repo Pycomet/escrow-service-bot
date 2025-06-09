@@ -138,6 +138,11 @@ async def dispatch_to_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     Dispatches incoming messages or callback queries to the appropriate
     method in the active trade flow based on context.
     """
+    # Add debug logging for admin callbacks
+    if update.callback_query and update.callback_query.data and update.callback_query.data.startswith("admin_"):
+        logging.info(f"dispatch_to_flow: Admin callback detected: {update.callback_query.data}, skipping")
+        return
+    
     if not context.user_data or "trade_creation" not in context.user_data:
         # If not in a trade creation flow, or if called for a message not meant for it,
         # simply return and let other handlers (if any) process it.

@@ -166,6 +166,45 @@ The Escrow Service Bot offers an automated service acting as an escrow platform,
 
 All payments are being made through BTCPay Server, providing secure and transparent transactions. The bot supports various payment methods and currencies, ensuring flexibility for both buyers and sellers.
 
+## Admin Functionality
+
+The bot includes a comprehensive admin panel accessible only to the admin user (defined in `ADMIN_ID`). Admin features include:
+
+### Wallet Management
+- **User Wallet Lookup**: View detailed wallet information for any user by their Telegram ID
+- **Balance Checking**: Real-time balance updates for all supported cryptocurrencies
+- **Crypto Sending**: Send cryptocurrencies from any user's wallet with proper safeguards
+- **Balance Refresh**: Force refresh wallet balances from blockchain networks
+
+### Platform Management
+- **Active Trades Overview**: Monitor all ongoing trades with seller/buyer information
+- **System Status**: Check database connectivity and bot health status
+- **Platform Statistics**: View comprehensive platform usage statistics
+
+### Access Admin Panel
+1. The admin button appears automatically in the main menu for the admin user
+2. Use `/admin` command to access the admin panel directly
+3. Admin functions include user lookup, crypto sending, and system monitoring
+
+### Admin Features
+- **User Wallet Info**: Enter any Telegram user ID to view their complete wallet information
+- **Send Crypto**: Send cryptocurrencies from user wallets with balance verification
+- **System Monitoring**: Real-time platform statistics and health checks
+- **Trade Management**: Overview of all active trades and platform activity
+
+### Security Features
+- Admin access restricted to `ADMIN_ID` only
+- All admin actions logged with user identification
+- Balance verification before any sending operations
+- Confirmation prompts for all sensitive operations
+- Secure private key handling and encryption
+
+### Supported Admin Operations
+- View user wallet balances for: BTC, ETH, SOL, USDT, BNB, LTC, DOGE, TRX
+- Send cryptocurrencies with real-time blockchain interaction
+- Monitor platform health and database connectivity
+- Track trade statistics and user activity
+
 ### Ideal Users
 
 * Group Administration (Software As A Service)

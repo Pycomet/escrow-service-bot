@@ -27,6 +27,13 @@ async def main_menu(update=None, context=None):
             InlineKeyboardButton(f"{EmojiEnums.QUESTION.value} Support", callback_data=CallbackDataEnums.SUPPORT.value)
         ]
     ]
+    
+    # Add admin button if user is admin
+    if update and hasattr(update, 'effective_user') and update.effective_user.id == ADMIN_ID:
+        keyboard.append([
+            InlineKeyboardButton("🛠️ Admin Panel", callback_data="admin_menu")
+        ])
+    
     return InlineKeyboardMarkup(keyboard)
 
 def group_menu():
