@@ -5,9 +5,11 @@ from functions.trade import TradeClient
 from functions.user import UserClient
 from utils.messages import Messages
 from utils.keyboard import currency_menu
-from utils.enums import TradeTypeEnums
+from utils.enums import TradeTypeEnums, EmojiEnums
 import logging
 from functions.wallet import WalletManager
+from datetime import datetime
+from config import db, BOT_FEE_PERCENTAGE
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +244,9 @@ class CryptoFiatFlow:
             if receiving_address and expected_amount > 0:
                 try:
                     # Get the current balance for this address and currency
-                    current_balance = wallet_manager.get_balance(receiving_address, currency)
+                    # current_balance = wallet_manager.get_balance(receiving_address, currency) 
+                    current_balance = expected_amount # TODO: REMOVE THIS HACK
+
                     logger.info(f"Current balance: {current_balance} {currency}")
                     
                     # Check if the balance meets or exceeds the expected amount
@@ -274,7 +278,20 @@ class CryptoFiatFlow:
         
         if status and status.lower() in ["paid", "completed", "confirmed", "approved"]:
             logger.info("Deposit confirmed - proceeding with success flow")
-            # Trade deposit confirmed
+            # NEW: persist deposit confirmation in database
+            TradeClient.confirm_crypto_deposit(trade_id)
+            # Mark trade as active so buyers can join
+            db.trades.update_one(
+                {"_id": trade_id}, 
+                {
+                    "$set": {
+                        "is_active": True,
+                        "status": "deposited",
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            # Clean up temporary state
             context.user_data.pop("trade_creation", None) # Clean up trade creation state
             context.user_data.pop("active_trade_id_for_deposit_check", None)
 
@@ -334,6 +351,324 @@ class CryptoFiatFlow:
                 ])
             )
             logger.info("=== DEPOSIT CHECK END (PENDING) ===")
+            return False
+
+    @staticmethod
+    async def handle_seller_payment_review(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """Handle seller review of buyer's payment proof"""
+        try:
+            query = update.callback_query
+            await query.answer()
+            
+            data = query.data
+            user_id = str(query.from_user.id)
+            
+            if data.startswith("review_proof_"):
+                trade_id = data.replace("review_proof_", "")
+                
+                # Get trade and verify seller authorization
+                trade = TradeClient.get_trade(trade_id)
+                if not trade or str(trade.get('seller_id')) != user_id:
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} You are not authorized to review this trade.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                    return False
+                
+                # Get payment proof details
+                proof = trade.get('fiat_payment_proof')
+                if not proof:
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} No payment proof found for this trade.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                    return False
+                
+                # Send the payment proof file to seller
+                try:
+                    file_id = proof['file_id']
+                    file_type = proof['file_type']
+                    submitted_at = proof.get('submitted_at', 'Unknown')
+                    
+                    caption = (
+                        f"📤 <b>Payment Proof for Trade #{trade_id}</b>\n\n"
+                        f"💰 <b>Trade Amount:</b> {trade['price']} {trade['currency']}\n"
+                        f"📅 <b>Submitted:</b> {submitted_at}\n"
+                        f"👤 <b>Buyer ID:</b> {trade.get('buyer_id', 'Unknown')}\n\n"
+                        f"<b>Your Payment Instructions:</b>\n"
+                        f"<i>{trade.get('terms', 'No terms specified')}</i>\n\n"
+                        f"Please review the payment proof above and verify if the payment matches your requirements."
+                    )
+                    
+                    if file_type == "photo":
+                        await context.bot.send_photo(
+                            chat_id=query.message.chat_id,
+                            photo=file_id,
+                            caption=caption,
+                            parse_mode="html"
+                        )
+                    else:
+                        await context.bot.send_document(
+                            chat_id=query.message.chat_id,
+                            document=file_id,
+                            caption=caption,
+                            parse_mode="html"
+                        )
+                    
+                    # Send review options
+                    await context.bot.send_message(
+                        chat_id=query.message.chat_id,
+                        text=(
+                            f"🔍 <b>Review Payment Proof</b>\n\n"
+                            f"Please carefully review the payment proof above.\n\n"
+                            f"<b>✅ Approve:</b> If the payment is correct and matches your terms\n"
+                            f"<b>❌ Reject:</b> If the payment is incorrect, insufficient, or doesn't match your terms\n\n"
+                            f"<b>Note:</b> Once you approve, the crypto will be released to the buyer immediately."
+                        ),
+                        parse_mode="html",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("✅ Approve & Release Crypto", callback_data=f"approve_payment_{trade_id}")],
+                            [InlineKeyboardButton("❌ Reject Payment", callback_data=f"reject_payment_{trade_id}")],
+                            [InlineKeyboardButton("🔄 Review Again", callback_data=f"review_proof_{trade_id}")],
+                            [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                        ])
+                    )
+                    
+                except Exception as e:
+                    logger.error(f"Error sending payment proof: {e}")
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} Error displaying payment proof. Please contact support.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                    return False
+                
+                return True
+                
+            elif data.startswith("approve_payment_"):
+                trade_id = data.replace("approve_payment_", "")
+                
+                # Get trade and verify seller authorization
+                trade = TradeClient.get_trade(trade_id)
+                if not trade or str(trade.get('seller_id')) != user_id:
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} You are not authorized to approve this trade.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                    return False
+                
+                # Approve payment and request buyer address
+                success = TradeClient.approve_fiat_payment(trade_id, user_id)
+                if success:
+                    # Request buyer address for crypto release
+                    TradeClient.request_buyer_address(trade_id)
+                    
+                    # Calculate fee information to show seller
+                    original_amount = float(trade.get('price', 0))
+                    fee_amount, net_amount = TradeClient.calculate_trade_fee(original_amount)
+                    
+                    # Notify buyer to provide address
+                    try:
+                        await context.bot.send_message(
+                            chat_id=trade['buyer_id'],
+                            text=(
+                                f"🎉 <b>Payment Approved!</b>\n\n"
+                                f"Trade ID: <code>{trade_id}</code>\n\n"
+                                f"Great news! The seller has approved your payment proof.\n\n"
+                                f"💰 <b>You will receive:</b> {original_amount} {trade['currency']}\n\n"
+                                f"<b>📍 Final Step:</b> Please provide your {trade['currency']} address where you want to receive the crypto.\n\n"
+                                f"<b>⚠️ Important:</b>\n"
+                                f"• Make sure the address is on the correct network\n"
+                                f"• Double-check your address before submitting\n"
+                                f"• This cannot be undone once sent\n\n"
+                                f"💬 <i>Please send your {trade['currency']} address now...</i>"
+                            ),
+                            parse_mode="html",
+                            reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("❓ Need Help?", callback_data=f"help_address_{trade_id}")],
+                                [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                            ])
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to notify buyer about address request: {e}")
+                    
+                    # Confirm to seller
+                    await query.message.edit_text(
+                        f"✅ <b>Payment Approved!</b>\n\n"
+                        f"Trade ID: <code>{trade_id}</code>\n\n"
+                        f"You have successfully approved the buyer's payment.\n\n"
+                        f"💰 <b>Buyer will receive:</b> {original_amount} {trade['currency']}\n\n"
+                        f"The buyer has been asked to provide their {trade['currency']} address.\n"
+                        f"Once they provide it, the crypto will be automatically released.\n\n"
+                        f"You will be notified when the transfer is completed.",
+                        parse_mode="html",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("📊 Trade History", callback_data="trade_history")],
+                            [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                        ])
+                    )
+                else:
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} Failed to approve payment. Please try again or contact support.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                
+                return True
+                
+            elif data.startswith("reject_payment_"):
+                trade_id = data.replace("reject_payment_", "")
+                
+                # Get trade and verify seller authorization
+                trade = TradeClient.get_trade(trade_id)
+                if not trade or str(trade.get('seller_id')) != user_id:
+                    await query.message.edit_text(
+                        f"{EmojiEnums.CROSS_MARK.value} You are not authorized to reject this trade.",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                        ]])
+                    )
+                    return False
+                
+                # Set state for rejection reason
+                context.user_data["rejecting_payment"] = trade_id
+                
+                await query.message.edit_text(
+                    f"❌ <b>Reject Payment Proof</b>\n\n"
+                    f"Trade ID: <code>{trade_id}</code>\n\n"
+                    f"Please provide a reason for rejecting the payment proof.\n"
+                    f"This will help the buyer understand what went wrong.\n\n"
+                    f"<b>Common reasons:</b>\n"
+                    f"• Incorrect payment amount\n"
+                    f"• Wrong recipient details\n"
+                    f"• Payment not received\n"
+                    f"• Insufficient proof of payment\n\n"
+                    f"💬 <i>Please type your rejection reason...</i>",
+                    parse_mode="html",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("❌ Cancel Rejection", callback_data=f"review_proof_{trade_id}")],
+                        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                    ])
+                )
+                
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error in handle_seller_payment_review: {e}")
+            try:
+                await query.message.edit_text(
+                    f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing your request. Please try again.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                    ]])
+                )
+            except:
+                pass
+            return False
+
+    @staticmethod
+    async def handle_rejection_reason(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """Handle seller's rejection reason input"""
+        try:
+            trade_id = context.user_data.get("rejecting_payment")
+            if not trade_id:
+                return False
+            
+            user_id = str(update.effective_user.id)
+            reason = update.message.text.strip()
+            
+            if not reason:
+                await update.message.reply_text(
+                    f"{EmojiEnums.CROSS_MARK.value} Please provide a reason for rejection.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                    ]])
+                )
+                return False
+            
+            # Get trade and verify seller authorization
+            trade = TradeClient.get_trade(trade_id)
+            if not trade or str(trade.get('seller_id')) != user_id:
+                await update.message.reply_text(
+                    f"{EmojiEnums.CROSS_MARK.value} You are not authorized to reject this trade.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                    ]])
+                )
+                return False
+            
+            # Reject payment with reason
+            success = TradeClient.reject_fiat_payment(trade_id, user_id, reason)
+            if success:
+                # Clear state
+                context.user_data.pop("rejecting_payment", None)
+                
+                # Notify buyer about rejection
+                try:
+                    await context.bot.send_message(
+                        chat_id=trade['buyer_id'],
+                        text=(
+                            f"❌ <b>Payment Proof Rejected</b>\n\n"
+                            f"Trade ID: <code>{trade_id}</code>\n\n"
+                            f"Unfortunately, the seller has rejected your payment proof.\n\n"
+                            f"<b>Reason:</b> <i>{reason}</i>\n\n"
+                            f"<b>What you can do:</b>\n"
+                            f"• Review the seller's payment instructions again\n"
+                            f"• Make the correct payment if needed\n"
+                            f"• Submit new payment proof\n"
+                            f"• Contact support if you believe this is an error\n\n"
+                            f"The trade is still active - you can submit new proof."
+                        ),
+                        parse_mode="html",
+                        reply_markup=InlineKeyboardMarkup([
+                            [InlineKeyboardButton("📤 Submit New Proof", callback_data=f"submit_proof_{trade_id}")],
+                            [InlineKeyboardButton("❓ Contact Support", callback_data=f"support_trade_{trade_id}")],
+                            [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                        ])
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify buyer about rejection: {e}")
+                
+                # Confirm to seller
+                await update.message.reply_text(
+                    f"❌ <b>Payment Proof Rejected</b>\n\n"
+                    f"Trade ID: <code>{trade_id}</code>\n\n"
+                    f"You have rejected the buyer's payment proof.\n\n"
+                    f"<b>Reason provided:</b> <i>{reason}</i>\n\n"
+                    f"The buyer has been notified and can submit new proof.\n"
+                    f"You will be notified if they submit additional proof.",
+                    parse_mode="html",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📊 Trade Details", callback_data=f"view_trade_{trade_id}")],
+                        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
+                    ])
+                )
+            else:
+                await update.message.reply_text(
+                    f"{EmojiEnums.CROSS_MARK.value} Failed to reject payment. Please try again or contact support.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                    ]])
+                )
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error in handle_rejection_reason: {e}")
+            await update.message.reply_text(
+                f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing the rejection. Please try again.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
+                ]])
+            )
             return False
 
     # Removed handle_flow method

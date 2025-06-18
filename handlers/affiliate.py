@@ -84,7 +84,7 @@ async def add_addresses(update: Update, context: ContextTypes.DEFAULT_TYPE):
         agent = AgentAction().create_agent(update.message.from_user.id)
         # import pdb; pdb.set_t     race()
         affiliate = create_affiliate(agent, str(chat.id))
-        print(affiliate)
+        logger.debug(f"Affiliate creation result: {affiliate}")
         if affiliate != "Already Exists":
             await context.bot.send_message(
                 chat_id=update.message.from_user.id,
@@ -101,7 +101,7 @@ async def add_addresses(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
             )
     except Exception as e:
-        print(e)
+        logger.error(f"Error adding addresses in affiliate: {e}")
         await context.bot.send_message(
             chat_id=update.message.from_user.id,
             text="Invalid Group ID or bot doesn't have access to the group"

@@ -1,7 +1,7 @@
 import os
 import logging
 import sys
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, ContextTypes, CommandHandler, MessageHandler, filters
 
 import emoji
@@ -20,7 +20,9 @@ from typing import Optional
 from dotenv import load_dotenv
 load_dotenv()
 
-DEBUG = False
+# Enable debug mode via environment variable (default False)
+# This allows certain components (e.g., wallet manager) to be more lenient during local development.
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 # Configuration variables
 TOKEN = os.getenv("TOKEN")  # Keep as TOKEN to maintain compatibility
@@ -39,6 +41,9 @@ BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
+
+# Bot fee configuration
+BOT_FEE_PERCENTAGE = float(os.getenv("BOT_FEE_PERCENTAGE", "2.5"))  # Default 2.5% fee
 
 # Initialize bot application
 application = Application.builder().token(TOKEN).build()
@@ -64,3 +69,39 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Ensure critical MongoDB indexes exist (idempotent)
+# These calls run at import-time, so every process verifies the indexes once.
+# If they already exist, MongoDB is a no-op.
+# ---------------------------------------------------------------------------
+
+def _ensure_db_indexes():
+    try:
+        # Trades collection indexes
+        # Use partial unique index for invoice_id to allow multiple null values
+        db.trades.create_index(
+            [("invoice_id", 1)], 
+            name="invoice_id_partial_unique", 
+            unique=True, 
+            background=True,
+            partialFilterExpression={
+                "invoice_id": {
+                    "$exists": True,
+                    "$type": "string"
+                }
+            }
+        )
+        db.trades.create_index([("is_active", 1), ("updated_at", -1)], name="active_updated_idx", background=True)
+        db.trades.create_index([("seller_id", 1)], name="seller_idx", background=True)
+        db.trades.create_index([("buyer_id", 1)], name="buyer_idx", background=True)
+
+        # Users collection indexes (ensure fast look-ups by affiliate etc.)
+        db.users.create_index([("affiliate_code", 1)], name="affiliate_code_idx", background=True, unique=False)
+
+        logger.info("MongoDB indexes ensured ✅")
+    except Exception as e:
+        logger.error("Failed to create MongoDB indexes: %s", e)
+
+# Invoke immediately
+_ensure_db_indexes()

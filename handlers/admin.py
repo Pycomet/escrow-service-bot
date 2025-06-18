@@ -10,11 +10,29 @@ from typing import Optional
 import asyncio
 from decimal import Decimal
 from datetime import datetime
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
 class AdminWalletManager:
     """Admin functions for wallet management"""
+    
+    # Fee constants (in respective currencies) - REALISTIC VALUES
+    FEES = {
+        'SOL': Decimal('0.000005'),  # ~$0.001 - SOL fees are very low
+        'BNB': Decimal('0.001'),     # ~$0.50 - BSC fees  
+        'LTC': Decimal('0.0001'),    # ~$0.01 - LTC fees
+        'DOGE': Decimal('1.0'),      # ~$0.40 - DOGE fees
+        'BTC': Decimal('0.0001'),    # ~$7 - Conservative BTC fee 
+        'ETH': Decimal('0.003'),     # ~$10 - ETH fees (can vary widely)
+        'USDT': {
+            'solana': Decimal('0.000005'),  # SOL fee for USDT on Solana (~$0.001)
+            'binance': Decimal('0.001'),    # BNB fee for USDT on BSC (~$0.50)
+            'tron': Decimal('15'),          # TRX fee for USDT on Tron (~$4.50)
+            'ethereum': Decimal('0.002')    # ETH fee for USDT on Ethereum (~$10)
+        }
+    }
     
     @staticmethod
     async def is_admin(user_id: int) -> bool:
@@ -25,13 +43,19 @@ class AdminWalletManager:
     async def get_user_wallet_info(user_id: str) -> Optional[dict]:
         """Get comprehensive wallet info for a user"""
         try:
+            logger.info(f"=== GETTING WALLET INFO FOR USER {user_id} ===")
+            
             # Get user wallet
             wallet = WalletManager.get_user_wallet(user_id)
             if not wallet:
+                logger.warning(f"No wallet found for user {user_id}")
                 return None
+            
+            logger.info(f"Found wallet {wallet['_id']} for user {user_id}")
             
             # Get coin addresses
             coin_addresses = WalletManager.get_wallet_coin_addresses(wallet['_id'])
+            logger.info(f"Found {len(coin_addresses)} coin addresses for wallet {wallet['_id']}")
             
             # Get balances and calculate totals
             wallet_manager = WalletManager()
@@ -52,9 +76,13 @@ class AdminWalletManager:
                         'private_key_encrypted': coin_address.get('private_key_encrypted', ''),
                         'network': coin_address.get('network', '')
                     })
+                    
+                    logger.debug(f"Coin {coin_address['coin_symbol']}: {balance} balance")
                 except Exception as e:
                     logger.error(f"Error processing coin {coin_address.get('coin_symbol', 'unknown')}: {e}")
                     continue
+            
+            logger.info(f"Processed {len(coin_balances)} coin balances, {coins_with_balance} with positive balance")
             
             return {
                 'wallet': wallet,
@@ -70,251 +98,462 @@ class AdminWalletManager:
             return None
     
     @staticmethod
-    def _send_sol_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for SOL sending"""
+    def get_transaction_fee(coin_symbol: str, network: str = None) -> tuple[Decimal, str]:
+        """Get estimated transaction fee for a coin - returns (amount, currency)"""
         try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual sol sending script
-            return {
-                "success": True,
-                "tx_hash": f"sol_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} SOL to {recipient_address}"
-            }
+            if coin_symbol == 'USDT':
+                if network == 'ethereum':
+                    return Decimal('8'), 'USDT'  # USDT fee for USDT on Ethereum (~$10)
+                elif network == 'solana':
+                    return Decimal('0.000005'), 'SOL'  # SOL fee for USDT on Solana
+                elif network == 'binance':
+                    return Decimal('0.001'), 'BNB'  # BNB fee for USDT on BSC
+                elif network == 'tron':
+                    return Decimal('15'), 'TRX'  # TRX fee for USDT on Tron
+                else:
+                    return Decimal('8'), 'USDT'  # Default to USDT fee
+            else:
+                # For native currencies, fee is in same currency
+                fee_amount = AdminWalletManager.FEES.get(coin_symbol, Decimal('0.001'))
+                return fee_amount, coin_symbol
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            logger.error(f"Error getting fee for {coin_symbol} on {network}: {e}")
+            return Decimal('0.001'), coin_symbol  # Default fee
     
     @staticmethod
-    def _send_usdt_sol_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for USDT on Solana sending"""
-        try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual USDT-SOL sending script
-            return {
-                "success": True,
-                "tx_hash": f"usdt_sol_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} USDT (SOL) to {recipient_address}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+    def check_sufficient_balance_for_token(token_balance: Decimal, token_amount: Decimal, 
+                                         gas_balance: Decimal, gas_fee: Decimal, 
+                                         token_symbol: str, gas_symbol: str) -> tuple[bool, str]:
+        """Check if balances are sufficient for token transfer (token amount + gas fee)"""
+        
+        logger.info(f"=== TOKEN BALANCE CHECK ===")
+        logger.info(f"Token ({token_symbol}) balance: {token_balance}")
+        logger.info(f"Token amount to send: {token_amount}")
+        logger.info(f"Gas ({gas_symbol}) balance: {gas_balance}")
+        logger.info(f"Gas fee required: {gas_fee}")
+        
+        # Check token balance
+        if token_balance < token_amount:
+            token_shortfall = token_amount - token_balance
+            error_msg = f"Insufficient {token_symbol}. Has {token_balance}, need {token_amount}. Shortfall: {token_shortfall} {token_symbol}"
+            logger.warning(error_msg)
+            return False, error_msg
+        
+        # Check gas balance
+        if gas_balance < gas_fee:
+            gas_shortfall = gas_fee - gas_balance
+            error_msg = f"Insufficient {gas_symbol} for gas. Has {gas_balance}, need {gas_fee}. Shortfall: {gas_shortfall} {gas_symbol}"
+            logger.warning(error_msg)
+            return False, error_msg
+        
+        logger.info("✅ Token and gas balance checks passed")
+        return True, "Sufficient balance"
     
     @staticmethod
-    def _send_usdt_bnb_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for USDT on BSC sending"""
+    def simple_log_message(message: str, log_file: str):
+        """Simple logging utility for transaction scripts"""
         try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual USDT-BNB sending script
-            return {
-                "success": True,
-                "tx_hash": f"usdt_bnb_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} USDT (BSC) to {recipient_address}"
-            }
+            logger.info(f"[{log_file}] {message}")
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            logger.error(f"Error logging message: {e}")
     
     @staticmethod
-    def _send_usdt_tron_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for USDT on Tron sending"""
-        try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual USDT-TRON sending script
-            return {
-                "success": True,
-                "tx_hash": f"usdt_tron_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} USDT (TRON) to {recipient_address}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
-    @staticmethod
-    def _send_bnb_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for BNB sending"""
-        try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual BNB sending script
-            return {
-                "success": True,
-                "tx_hash": f"bnb_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} BNB to {recipient_address}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
-    @staticmethod
-    def _send_doge_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for DOGE sending"""
-        try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual DOGE sending script
-            return {
-                "success": True,
-                "tx_hash": f"doge_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} DOGE to {recipient_address}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
-    
-    @staticmethod
-    def _send_ltc_wrapper(private_key: str, recipient_address: str, amount: float) -> dict:
-        """Wrapper for LTC sending"""
-        try:
-            # For now, return a simulated successful result
-            # TODO: Integrate with actual LTC sending script
-            return {
-                "success": True,
-                "tx_hash": f"ltc_mock_{recipient_address[:8]}",
-                "message": f"Sent {amount} LTC to {recipient_address}"
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+    def check_sufficient_balance(balance: Decimal, amount: Decimal, fee: Decimal) -> tuple[bool, str]:
+        """Check if balance is sufficient for amount + fee"""
+        required_total = amount + fee
+        
+        logger.info(f"=== BALANCE CHECK ===")
+        logger.info(f"Current balance: {balance}")
+        logger.info(f"Amount to send: {amount}")
+        logger.info(f"Estimated fee: {fee}")
+        logger.info(f"Required total: {required_total}")
+        
+        if balance < required_total:
+            shortfall = required_total - balance
+            error_msg = f"Insufficient balance. Has {balance}, need {required_total} (amount: {amount} + fee: {fee}). Shortfall: {shortfall}"
+            logger.warning(error_msg)
+            return False, error_msg
+        
+        logger.info("✅ Balance check passed")
+        return True, "Sufficient balance"
     
     @staticmethod
     async def send_crypto(sender_wallet_id: str, coin_symbol: str, recipient_address: str, 
                          amount: float, admin_user_id: str) -> dict:
         """Send cryptocurrency from a user's wallet (admin function)"""
         try:
+            logger.info(f"=== ADMIN CRYPTO SEND INITIATED ===")
+            logger.info(f"Admin ID: {admin_user_id}")
+            logger.info(f"Wallet ID: {sender_wallet_id}")
+            logger.info(f"Coin: {coin_symbol}")
+            logger.info(f"Recipient: {recipient_address}")
+            logger.info(f"Amount: {amount}")
+            
             # Get the coin address for sending
             coin_address = WalletManager.get_wallet_coin_address(sender_wallet_id, coin_symbol)
             if not coin_address:
-                return {"success": False, "error": f"No {coin_symbol} address found in wallet"}
+                error_msg = f"No {coin_symbol} address found in wallet"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
             
-            # Get current balance
-            wallet_manager = WalletManager()
-            current_balance = wallet_manager.get_balance(coin_address['address'], coin_symbol)
+            logger.info(f"Found coin address: {coin_address['address']}")
             
-            if current_balance < amount:
-                return {
-                    "success": False, 
-                    "error": f"Insufficient balance. Has {current_balance} {coin_symbol}, trying to send {amount}"
-                }
+            # Get current balance - use database balance for consistency with wallet display
+            current_balance = Decimal(str(coin_address.get('balance', 0)))
+            amount_decimal = Decimal(str(amount))
+            network = coin_address.get('network', '')
+            
+            logger.info(f"Database balance for {coin_symbol}: {current_balance}")
+            
+            # If balance is zero, try to refresh it
+            if current_balance == 0:
+                logger.info("Balance is zero, attempting to refresh...")
+                wallet_manager = WalletManager()
+                await wallet_manager.refresh_wallet_balances(sender_wallet_id)
+                
+                # Get updated coin address after refresh
+                coin_address = WalletManager.get_wallet_coin_address(sender_wallet_id, coin_symbol)
+                if coin_address:
+                    current_balance = Decimal(str(coin_address.get('balance', 0)))
+                    logger.info(f"Refreshed balance for {coin_symbol}: {current_balance}")
+                else:
+                    logger.error("Failed to get updated coin address after refresh")
+                    return {"success": False, "error": "Failed to refresh balance"}
+            
+            # Get network info
+            network = coin_address.get('network', '')
+            logger.info(f"Network: {network}")
+            
+            # Calculate transaction fee
+            estimated_fee, fee_currency = AdminWalletManager.get_transaction_fee(coin_symbol, network)
+            logger.info(f"Estimated transaction fee: {estimated_fee} {fee_currency}")
+            
+            # Check if balance is sufficient - different logic for tokens vs native currencies
+            if coin_symbol == 'USDT' and fee_currency != coin_symbol:
+                # For tokens like USDT on other networks (SOL, BSC, TRON), we need to check both token balance and gas currency balance
+                logger.info("Checking token + gas balance for USDT transaction")
+                
+                # Get gas currency balance (SOL, BNB, TRX)
+                gas_coin_address = WalletManager.get_wallet_coin_address(sender_wallet_id, fee_currency)
+                if not gas_coin_address:
+                    error_msg = f"No {fee_currency} address found for gas fees"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+                
+                # Use database balance for gas currency too
+                gas_balance = Decimal(str(gas_coin_address.get('balance', 0)))
+                logger.info(f"Gas currency ({fee_currency}) database balance: {gas_balance}")
+                
+                # If gas balance is zero, try to refresh it
+                if gas_balance == 0:
+                    logger.info("Gas balance is zero, attempting to refresh...")
+                    await wallet_manager.refresh_wallet_balances(sender_wallet_id)
+                    
+                    # Get updated gas coin address after refresh
+                    gas_coin_address = WalletManager.get_wallet_coin_address(sender_wallet_id, fee_currency)
+                    if gas_coin_address:
+                        gas_balance = Decimal(str(gas_coin_address.get('balance', 0)))
+                        logger.info(f"Refreshed gas balance for {fee_currency}: {gas_balance}")
+                    else:
+                        logger.error("Failed to get updated gas coin address after refresh")
+                        return {"success": False, "error": "Failed to refresh gas balance"}
+                
+                # Check both balances
+                sufficient, balance_message = AdminWalletManager.check_sufficient_balance_for_token(
+                    current_balance, amount_decimal, gas_balance, estimated_fee, coin_symbol, fee_currency
+                )
+            else:
+                # For native currencies and USDT on Ethereum (where fee is also in USDT), use the simple logic
+                sufficient, balance_message = AdminWalletManager.check_sufficient_balance(
+                    current_balance, amount_decimal, estimated_fee
+                )
+            
+            if not sufficient:
+                logger.error(f"Balance check failed: {balance_message}")
+                return {"success": False, "error": balance_message}
             
             # Get private key for sending
             private_key_encrypted = coin_address.get('private_key_encrypted', '')
             if not private_key_encrypted:
-                return {"success": False, "error": f"No private key found for {coin_symbol} address"}
+                error_msg = f"No private key found for {coin_symbol} address"
+                logger.error(error_msg)
+                return {"success": False, "error": error_msg}
             
-            # Decrypt private key
-            private_key = wallet_manager._decrypt_data(private_key_encrypted)
+            # Decrypt private key - ensure wallet_manager is available
+            if 'wallet_manager' not in locals():
+                wallet_manager = WalletManager()
+            
+            logger.info("Decrypting private key...")
+            try:
+                private_key = wallet_manager._decrypt_data(private_key_encrypted)
+                logger.info("✅ Private key decrypted successfully")
+            except Exception as decrypt_error:
+                logger.error(f"❌ Failed to decrypt private key: {decrypt_error}")
+                return {"success": False, "error": f"Private key decryption failed: {str(decrypt_error)}"}
+            
             sender_address = coin_address['address']
             
-            logger.info(f"Admin {admin_user_id} sending {amount} {coin_symbol} from {sender_address} to {recipient_address}")
+            logger.info(f"=== EXECUTING TRANSACTION ===")
+            logger.info(f"From: {sender_address}")
+            logger.info(f"To: {recipient_address}")
+            logger.info(f"Amount: {amount} {coin_symbol}")
+            logger.info(f"Fee: {estimated_fee} {fee_currency}")
+            logger.info(f"Network: {network}")
             
-            # Route to appropriate sender wrapper based on coin type
-            result = None
-            
+            # Execute the actual transaction using the web3 functions
             try:
-                if coin_symbol == 'SOL':
-                    # Solana sending
-                    result = AdminWalletManager._send_sol_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'USDT' and coin_address.get('network') == 'solana':
-                    # USDT on Solana
-                    result = AdminWalletManager._send_usdt_sol_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'USDT' and coin_address.get('network') == 'binance':
-                    # USDT on BSC
-                    result = AdminWalletManager._send_usdt_bnb_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'USDT' and coin_address.get('network') == 'tron':
-                    # USDT on Tron
-                    result = AdminWalletManager._send_usdt_tron_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'BNB':
-                    # BNB sending
-                    result = AdminWalletManager._send_bnb_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'DOGE':
-                    # Dogecoin sending
-                    result = AdminWalletManager._send_doge_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'LTC':
-                    # Litecoin sending
-                    result = AdminWalletManager._send_ltc_wrapper(private_key, recipient_address, amount)
-                    
-                elif coin_symbol == 'BTC':
-                    # Bitcoin sending - you'll need to implement this or use an existing script
-                    logger.warning("Bitcoin sending not yet implemented")
-                    return {
-                        "success": False,
-                        "error": "Bitcoin sending functionality not yet implemented"
-                    }
-                    
-                elif coin_symbol == 'ETH':
-                    # Ethereum sending - you'll need to implement this
-                    logger.warning("Ethereum sending not yet implemented")
-                    return {
-                        "success": False,
-                        "error": "Ethereum sending functionality not yet implemented"
-                    }
-                    
-                else:
-                    return {
-                        "success": False,
-                        "error": f"Sending functionality not implemented for {coin_symbol}"
-                    }
+                tx_hash = None
+                logger.info(f"Starting transaction execution for {coin_symbol}...")
                 
-                # Process the result from the sending wrapper
-                if result and result.get('success'):
-                    # Log the successful transaction
-                    logger.info(f"Admin transaction successful: {result}")
+                if coin_symbol == 'SOL':
+                    logger.info("Executing SOL transaction...")
+                    # Import and call the SOL sending function
+                    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                    from simple_sol_to_sol_sender import send_transaction as sol_send
                     
-                    # Update the sender's balance in database (subtract sent amount)
-                    new_balance = current_balance - amount
-                    db.coin_addresses.update_one(
-                        {"_id": coin_address["_id"]},
-                        {
-                            "$set": {
-                                "balance": str(new_balance),
-                                "last_balance_update": datetime.now().isoformat()
-                            }
-                        }
+                    # Create trade details structure for the sender
+                    trade_details = {
+                        'fee': '0',
+                        'broker_fee': '0',
+                        'brokerTrade': False,
+                        'brokerAddress': None
+                    }
+                    
+                    tx_hash = sol_send(
+                        private_key, recipient_address, str(amount), 
+                        sender_address, trade_details, os.getenv('SOLANA_FEE_PAYER_SECRET')
                     )
                     
+                elif coin_symbol == 'BNB':
+                    logger.info("Executing BNB transaction...")
+                    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                    from simple_bnb_transaction import send_bnb
+                    
+                    # Call BNB sending function
+                    from utils import private_key_to_bsc_address
+                    
+                    actual_sender_address = private_key_to_bsc_address(private_key)
+                    tx_hash = send_bnb(
+                        actual_sender_address, private_key, [recipient_address], [amount], 
+                        sender_address, empty_wallet=False
+                    )
+                    
+                elif coin_symbol == 'LTC':
+                    logger.info("Executing LTC transaction...")
+                    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                    from ltctransactionsender import send_ltc_transaction
+                    
+                    trade_details = {
+                        'fee': '0',
+                        'broker_fee': '0',
+                        'brokerTrade': False,
+                        'brokerAddress': None
+                    }
+                    
+                    tx_hash = send_ltc_transaction(
+                        sender_address, private_key, recipient_address, amount,
+                        os.getenv('BLOCK_CYPHER_API_TOKEN'), 
+                        os.getenv('LTC_FEE_WALLET', sender_address), 
+                        trade_details
+                    )
+                    
+                elif coin_symbol == 'DOGE':
+                    logger.info("Executing DOGE transaction...")
+                    sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                    from doge_transaction_sender import send_doge_transaction
+                    
+                    trade_details = {
+                        'fee': '0',
+                        'broker_fee': '0',
+                        'brokerTrade': False,
+                        'brokerAddress': None
+                    }
+                    
+                    tx_hash = send_doge_transaction(
+                        sender_address, private_key, recipient_address, amount,
+                        os.getenv('BLOCK_CYPHER_API_TOKEN'),
+                        os.getenv('DOGE_FEE_WALLET', sender_address),
+                        trade_details
+                    )
+                    
+                elif coin_symbol == 'USDT':
+                    if network == 'solana':
+                        logger.info("Executing USDT-SOL transaction...")
+                        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                        from usdt_sol_sender import send_transaction as usdt_sol_send
+                        
+                        trade_details = {
+                            'fee': '0',
+                            'broker_fee': '0',
+                            'brokerTrade': False,
+                            'brokerAddress': None
+                        }
+                        
+                        tx_hash = usdt_sol_send(
+                            private_key, os.getenv('SOLANA_FEE_PAYER_SECRET'),
+                            recipient_address, amount, sender_address, trade_details, None
+                        )
+                        
+                    elif network == 'binance':
+                        logger.info("Executing USDT-BNB transaction...")
+                        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                        from usdt_bnb_sender import send_transaction as usdt_bnb_send
+                        
+                        trade_details = {
+                            'fee': '0',
+                            'broker_fee': '0',
+                            'brokerTrade': False,
+                            'brokerAddress': None
+                        }
+                        
+                        tx_hash = usdt_bnb_send(
+                            os.getenv('BSC_FEE_PAYER_SECRET'), private_key,
+                            recipient_address, amount, sender_address, trade_details
+                        )
+                        
+                    elif network == 'tron':
+                        logger.info("Executing USDT-TRON transaction...")
+                        sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                        from usdt_tron_sender import send_token_tx
+                        
+                        tx_hash = send_token_tx(
+                            private_key, recipient_address, amount,
+                            'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'  # USDT contract on Tron
+                        )
+                        
+                    elif network == 'ethereum':
+                        logger.info("Executing USDT-ETH transaction...")
+                        logger.info(f"About to import USDT ETH sender...")
+                        try:
+                            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'functions', 'scripts'))
+                            logger.info("Path added to sys.path")
+                            
+                            from usdt_eth_sender import send_transaction as usdt_eth_send
+                            logger.info("✅ USDT ETH sender imported successfully")
+                            
+                            trade_details = {
+                                'fee': '0',
+                                'broker_fee': '0',
+                                'brokerTrade': False,
+                                'brokerAddress': None
+                            }
+                            logger.info("Trade details prepared")
+                            
+                            logger.info(f"Calling USDT ETH sender with:")
+                            logger.info(f"  - recipient: {recipient_address}")
+                            logger.info(f"  - amount: {amount}")
+                            logger.info(f"  - sender: {sender_address}")
+                            logger.info(f"  - private_key: [REDACTED]")
+                            
+                            tx_hash = usdt_eth_send(
+                                private_key, recipient_address, amount, sender_address, trade_details
+                            )
+                            
+                            logger.info(f"USDT ETH sender returned: {tx_hash}")
+                            
+                        except ImportError as import_error:
+                            logger.error(f"Failed to import USDT ETH sender: {import_error}")
+                            return {"success": False, "error": f"Import error: {str(import_error)}"}
+                        except Exception as eth_error:
+                            logger.error(f"Error in USDT ETH transaction: {eth_error}")
+                            return {"success": False, "error": f"USDT ETH transaction error: {str(eth_error)}"}
+                        
+                    else:
+                        error_msg = f"USDT network '{network}' not supported"
+                        logger.error(error_msg)
+                        return {"success": False, "error": error_msg}
+                        
+                elif coin_symbol == 'BTC':
+                    logger.info("Executing BTC transaction...")
+                    # Use the forgingblock API for Bitcoin
+                    from payments.forgingblock import BitcoinApi
+                    
+                    btc_api = BitcoinApi()
+                    # Get mnemonic from encrypted wallet data
+                    wallet = WalletManager.get_wallet_by_id(sender_wallet_id)
+                    if wallet:
+                        mnemonic = wallet_manager._decrypt_data(wallet['mnemonic_encrypted'])
+                        tx_hash = btc_api.send_btc(mnemonic, sender_address, amount, recipient_address)
+                    else:
+                        return {"success": False, "error": "Could not retrieve wallet mnemonic for BTC transaction"}
+                
+                else:
+                    error_msg = f"Sending functionality not implemented for {coin_symbol}"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+                
+                # Check if transaction was successful
+                if tx_hash and tx_hash != "Failed":
+                    logger.info(f"Transaction successful with hash: {tx_hash}")
+                    
+                    # Update the sender's balance in database
+                    if coin_symbol == 'USDT' and fee_currency != coin_symbol:
+                        # For token transactions where fee is in different currency (SOL, BSC, TRON, ETHEREUM)
+                        # Only update the token balance, gas fees are handled separately
+                        new_token_balance = current_balance - amount_decimal
+                        logger.info(f"Updating {coin_symbol} balance from {current_balance} to {new_token_balance}")
+                        
+                        db.coin_addresses.update_one(
+                            {"_id": coin_address["_id"]},
+                            {
+                                "$set": {
+                                    "balance": str(new_token_balance),
+                                    "last_balance_update": datetime.now().isoformat()
+                                }
+                            }
+                        )
+                        
+                        new_balance = float(new_token_balance)
+                    else:
+                        # For native currencies where fee is in same currency
+                        new_balance = current_balance - amount_decimal - estimated_fee
+                        logger.info(f"Updating balance from {current_balance} to {new_balance}")
+                        
+                        db.coin_addresses.update_one(
+                            {"_id": coin_address["_id"]},
+                            {
+                                "$set": {
+                                    "balance": str(new_balance),
+                                    "last_balance_update": datetime.now().isoformat()
+                                }
+                            }
+                        )
+                        
+                        new_balance = float(new_balance)
+                    
+                    logger.info("✅ Transaction completed successfully")
                     return {
                         "success": True,
-                        "tx_hash": result.get('tx_hash', 'mock_hash'),
+                        "tx_hash": str(tx_hash),
                         "amount": amount,
+                        "fee": float(estimated_fee),
+                        "fee_currency": fee_currency,
                         "recipient": recipient_address,
                         "sender": sender_address,
                         "coin": coin_symbol,
-                        "note": result.get('message', f"✅ Successfully sent {amount} {coin_symbol}")
+                        "network": network,
+                        "new_balance": new_balance,
+                        "note": f"✅ Successfully sent {amount} {coin_symbol} (fee: {estimated_fee} {fee_currency})"
                     }
                 else:
-                    error_msg = result.get('error', 'Unknown error occurred during transaction') if result else 'Transaction failed with no result'
-                    return {
-                        "success": False,
-                        "error": f"Transaction failed: {error_msg}"
-                    }
+                    error_msg = f"Transaction failed - received hash: {tx_hash}"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
                     
             except Exception as send_error:
                 logger.error(f"Error during {coin_symbol} transaction: {send_error}")
-                return {
-                    "success": False,
-                    "error": f"Transaction error: {str(send_error)}"
-                }
+                logger.error(f"Error type: {type(send_error).__name__}")
+                logger.error(f"Error args: {send_error.args}")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
+                return {"success": False, "error": f"Transaction error: {str(send_error)}"}
                 
         except Exception as e:
-            logger.error(f"Error sending {coin_symbol}: {e}")
+            logger.error(f"Error in send_crypto: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.error(f"Error args: {e.args}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
             return {"success": False, "error": str(e)}
 
 
@@ -326,6 +565,14 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not await AdminWalletManager.is_admin(user_id):
         await update.message.reply_text("❌ Access denied. Admin privileges required.")
         return
+    
+    # Clear any cached data when starting admin session
+    context.user_data.pop("send_crypto_user_id", None)
+    context.user_data.pop("send_crypto_wallet_id", None)
+    context.user_data.pop("send_crypto_coin", None)
+    context.user_data.pop("send_crypto_recipient", None)
+    context.user_data.pop("send_crypto_amount", None)
+    context.user_data.pop("admin_action", None)
     
     keyboard = InlineKeyboardMarkup([
         [
@@ -409,6 +656,14 @@ async def admin_user_wallet_handler(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     await query.answer()
     
+    # Clear any cached data to start fresh
+    context.user_data.pop("send_crypto_user_id", None)
+    context.user_data.pop("send_crypto_wallet_id", None)
+    context.user_data.pop("send_crypto_coin", None)
+    context.user_data.pop("send_crypto_recipient", None)
+    context.user_data.pop("send_crypto_amount", None)
+    context.user_data.pop("admin_action", None)
+    
     await query.edit_message_text(
         "👤 <b>User Wallet Lookup</b>\n\n"
         "Please enter the User ID (Telegram ID) to lookup their wallet information:",
@@ -425,6 +680,15 @@ async def admin_send_crypto_handler(update: Update, context: ContextTypes.DEFAUL
     """Handle crypto sending setup"""
     query = update.callback_query
     await query.answer()
+    
+    # Clear any cached data to start fresh (except if coming from wallet lookup)
+    if not query.data.startswith("admin_send_from_"):
+        context.user_data.pop("send_crypto_user_id", None)
+        context.user_data.pop("send_crypto_wallet_id", None)
+        context.user_data.pop("send_crypto_coin", None)
+        context.user_data.pop("send_crypto_recipient", None)
+        context.user_data.pop("send_crypto_amount", None)
+        context.user_data.pop("admin_action", None)
     
     # Check if user ID is already set (from wallet lookup)
     if context.user_data.get("send_crypto_user_id"):
@@ -613,6 +877,14 @@ async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
+    # Clear any cached data when returning to main menu
+    context.user_data.pop("send_crypto_user_id", None)
+    context.user_data.pop("send_crypto_wallet_id", None)
+    context.user_data.pop("send_crypto_coin", None)
+    context.user_data.pop("send_crypto_recipient", None)
+    context.user_data.pop("send_crypto_amount", None)
+    context.user_data.pop("admin_action", None)
+    
     keyboard = InlineKeyboardMarkup([
         [
             InlineKeyboardButton("👤 User Wallet Info", callback_data="admin_user_wallet"),
@@ -670,6 +942,7 @@ async def handle_user_wallet_lookup(update: Update, context: ContextTypes.DEFAUL
                     InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
                 ]])
             )
+            # Clear the cached action so user can try again
             context.user_data.pop("admin_action", None)
             return
         
@@ -770,7 +1043,9 @@ async def handle_send_crypto_step1_with_user_id(update, context):
             elif hasattr(update, 'callback_query') and update.callback_query:
                 await update.callback_query.edit_message_text(message_text, reply_markup=keyboard)
             
+            # Clear cached data so user can try again
             context.user_data.pop("admin_action", None)
+            context.user_data.pop("send_crypto_user_id", None)
             return
         
         # Store wallet info
@@ -837,7 +1112,9 @@ async def handle_send_crypto_step1_with_user_id(update, context):
         elif hasattr(update, 'callback_query') and update.callback_query:
             await update.callback_query.edit_message_text(message_text, reply_markup=keyboard)
         
+        # Clear cached data so user can try again
         context.user_data.pop("admin_action", None)
+        context.user_data.pop("send_crypto_user_id", None)
 
 
 async def handle_coin_selection_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -903,28 +1180,168 @@ async def handle_send_crypto_step4(update: Update, context: ContextTypes.DEFAULT
             await update.message.reply_text("❌ Amount must be greater than 0. Please try again.")
             return
         
-        # Show confirmation
+        # Get transaction details for fee calculation
         user_id = context.user_data['send_crypto_user_id']
         coin = context.user_data['send_crypto_coin']
         recipient = context.user_data['send_crypto_recipient']
+        wallet_id = context.user_data['send_crypto_wallet_id']
         
+        logger.info(f"=== STEP 4: AMOUNT CONFIRMATION ===")
+        logger.info(f"User: {user_id}, Coin: {coin}, Amount: {amount}")
+        
+        # Get wallet and coin info for fee calculation
+        coin_address = WalletManager.get_wallet_coin_address(wallet_id, coin)
+        if not coin_address:
+            await update.message.reply_text(
+                "❌ Error: Could not find coin address. Please try again.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+                ]])
+            )
+            return
+        
+        # Get current balance - use database balance for consistency with wallet display
+        current_balance = Decimal(str(coin_address.get('balance', 0)))
+        amount_decimal = Decimal(str(amount))
+        network = coin_address.get('network', '')
+        
+        logger.info(f"Database balance for {coin} in confirmation: {current_balance}")
+        
+        # If balance is zero, try to refresh it
+        if current_balance == 0:
+            logger.info("Balance is zero in confirmation, attempting to refresh...")
+            wallet_manager = WalletManager()
+            await wallet_manager.refresh_wallet_balances(wallet_id)
+            
+            # Get updated coin address after refresh
+            coin_address = WalletManager.get_wallet_coin_address(wallet_id, coin)
+            if coin_address:
+                current_balance = Decimal(str(coin_address.get('balance', 0)))
+                logger.info(f"Refreshed balance for {coin} in confirmation: {current_balance}")
+            else:
+                logger.error("Failed to get updated coin address after refresh in confirmation")
+                await update.message.reply_text(
+                    f"❌ Error: Failed to refresh {coin} balance. Please try again.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+                    ]])
+                )
+                return
+        
+        # Calculate estimated fee
+        estimated_fee, fee_currency = AdminWalletManager.get_transaction_fee(coin, network)
+        required_total = amount_decimal + estimated_fee
+        
+        logger.info(f"Balance check: {current_balance} available, {required_total} required (amount: {amount_decimal} + fee: {estimated_fee})")
+        
+        # Store amount for confirmation
         context.user_data["send_crypto_amount"] = amount
         
+        # Build confirmation message with fee info
         confirmation_text = f"⚠️ <b>Confirm Transaction</b>\n\n"
         confirmation_text += f"👤 <b>From User:</b> {user_id}\n"
-        confirmation_text += f"💰 <b>Coin:</b> {coin}\n"
-        confirmation_text += f"💸 <b>Amount:</b> {amount}\n"
-        confirmation_text += f"📍 <b>To:</b> <code>{recipient}</code>\n\n"
-        confirmation_text += f"⚠️ <b>WARNING:</b> This action cannot be undone!\n\n"
-        confirmation_text += f"Are you sure you want to proceed?"
+        confirmation_text += f"💰 <b>Coin:</b> {coin}"
         
-        keyboard = InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ Confirm Send", callback_data="admin_confirm_send_yes"),
-                InlineKeyboardButton("❌ Cancel", callback_data="admin_confirm_send_no")
-            ],
-            [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")]
-        ])
+        if network:
+            confirmation_text += f" ({network.title()})\n"
+        else:
+            confirmation_text += "\n"
+            
+        # Different display logic for tokens vs native currencies
+        if coin == 'USDT' and fee_currency != coin:
+            # For tokens on other networks (SOL, BSC, TRON), show both token balance and gas balance
+            gas_coin_address = WalletManager.get_wallet_coin_address(wallet_id, fee_currency)
+            if gas_coin_address:
+                gas_balance = Decimal(str(gas_coin_address.get('balance', 0)))
+                
+                # If gas balance is zero, try to refresh it
+                if gas_balance == 0:
+                    logger.info(f"Gas balance is zero in confirmation, attempting to refresh {fee_currency}...")
+                    await wallet_manager.refresh_wallet_balances(wallet_id)
+                    
+                    # Get updated gas coin address after refresh
+                    gas_coin_address = WalletManager.get_wallet_coin_address(wallet_id, fee_currency)
+                    if gas_coin_address:
+                        gas_balance = Decimal(str(gas_coin_address.get('balance', 0)))
+                        logger.info(f"Refreshed gas balance for {fee_currency} in confirmation: {gas_balance}")
+                    else:
+                        logger.error("Failed to get updated gas coin address after refresh in confirmation")
+                        await update.message.reply_text(
+                            f"❌ Error: Failed to refresh {fee_currency} balance. Please try again.",
+                            reply_markup=InlineKeyboardMarkup([[
+                                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+                            ]])
+                        )
+                        return
+                
+                confirmation_text += f"💳 <b>{coin} Balance:</b> {current_balance} {coin}\n"
+                confirmation_text += f"⛽ <b>{fee_currency} Balance (for gas):</b> {gas_balance} {fee_currency}\n"
+                confirmation_text += f"💸 <b>Amount to Send:</b> {amount} {coin}\n"
+                confirmation_text += f"⚡ <b>Gas Fee:</b> {estimated_fee} {fee_currency}\n\n"
+                
+                # Check both balances separately
+                token_ok = current_balance >= amount_decimal
+                gas_ok = gas_balance >= estimated_fee
+                
+                if token_ok and gas_ok:
+                    confirmation_text += f"✅ <b>Token Balance:</b> Sufficient ({current_balance - amount_decimal} {coin} remaining)\n"
+                    confirmation_text += f"✅ <b>Gas Balance:</b> Sufficient ({gas_balance - estimated_fee} {fee_currency} remaining)\n"
+                    balance_ok = True
+                else:
+                    if not token_ok:
+                        token_shortfall = amount_decimal - current_balance
+                        confirmation_text += f"❌ <b>Token Balance:</b> Need {token_shortfall} more {coin}\n"
+                    else:
+                        confirmation_text += f"✅ <b>Token Balance:</b> Sufficient\n"
+                        
+                    if not gas_ok:
+                        gas_shortfall = estimated_fee - gas_balance
+                        confirmation_text += f"❌ <b>Gas Balance:</b> Need {gas_shortfall} more {fee_currency}\n"
+                    else:
+                        confirmation_text += f"✅ <b>Gas Balance:</b> Sufficient\n"
+                        
+                    balance_ok = False
+            else:
+                confirmation_text += f"❌ <b>Error:</b> No {fee_currency} address found for gas fees\n"
+                balance_ok = False
+        else:
+            # For native currencies and USDT on Ethereum (where fee is also in USDT)
+            confirmation_text += f"💳 <b>Current Balance:</b> {current_balance} {coin}\n"
+            confirmation_text += f"💸 <b>Amount to Send:</b> {amount} {coin}\n"
+            confirmation_text += f"⚡ <b>Transaction Fee:</b> {estimated_fee} {fee_currency}\n"
+            confirmation_text += f"🔢 <b>Total Required:</b> {amount_decimal + estimated_fee} {fee_currency}\n"
+            confirmation_text += f"💰 <b>Remaining Balance:</b> {current_balance - amount_decimal - estimated_fee} {coin}\n\n"
+            
+            # Balance status
+            required_total = amount_decimal + estimated_fee
+            if current_balance >= required_total:
+                confirmation_text += f"✅ <b>Status:</b> Sufficient balance\n"
+                balance_ok = True
+            else:
+                shortfall = required_total - current_balance
+                confirmation_text += f"❌ <b>Status:</b> Insufficient balance (need {shortfall} more {fee_currency})\n"
+                balance_ok = False
+            
+        confirmation_text += f"📍 <b>To Address:</b> <code>{recipient}</code>\n\n"
+        
+        if balance_ok:
+            confirmation_text += f"⚠️ <b>WARNING:</b> This action cannot be undone!\n\n"
+            confirmation_text += f"Are you sure you want to proceed with this transaction?"
+            
+            keyboard = InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton("✅ Confirm Send", callback_data="admin_confirm_send_yes"),
+                    InlineKeyboardButton("❌ Cancel", callback_data="admin_confirm_send_no")
+                ],
+                [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")]
+            ])
+        else:
+            confirmation_text += f"❌ <b>Cannot proceed:</b> Insufficient balance to cover amount + fees.\n\n"
+            confirmation_text += f"Please reduce the amount or wait for more funds to be deposited."
+            
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")]
+            ])
         
         await update.message.reply_text(
             confirmation_text,
@@ -955,7 +1372,8 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
         # Proceed with the transaction
         await query.edit_message_text(
             f"⏳ <b>Processing Transaction...</b>\n\n"
-            f"Please wait while we send the cryptocurrency.",
+            f"Please wait while we send the cryptocurrency.\n"
+            f"This may take a few moments to complete.",
             parse_mode="HTML"
         )
         
@@ -967,6 +1385,9 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
             amount = context.user_data['send_crypto_amount']
             admin_id = query.from_user.id
             
+            logger.info(f"=== ADMIN CONFIRMATION PROCESSING ===")
+            logger.info(f"Admin {admin_id} confirming send of {amount} {coin_symbol} to {recipient}")
+            
             # Perform the transaction
             result = await AdminWalletManager.send_crypto(
                 wallet_id, coin_symbol, recipient, amount, str(admin_id)
@@ -975,11 +1396,24 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
             if result['success']:
                 success_text = f"✅ <b>Transaction Successful!</b>\n\n"
                 success_text += f"💰 <b>Amount:</b> {amount} {coin_symbol}\n"
+                
+                fee_currency = result.get('fee_currency', coin_symbol)
+                success_text += f"💸 <b>Network Fee:</b> {result.get('fee', 'N/A')} {fee_currency}\n"
                 success_text += f"📍 <b>To:</b> <code>{recipient}</code>\n"
-                success_text += f"🔗 <b>TX Hash:</b> <code>{result.get('tx_hash', 'N/A')}</code>\n\n"
+                success_text += f"📤 <b>From:</b> <code>{result.get('sender', 'N/A')}</code>\n"
+                
+                if result.get('network'):
+                    success_text += f"🌐 <b>Network:</b> {result['network'].title()}\n"
+                
+                success_text += f"🔗 <b>TX Hash:</b> <code>{result.get('tx_hash', 'N/A')}</code>\n"
+                success_text += f"💳 <b>New {coin_symbol} Balance:</b> {result.get('new_balance', 'N/A')} {coin_symbol}\n\n"
+                
                 if result.get('note'):
                     success_text += f"ℹ️ <b>Note:</b> {result['note']}\n\n"
-                success_text += f"The transaction has been completed successfully."
+                
+                success_text += f"The transaction has been completed successfully and the blockchain has been updated."
+                
+                logger.info(f"✅ Transaction successful for admin {admin_id}")
                 
                 await query.edit_message_text(
                     success_text,
@@ -990,8 +1424,12 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
                 )
             else:
                 error_text = f"❌ <b>Transaction Failed</b>\n\n"
-                error_text += f"Error: {result.get('error', 'Unknown error')}\n\n"
-                error_text += f"The transaction could not be completed."
+                error_text += f"💰 <b>Attempted Amount:</b> {amount} {coin_symbol}\n"
+                error_text += f"📍 <b>Recipient:</b> <code>{recipient}</code>\n\n"
+                error_text += f"❗ <b>Error:</b> {result.get('error', 'Unknown error')}\n\n"
+                error_text += f"Please check the wallet balance and try again, or contact support if the issue persists."
+                
+                logger.error(f"❌ Transaction failed for admin {admin_id}: {result.get('error')}")
                 
                 await query.edit_message_text(
                     error_text,
@@ -1002,10 +1440,12 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
                 )
             
         except Exception as e:
-            logger.error(f"Error executing transaction: {e}")
+            logger.error(f"Error executing transaction for admin {admin_id}: {e}")
             await query.edit_message_text(
                 f"❌ <b>Transaction Error</b>\n\n"
-                f"An unexpected error occurred: {str(e)}",
+                f"An unexpected error occurred while processing the transaction:\n\n"
+                f"<code>{str(e)}</code>\n\n"
+                f"Please try again or contact support if the issue persists.",
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
@@ -1021,9 +1461,12 @@ async def handle_send_confirmation(update: Update, context: ContextTypes.DEFAULT
         
     elif query.data == "admin_confirm_send_no":
         # Cancel the transaction
+        logger.info(f"Admin {query.from_user.id} cancelled transaction")
+        
         await query.edit_message_text(
             f"❌ <b>Transaction Cancelled</b>\n\n"
-            f"The transaction has been cancelled by admin.",
+            f"The transaction has been cancelled by admin.\n"
+            f"No funds were sent and no fees were charged.",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")

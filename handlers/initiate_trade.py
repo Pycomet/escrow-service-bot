@@ -143,6 +143,12 @@ async def dispatch_to_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f"dispatch_to_flow: Admin callback detected: {update.callback_query.data}, skipping")
         return
     
+    # Handle seller rejection reason input for CryptoFiatFlow
+    if update.message and update.message.text and not update.message.text.startswith('/'):
+        if context.user_data.get("rejecting_payment"):
+            await CryptoFiatFlow.handle_rejection_reason(update, context)
+            return
+    
     if not context.user_data or "trade_creation" not in context.user_data:
         # If not in a trade creation flow, or if called for a message not meant for it,
         # simply return and let other handlers (if any) process it.

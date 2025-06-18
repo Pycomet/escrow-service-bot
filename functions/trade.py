@@ -6,6 +6,9 @@ from .utils import generate_id
 from .user import UserClient
 from payments import BtcPayAPI
 from .wallet import WalletManager
+import logging
+
+logger = logging.getLogger(__name__)
 
 client = BtcPayAPI()
 
@@ -21,8 +24,7 @@ class TradeClient:
         Returns a new trade without Agent
         """
         user: UserType = UserClient.get_user(msg)
-
-        print(user.keys())
+        logger.debug(f"open_new_trade for user {user.get('_id')} with keys: {list(user.keys())}")
 
         trade: TradeType = {
             "_id": generate_id(),
@@ -32,7 +34,7 @@ class TradeClient:
             "is_active": False,
             "is_paid": False,
             "price": 0,
-            "invoice_id": "",
+            "invoice_id": None,
             "is_completed": False,
             "chat": chat,
             "trade_type": trade_type,
@@ -88,6 +90,7 @@ class TradeClient:
     @staticmethod
     def get_trade(id: str) -> TradeType or None: # type: ignore
         trade: TradeType = db.trades.find_one({"_id": id})
+        logger.debug(f"Fetched trade in get_trade: {trade}")
         return trade
 
     @staticmethod
@@ -133,8 +136,13 @@ class TradeClient:
     @staticmethod
     def add_invoice_id(trade: TradeType, invoice_id: str):
         """
-        Update trade instance with price of service
+        Update trade instance with invoice_id
         """
+        # Validate invoice_id is not empty
+        if not invoice_id or invoice_id.strip() == "":
+            logger.error(f"Cannot set empty invoice_id for trade {trade['_id']}")
+            return trade
+            
         db.trades.update_one(
             {"_id": trade["_id"]}, {"$set": {"invoice_id": invoice_id}}
         )
@@ -170,15 +178,14 @@ class TradeClient:
             return TradeClient._get_wallet_based_payment_info(active_trade)
         else:
             # Handle BTC/LTC trades with BTCPay
-            if active_trade['invoice_id'] == "":
+            if active_trade['invoice_id'] is None or active_trade['invoice_id'] == "":
                 try:
                     url, invoice_id = client.create_invoice(active_trade)
                     if url is not None:
                         TradeClient.add_invoice_id(trade, str(invoice_id))
                         return url
                 except Exception as e:
-                    app.logger.info(e)
-                    print(f"Error creating invoice: {e}")
+                    app.logger.error(f"Error creating invoice for trade {trade['_id']}: {e}")
             else:
                 return f"{BTCPAY_URL}/i/{trade['invoice_id']}"
             
@@ -237,7 +244,7 @@ class TradeClient:
     def check_trade(user: UserType, trade_id: str) -> str | TradeType:
         "Return trade info"
         trade: TradeType = db.trades.find_one({"_id": trade_id})
-        print(trade)
+        logger.debug(f"Fetched trade in check_trade: {trade}")
 
         if trade == None:
             return "Not Found"
@@ -379,16 +386,24 @@ class TradeClient:
 
     @staticmethod
     def update_trade_status(trade_id: str, status: str) -> bool:
-        """Update trade status"""
+        """Update trade status and deactivate if terminal status"""
         try:
+            # Define terminal statuses that should deactivate the trade
+            terminal_statuses = ["completed", "cancelled", "expired", "failed", "crypto_released"]
+            
+            update_data = {
+                "status": status,
+                "updated_at": datetime.now()
+            }
+            
+            # If it's a terminal status, also deactivate the trade
+            if status.lower() in terminal_statuses:
+                update_data["is_active"] = False
+                logger.info(f"Deactivating trade {trade_id} due to terminal status: {status}")
+            
             db.trades.update_one(
                 {"_id": trade_id},
-                {
-                    "$set": {
-                        "status": status,
-                        "updated_at": datetime.now()
-                    }
-                }
+                {"$set": update_data}
             )
             return True
         except Exception as e:
@@ -434,6 +449,220 @@ class TradeClient:
             return False
 
     @staticmethod
+    def add_fiat_payment_proof(trade_id: str, file_id: str, file_type: str, buyer_id: str) -> bool:
+        """Add fiat payment proof to a trade"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "fiat_payment_proof": {
+                            "file_id": file_id,
+                            "file_type": file_type,
+                            "submitted_by": buyer_id,
+                            "submitted_at": datetime.now()
+                        },
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error adding fiat payment proof: {e}")
+            return False
+
+    @staticmethod
+    def approve_fiat_payment(trade_id: str, seller_id: str) -> bool:
+        """Approve fiat payment and mark trade as ready for crypto release"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "is_fiat_paid": True,
+                        "fiat_payment_approved": True,
+                        "fiat_approved_by": seller_id,
+                        "fiat_approved_at": datetime.now(),
+                        "status": "fiat_approved",
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error approving fiat payment: {e}")
+            return False
+
+    @staticmethod
+    def reject_fiat_payment(trade_id: str, seller_id: str, reason: str = None) -> bool:
+        """Reject fiat payment proof"""
+        try:
+            update_data = {
+                "fiat_payment_rejected": True,
+                "fiat_rejected_by": seller_id,
+                "fiat_rejected_at": datetime.now(),
+                "status": "fiat_rejected",
+                "updated_at": datetime.now()
+            }
+            if reason:
+                update_data["fiat_rejection_reason"] = reason
+            
+            db.trades.update_one(
+                {"_id": trade_id},
+                {"$set": update_data}
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error rejecting fiat payment: {e}")
+            return False
+
+    @staticmethod
+    def complete_trade(trade_id: str) -> bool:
+        """Mark trade as completed and deactivate it"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "is_completed": True,
+                        "is_active": False,  # Deactivate the trade when completed
+                        "status": "completed",
+                        "completed_at": datetime.now(),
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error completing trade: {e}")
+            return False
+
+    @staticmethod
+    def calculate_trade_fee(amount: float) -> tuple[float, float]:
+        """Calculate bot fee and total deposit amount for trade
+        
+        Args:
+            amount: The amount the buyer will receive
+            
+        Returns:
+            tuple: (fee_amount, total_deposit_required)
+        """
+        from config import BOT_FEE_PERCENTAGE
+        fee_amount = amount * (BOT_FEE_PERCENTAGE / 100)
+        total_deposit_required = amount + fee_amount
+        return fee_amount, total_deposit_required
+
+    @staticmethod
+    def set_buyer_address(trade_id: str, buyer_address: str, network: str = None) -> bool:
+        """Set buyer's crypto address for receiving funds"""
+        try:
+            update_data = {
+                "buyer_address": buyer_address,
+                "updated_at": datetime.now()
+            }
+            if network:
+                update_data["buyer_network"] = network
+            
+            db.trades.update_one(
+                {"_id": trade_id},
+                {"$set": update_data}
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error setting buyer address: {e}")
+            return False
+
+    @staticmethod
+    def initiate_crypto_release(trade_id: str) -> bool:
+        """Initiate crypto release process - transfer from seller wallet to buyer"""
+        try:
+            trade = TradeClient.get_trade(trade_id)
+            if not trade:
+                logger.error(f"Trade {trade_id} not found for crypto release")
+                return False
+            
+            # Check if trade is approved and has buyer address
+            if not trade.get('fiat_payment_approved'):
+                logger.error(f"Trade {trade_id} payment not approved")
+                return False
+            
+            buyer_address = trade.get('buyer_address')
+            if not buyer_address:
+                logger.error(f"Trade {trade_id} missing buyer address")
+                return False
+            
+            # Calculate fee and net amount
+            original_amount = float(trade.get('price', 0))
+            fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(original_amount)
+            
+            # For wallet-based trades (ETH/USDT), initiate transfer
+            if trade.get('is_wallet_trade'):
+                from functions.wallet import WalletManager
+                
+                seller_wallet_id = trade.get('seller_wallet_id')
+                currency = trade.get('currency')
+                
+                if not seller_wallet_id:
+                    logger.error(f"Trade {trade_id} missing seller wallet ID")
+                    return False
+                
+                # Transfer the original amount to buyer (seller deposited original + fee)
+                success = WalletManager.transfer_crypto(
+                    from_wallet_id=seller_wallet_id,
+                    to_address=buyer_address,
+                    amount=original_amount,  # Buyer gets the original amount
+                    currency=currency,
+                    trade_id=trade_id
+                )
+                
+                if success:
+                    # Update trade with release information
+                    db.trades.update_one(
+                        {"_id": trade_id},
+                        {
+                            "$set": {
+                                "crypto_released": True,
+                                "crypto_release_amount": original_amount,  # Record what was sent to buyer
+                                "bot_fee_amount": fee_amount,
+                                "crypto_release_time": datetime.now(),
+                                "status": "crypto_released",
+                                "updated_at": datetime.now()
+                            }
+                        }
+                    )
+                    logger.info(f"Crypto released for trade {trade_id}: {original_amount} {currency} to {buyer_address}")
+                    return True
+                else:
+                    logger.error(f"Failed to transfer crypto for trade {trade_id}")
+                    return False
+            else:
+                # For BTCPay trades, handle differently (if needed)
+                logger.warning(f"Crypto release not implemented for non-wallet trade {trade_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error initiating crypto release for trade {trade_id}: {e}")
+            return False
+
+    @staticmethod
+    def request_buyer_address(trade_id: str) -> bool:
+        """Mark trade as waiting for buyer address"""
+        try:
+            db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "status": "awaiting_buyer_address",
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error requesting buyer address: {e}")
+            return False
+
+    @staticmethod
     def cancel_trade(trade_id: str, user_id: str) -> bool:
         """Cancel a trade"""
         try:
@@ -474,4 +703,52 @@ class TradeClient:
                 
         except Exception as e:
             logger.error(f"Error cancelling trade {trade_id}: {e}")
+            return False
+
+    @staticmethod
+    def join_trade(trade_id: str, user_id: str) -> bool:
+        """Allow a buyer to join an active trade"""
+        try:
+            # Get the trade to verify it exists and is available
+            trade = TradeClient.get_trade(trade_id)
+            if not trade:
+                logger.error(f"Trade {trade_id} not found for joining")
+                return False
+            
+            # Check if trade is active and available for joining
+            if not trade.get('is_active', False):
+                logger.error(f"Trade {trade_id} is not active")
+                return False
+            
+            # Check if trade already has a buyer
+            if trade.get('buyer_id') and trade.get('buyer_id') != "":
+                logger.error(f"Trade {trade_id} already has a buyer")
+                return False
+            
+            # Check if user is not the seller
+            seller_id = str(trade.get('seller_id', ''))
+            if str(user_id) == seller_id:
+                logger.error(f"User {user_id} cannot join their own trade {trade_id}")
+                return False
+            
+            # Add the buyer to the trade
+            result = db.trades.update_one(
+                {"_id": trade_id},
+                {
+                    "$set": {
+                        "buyer_id": str(user_id),
+                        "updated_at": datetime.now()
+                    }
+                }
+            )
+            
+            if result.modified_count > 0:
+                logger.info(f"User {user_id} successfully joined trade {trade_id}")
+                return True
+            else:
+                logger.error(f"Failed to add user {user_id} to trade {trade_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error joining trade {trade_id}: {e}")
             return False

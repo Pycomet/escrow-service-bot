@@ -1,6 +1,9 @@
 from config import *
 import requests
+import logging
 from database import TradeType
+
+logger = logging.getLogger(__name__)
 
 
 class BtcPayAPI(object):
@@ -20,10 +23,10 @@ class BtcPayAPI(object):
                 f"{self.url}/api/v1/stores/{self.store_id}/invoices/{invoice_id}",
                 headers=self.header,
             ).json()
-            return result["status"]
+            return result.get("status")
 
         except Exception as e:
-            print(e, "Error")
+            logger.error("Error fetching invoice %s: %s", invoice_id, e)
             return None
 
     def create_invoice(self, trade: TradeType):
@@ -65,13 +68,12 @@ class BtcPayAPI(object):
             self.status = result["status"]
             self.invoice_id = result["id"]
             self.checkout_url = result["checkoutLink"]
-            print("Invoice ", result)
+            logger.info("Invoice created: %s", result)
 
             return self.checkout_url, self.invoice_id
 
         except Exception as e:
-            app.logger.info(e)
-            print(e, "Error")
+            app.logger.error("Error creating invoice via BTCPay API: %s", e)
             return None, None
 
 

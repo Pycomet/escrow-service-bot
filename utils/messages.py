@@ -243,13 +243,17 @@ You can go to payment portal by clicking the button below.
     @staticmethod
     def deposit_instructions(amount: float, currency: str, description: str, payment_url: str, trade_id: str) -> str:
         """Generates the message for crypto deposit instructions."""
+        from functions.trade import TradeClient
+        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
+        
         return f"""
 🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
 
 To proceed with this trade, you (the seller) need to deposit the specified crypto amount into escrow.
 
-<b>Amount to Deposit:</b> {amount} {currency}
+<b>Amount to Deposit:</b> {total_deposit_required} {currency}
+<b>Buyer will receive:</b> {amount} {currency}
 <b>Your Trade Description/Terms:</b> {description}
 
 
@@ -265,20 +269,24 @@ If you encounter any issues, please contact support.
     @staticmethod
     def wallet_deposit_instructions(amount: float, currency: str, description: str, receiving_address: str, trade_id: str) -> str:
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
+        from functions.trade import TradeClient
+        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
+        
         return f"""
 🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
 
 To proceed with this trade, you (the seller) need to deposit the specified crypto amount to your escrow wallet address.
 
-<b>Amount to Deposit:</b> {amount} {currency}
+<b>Amount to Deposit:</b> {total_deposit_required} {currency}
+<b>Buyer will receive:</b> {amount} {currency}
 <b>Your Trade Description/Terms:</b> {description}
 
 <b>💰 Deposit Address ({currency}):</b>
 <code>{receiving_address}</code>
 
 <b>⚠️ Important:</b>
-• Send exactly {amount} {currency} to the address above
+• Send exactly {total_deposit_required} {currency} to the address above
 • Make sure you're sending on the correct network (Ethereum for ETH/USDT)
 • Double-check the address before sending
 • This address is unique to your wallet - funds sent here belong to you
@@ -444,3 +452,153 @@ If you have made the deposit and it's still not confirmed after some time, pleas
         
         emoji = currency_emoji_map.get(currency.upper(), "💰")
         return f"{emoji} {amount} {currency.upper()}"
+
+    # ========== CRYPTOFIAT TRADE MESSAGES ==========
+    @staticmethod
+    def buyer_trade_details(trade: TradeType) -> str:
+        """Detailed trade information for buyer in CryptoToFiat trades"""
+        return f"""
+💰 <b>Crypto → Fiat Trade Details</b>
+
+🆔 <b>Trade ID:</b> <code>{trade['_id']}</code>
+💎 <b>You're buying:</b> {trade['price']} {trade['currency']}
+📅 <b>Created:</b> {trade.get('created_at', 'Unknown')}
+✅ <b>Status:</b> Seller has deposited crypto - Ready for buyer
+
+📋 <b>Payment Instructions from Seller:</b>
+<i>{trade.get('terms', 'No specific terms provided')}</i>
+
+<b>🔄 How this trade works:</b>
+1. You join as the buyer
+2. You make the fiat payment to the seller as per their instructions
+3. You submit proof of payment (screenshot/receipt)
+4. Seller verifies your payment and releases the crypto
+5. You receive {trade['price']} {trade['currency']} in your wallet
+
+<b>⚠️ Important:</b> The seller's crypto ({trade['price']} {trade['currency']}) is already secured in escrow. Only make the fiat payment after joining this trade.
+        """
+
+    @staticmethod
+    def buyer_joined_success(trade: TradeType) -> str:
+        """Success message when buyer joins CryptoToFiat trade"""
+        return f"""
+{EmojiEnums.CHECK_MARK.value} <b>Successfully Joined Trade #{trade['_id']}!</b>
+
+💰 <b>You're buying:</b> {trade['price']} {trade['currency']}
+
+<b>📋 Next Steps:</b>
+1. Make the fiat payment exactly as described in the seller's terms
+2. Take a screenshot or photo of your payment confirmation
+3. Click 'Submit Payment Proof' below to upload your proof
+4. Wait for seller verification (usually within a few hours)
+5. Receive your crypto once payment is verified!
+
+<b>⚠️ Payment Instructions:</b>
+<i>{trade.get('terms', 'No specific terms provided')}</i>
+
+<b>🔒 Security:</b> The seller's crypto is safely held in escrow. You will only receive it after they verify your payment.
+        """
+
+    @staticmethod
+    def payment_proof_submitted(trade_id: str) -> str:
+        """Message when buyer submits payment proof"""
+        return f"""
+{EmojiEnums.CHECK_MARK.value} <b>Payment Proof Submitted!</b>
+
+Trade ID: <code>{trade_id}</code>
+
+Your payment proof has been successfully submitted and the seller has been notified.
+
+<b>What happens next:</b>
+• The seller will review your payment proof
+• If approved, they will release the crypto to you
+• You'll be notified of the decision
+
+<b>Estimated review time:</b> Usually within a few hours
+
+Thank you for using our escrow service!
+        """
+
+    @staticmethod
+    def seller_proof_notification(trade: TradeType) -> str:
+        """Notification to seller when buyer submits proof"""
+        return f"""
+📤 <b>Payment Proof Submitted</b>
+
+Trade ID: <code>{trade['_id']}</code>
+The buyer has submitted proof of fiat payment.
+
+Please review and verify the payment proof.
+        """
+
+    @staticmethod
+    def payment_approved_buyer(trade: TradeType) -> str:
+        """Message to buyer when payment is approved"""
+        return f"""
+🎉 <b>Payment Approved - Crypto Released!</b>
+
+Trade ID: <code>{trade['_id']}</code>
+
+Great news! The seller has approved your payment proof.
+
+💰 <b>You have received:</b> {trade['price']} {trade['currency']}
+
+The crypto has been released from escrow and is now in your wallet.
+
+Thank you for using our escrow service! 🚀
+        """
+
+    @staticmethod
+    def payment_approved_seller(trade: TradeType) -> str:
+        """Message to seller when they approve payment"""
+        return f"""
+✅ <b>Payment Approved & Crypto Released!</b>
+
+Trade ID: <code>{trade['_id']}</code>
+
+You have successfully approved the buyer's payment.
+
+💰 <b>Released:</b> {trade['price']} {trade['currency']}
+
+The crypto has been released from escrow to the buyer.
+The buyer has been notified.
+
+Trade completed successfully! 🎉
+        """
+
+    @staticmethod
+    def payment_rejected_buyer(trade_id: str, reason: str) -> str:
+        """Message to buyer when payment proof is rejected"""
+        return f"""
+❌ <b>Payment Proof Rejected</b>
+
+Trade ID: <code>{trade_id}</code>
+
+Unfortunately, the seller has rejected your payment proof.
+
+<b>Reason:</b> <i>{reason}</i>
+
+<b>What you can do:</b>
+• Review the seller's payment instructions again
+• Make the correct payment if needed
+• Submit new payment proof
+• Contact support if you believe this is an error
+
+The trade is still active - you can submit new proof.
+        """
+
+    @staticmethod
+    def payment_rejected_seller(trade_id: str, reason: str) -> str:
+        """Message to seller when they reject payment proof"""
+        return f"""
+❌ <b>Payment Proof Rejected</b>
+
+Trade ID: <code>{trade_id}</code>
+
+You have rejected the buyer's payment proof.
+
+<b>Reason provided:</b> <i>{reason}</i>
+
+The buyer has been notified and can submit new proof.
+You will be notified if they submit additional proof.
+        """

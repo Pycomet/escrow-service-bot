@@ -148,8 +148,9 @@ async def give_verdict_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     if verdict == "approve":
-        # Update trade status
-        update_trade_status(trade_id, "completed")
+        # Complete the trade properly
+        from functions.trade import TradeClient
+        TradeClient.complete_trade(trade_id)
         
         # Notify seller
         await context.bot.send_message(

@@ -327,6 +327,13 @@ async def handle_support_trade_callback(update: Update, context: ContextTypes.DE
             ])
         )
 
+async def handle_payment_review_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle seller payment proof review callbacks"""
+    logger.info(f"Payment review callback received: {update.callback_query.data}")
+    
+    # Route to CryptoFiatFlow seller payment review handler
+    await CryptoFiatFlow.handle_seller_payment_review(update, context)
+
 def register_handlers(application):
     """Register all callback handlers"""
     # Main menu callbacks
@@ -346,5 +353,8 @@ def register_handlers(application):
     application.add_handler(CallbackQueryHandler(handle_cancel_trade_callback, pattern="^cancel_trade_"))
     application.add_handler(CallbackQueryHandler(handle_confirm_cancel_callback, pattern="^(confirm|cancel)_cancel_trade_"))
     application.add_handler(CallbackQueryHandler(handle_support_trade_callback, pattern="^support_trade_"))
+    
+    # Payment review callbacks for CryptoToFiat trades
+    application.add_handler(CallbackQueryHandler(handle_payment_review_callback, pattern="^(review_proof_|approve_payment_|reject_payment_)"))
     
     logger.info("Callback handlers registered successfully")

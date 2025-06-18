@@ -21,11 +21,11 @@ class CryptoCurrencyEnums(Enum):
     USDT = "USDT"
     BTC = "BTC"
     ETH = "ETH"
-    # SOL = "SOL"
-    # BNB = "BNB"
-    # LTC = "LTC"
-    # DOGE = "DOGE"
-    # TRX = "TRX"
+    SOL = "SOL"
+    BNB = "BNB"
+    LTC = "LTC"
+    DOGE = "DOGE"
+    TRX = "TRX"
 
 class FiatCurrencyEnums(Enum):
     USD = "USD"

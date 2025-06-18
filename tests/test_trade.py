@@ -33,7 +33,7 @@ def mock_trade():
         "is_paid": False,
         "price": 0,
         "terms": "",
-        "invoice_id": "",
+        "invoice_id": None,
         "is_completed": False,
         "chat": None,
         "created_at": datetime.now(),
