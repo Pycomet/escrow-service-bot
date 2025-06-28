@@ -127,6 +127,7 @@ async def test_handle_trade_type_selection_disabled(mock_update, mock_context):
     mock_context.user_data["trade_creation"] = {"step": "select_trade_type"}
     mock_update.callback_query.data = "trade_type_Disabled"
 
+
     await handle_trade_type_selection(mock_update, mock_context)
 
     mock_update.callback_query.answer.assert_called_once()

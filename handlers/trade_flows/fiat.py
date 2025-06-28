@@ -146,7 +146,6 @@ class CryptoFiatFlow:
             return False
         
         context.user_data['trade_creation']['current_flow_step'] = AWAITING_DEPOSIT_CONFIRMATION
-        
         # Check if this is a wallet-based trade (ETH/USDT)
         is_wallet_currency = trade_data['currency'] in ['ETH', 'USDT']
         
@@ -573,7 +572,7 @@ class CryptoFiatFlow:
             except:
                 pass
             return False
-
+          
     @staticmethod
     async def handle_rejection_reason(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
         """Handle seller's rejection reason input"""

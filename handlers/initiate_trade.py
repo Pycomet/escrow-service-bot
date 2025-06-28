@@ -227,5 +227,4 @@ def register_handlers(application):
         filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, 
         dispatch_to_flow
     ), group=1)
-
     application.add_handler(CallbackQueryHandler(dispatch_to_flow, pattern="^.*$", block=False), group=1)
