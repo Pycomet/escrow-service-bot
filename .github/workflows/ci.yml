@@ -10,7 +10,7 @@ env:
   PYTHONUNBUFFERED: 1
 
 jobs:
-  # Code Quality and Testing
+  # Core Testing - Runs on all events
   test:
     name: Test Suite
     runs-on: ubuntu-latest
@@ -78,7 +78,28 @@ jobs:
         path: htmlcov/
         retention-days: 30
 
-  # Security and Dependency Checks
+  # Docker Build Test - Runs on all events
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t escrow-service-bot:test .
+
+    - name: Test Docker image
+      run: |
+        docker run --rm escrow-service-bot:test python -c "import sys; print('Python version:', sys.version)"
+
+  # Security Checks - Runs on all events
   security:
     name: Security Checks
     runs-on: ubuntu-latest
@@ -113,28 +134,7 @@ jobs:
           safety-report.json
         retention-days: 30
 
-  # Docker Build Test
-  docker:
-    name: Docker Build Test
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build Docker image
-      run: |
-        docker build -t escrow-service-bot:test .
-
-    - name: Test Docker image
-      run: |
-        docker run --rm escrow-service-bot:test python -c "import sys; print('Python version:', sys.version)"
-
-  # Integration Tests
+  # Integration Tests - Only on main branch pushes
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -181,7 +181,7 @@ jobs:
       run: |
         make test-integration
 
-  # Performance Tests (Optional)
+  # Performance Tests - Only on main branch pushes
   performance:
     name: Performance Tests
     runs-on: ubuntu-latest
@@ -210,7 +210,7 @@ jobs:
           echo "No performance tests found, skipping..."
         fi
 
-  # Documentation Check
+  # Documentation Check - Runs on all events
   docs:
     name: Documentation Check
     runs-on: ubuntu-latest
@@ -236,7 +236,7 @@ jobs:
           echo "markdown-link-check not available, skipping link check"
         fi
 
-  # Final Status Check
+  # Final Status Check - Runs on all events
   status:
     name: Status Check
     runs-on: ubuntu-latest
