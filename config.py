@@ -53,7 +53,11 @@ DATABASE_NAME = os.getenv("DATABASE_NAME")
 BOT_FEE_PERCENTAGE = float(os.getenv("BOT_FEE_PERCENTAGE", "2.5"))  # Default 2.5% fee
 
 # Initialize bot application
-application = Application.builder().token(TOKEN).build()
+if TOKEN:
+    application = Application.builder().token(TOKEN).build()
+else:
+    # For testing environments where TOKEN might not be set
+    application = None
 
 # Initialize Quart application
 app = Quart(__name__)
