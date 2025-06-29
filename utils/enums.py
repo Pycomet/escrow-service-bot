@@ -1,10 +1,12 @@
 from enum import Enum
 
+
 class TradeTypeEnums(Enum):
     CRYPTO_FIAT = "CryptoToFiat"
     CRYPTO_CRYPTO = "CryptoToCrypto"
     CRYPTO_PRODUCT = "CryptoToProduct"
     MARKET_SHOP = "MarketShop"
+
 
 class TradeStatusEnums(Enum):
     PENDING = "pending"
@@ -17,6 +19,7 @@ class TradeStatusEnums(Enum):
     CANCELLED = "cancelled"
     EXPIRED = "expired"
 
+
 class CryptoCurrencyEnums(Enum):
     USDT = "USDT"
     BTC = "BTC"
@@ -27,11 +30,13 @@ class CryptoCurrencyEnums(Enum):
     DOGE = "DOGE"
     TRX = "TRX"
 
+
 class FiatCurrencyEnums(Enum):
     USD = "USD"
     EUR = "EUR"
     GBP = "GBP"
     JPY = "JPY"
+
 
 class CallbackDataEnums(Enum):
     # Main Menu
@@ -46,22 +51,23 @@ class CallbackDataEnums(Enum):
     SUPPORT = "support"
     REPORT = "report"
     FAQ = "faq"
-    
+
     # Wallet
     WALLET_BALANCES = "wallet_balances"
     WALLET_CREATE = "wallet_create"
     WALLET_TRANSACTIONS = "wallet_transactions"
     WALLET_REFRESH = "wallet_refresh"
-    
+
     # Trade Types
     TRADE_TYPE_PREFIX = "trade_type_"
     CURRENCY_PREFIX = "currency_"
-    
+
     # Actions
     CANCEL = "cancel"
     BACK = "back"
     CONFIRM = "confirm"
     DELETE = "delete"
+
 
 class EmojiEnums(Enum):
     # Trade related
@@ -75,7 +81,7 @@ class EmojiEnums(Enum):
     TARGET = "🎯"
     QUESTION = "❓"
     MAGNIFYING_GLASS = "🔍"
-    
+
     # Crypto
     BITCOIN = "₿"
     ETHEREUM = "Ξ"
@@ -85,7 +91,7 @@ class EmojiEnums(Enum):
     DOGECOIN = "Ð"
     TETHER = "₮"
     TRON = "ⓣ"
-    
+
     # Actions
     CHECK_MARK = "✅"
     CROSS_MARK = "❌"
@@ -96,12 +102,13 @@ class EmojiEnums(Enum):
     BACK_ARROW = "🔙"
     SEND = "💸"
     RECEIVE = "📥"
-    
+
     # Status
     FIRE = "🔥"
     STAR = "⭐"
     BELL = "🔔"
     ROBOT = "🤖"
+
 
 class MessageTypeEnums(Enum):
     WELCOME = "welcome"
@@ -114,6 +121,3 @@ class MessageTypeEnums(Enum):
     SUCCESS = "success"
     WARNING = "warning"
     INFO = "info"
-
-
-

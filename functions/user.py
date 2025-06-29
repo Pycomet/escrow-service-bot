@@ -1,7 +1,9 @@
+import logging
+
 from config import *
 from database import *
+
 from .utils import *
-import logging
 
 logger = logging.getLogger(__name__)
 

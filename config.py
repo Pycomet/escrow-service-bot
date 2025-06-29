@@ -1,23 +1,30 @@
-import os
-import logging
-import sys
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, ContextTypes, CommandHandler, MessageHandler, filters
-
-import emoji
-from quart import Quart, Blueprint, make_response, request
-from flask_restful import Api, Resource
-from pymongo import MongoClient
-import random
-import requests
-import string
 import asyncio
+import logging
+import os
+import random
+import string
+import sys
+
 # from prisma import Client
 from datetime import datetime
-import cryptocompare
 from typing import Optional
 
+import cryptocompare
+import emoji
+import requests
 from dotenv import load_dotenv
+from flask_restful import Api, Resource
+from pymongo import MongoClient
+from quart import Blueprint, Quart, make_response, request
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
 load_dotenv()
 
 # Enable debug mode via environment variable (default False)
@@ -57,16 +64,14 @@ db = client[DATABASE_NAME]
 
 # Define collections
 wallets = db.wallets
-coin_addresses = db.coin_addresses  
+coin_addresses = db.coin_addresses
 wallet_transactions = db.wallet_transactions
 
 # Configure logging to stdout for Cloud Run
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -76,32 +81,40 @@ logger = logging.getLogger(__name__)
 # If they already exist, MongoDB is a no-op.
 # ---------------------------------------------------------------------------
 
+
 def _ensure_db_indexes():
     try:
         # Trades collection indexes
         # Use partial unique index for invoice_id to allow multiple null values
         db.trades.create_index(
-            [("invoice_id", 1)], 
-            name="invoice_id_partial_unique", 
-            unique=True, 
+            [("invoice_id", 1)],
+            name="invoice_id_partial_unique",
+            unique=True,
             background=True,
             partialFilterExpression={
-                "invoice_id": {
-                    "$exists": True,
-                    "$type": "string"
-                }
-            }
+                "invoice_id": {"$exists": True, "$type": "string"}
+            },
         )
-        db.trades.create_index([("is_active", 1), ("updated_at", -1)], name="active_updated_idx", background=True)
+        db.trades.create_index(
+            [("is_active", 1), ("updated_at", -1)],
+            name="active_updated_idx",
+            background=True,
+        )
         db.trades.create_index([("seller_id", 1)], name="seller_idx", background=True)
         db.trades.create_index([("buyer_id", 1)], name="buyer_idx", background=True)
 
         # Users collection indexes (ensure fast look-ups by affiliate etc.)
-        db.users.create_index([("affiliate_code", 1)], name="affiliate_code_idx", background=True, unique=False)
+        db.users.create_index(
+            [("affiliate_code", 1)],
+            name="affiliate_code_idx",
+            background=True,
+            unique=False,
+        )
 
         logger.info("MongoDB indexes ensured ✅")
     except Exception as e:
         logger.error("Failed to create MongoDB indexes: %s", e)
+
 
 # Invoke immediately
 _ensure_db_indexes()

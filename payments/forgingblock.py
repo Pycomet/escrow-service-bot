@@ -1,5 +1,6 @@
-from config import *
 import requests
+
+from config import *
 
 
 class BitcoinApi(object):

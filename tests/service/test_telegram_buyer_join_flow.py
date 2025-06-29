@@ -1,70 +1,117 @@
-import pytest
-import types
+import os
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from telegram.ext._testing import PTBTestApplication, MessageBuilder, CallbackQueryBuilder
+import pytest
+
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+from telegram import CallbackQuery, Chat, Message, Update, User
+from telegram.ext import ContextTypes
 
 import config
-from functions import trades_db
+from handlers.join import handle_join_callback, handle_trade_id, join_handler
 
-# ---------------- shared fixtures -----------------
-@pytest.fixture(scope="session")
-def event_loop():
-    import asyncio
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+
+# Test fixtures
+@pytest.fixture
+def mock_seller_update():
+    """Create a mock Update object for seller"""
+    update = AsyncMock(spec=Update)
+    update.effective_user = AsyncMock(spec=User)
+    update.effective_user.id = 111  # seller_id
+    update.effective_user.username = "seller"
+    update.message = AsyncMock(spec=Message)
+    update.message.from_user = update.effective_user
+    update.message.chat = AsyncMock(spec=Chat)
+    update.message.chat.id = 111
+    return update
+
 
 @pytest.fixture
-async def ptb_app():
-    """Yield PTBTestApplication wrapping the production bot."""
-    test_app: PTBTestApplication = PTBTestApplication.wrap_application(config.application)
-    async with test_app:
-        yield test_app
+def mock_buyer_update():
+    """Create a mock Update object for buyer"""
+    update = AsyncMock(spec=Update)
+    update.effective_user = AsyncMock(spec=User)
+    update.effective_user.id = 222  # buyer_id
+    update.effective_user.username = "buyer"
+    update.message = AsyncMock(spec=Message)
+    update.message.from_user = update.effective_user
+    update.message.chat = AsyncMock(spec=Chat)
+    update.message.chat.id = 222
+    update.message.text = ""
+    update.callback_query = AsyncMock(spec=CallbackQuery)
+    update.callback_query.from_user = update.effective_user
+    update.callback_query.message = update.message
+    update.callback_query.data = ""
+    return update
 
-# ---------------- helper monkeypatch for missing join_trade -----------------
-@pytest.fixture(autouse=True)
-def _patch_join_trade(monkeypatch):
-    """Provide a simple implementation of trades_db.join_trade if it's missing."""
-    if not hasattr(trades_db, "join_trade"):
-        def _join_trade(trade_id: str, user_id: str):
-            trade = trades_db.get_trade(trade_id)
-            if not trade or trade.get("buyer_id"):
-                return False
-            config.db.trades.update_one({"_id": trade_id}, {"$set": {"buyer_id": user_id}})
-            return True
-        monkeypatch.setattr(trades_db, "join_trade", _join_trade)
-    yield
 
-# ---------------- actual test ----------------------
+@pytest.fixture
+def mock_context():
+    """Create a mock Context object"""
+    context = AsyncMock(spec=ContextTypes.DEFAULT_TYPE)
+    context.user_data = {}
+    context.bot = AsyncMock()
+    return context
+
+
 @pytest.mark.asyncio
-async def test_buyer_joins_flow(ptb_app):
-    seller_id = 111
-    buyer_id = 222
+async def test_buyer_joins_flow(mock_buyer_update, mock_context):
+    """Test buyer joining an existing trade"""
 
-    # Seller creates trade directly via DB helpers (faster than UI)
-    seller_msg = types.SimpleNamespace(
-        from_user=types.SimpleNamespace(id=seller_id, first_name="Seller"),
-        chat=types.SimpleNamespace(id=seller_id)
-    )
-    trade = trades_db.open_new_trade(seller_msg, currency="USDT", trade_type="CryptoToFiat")
-    tid = trade["_id"]
-    trades_db.confirm_crypto_deposit(tid)
-    trades_db.update_trade_status(tid, "deposited")
+    # Mock trade data
+    test_trade_id = "test_trade_123"
+    mock_trade = {
+        "_id": test_trade_id,
+        "seller_id": "111",
+        "buyer_id": "",  # Empty string means no buyer
+        "currency": "USDT",
+        "price": 150,
+        "trade_type": "CryptoToFiat",
+        "is_active": True,
+        "status": "deposited",
+        "terms": "Test trade terms",
+    }
 
-    # Buyer interaction via PTB
-    mb = MessageBuilder(buyer_id)
+    # Mock the database and other dependencies
+    with patch("handlers.join.TradeClient.get_trade") as mock_get_trade, patch(
+        "handlers.join.TradeClient.join_trade"
+    ) as mock_join_trade, patch("handlers.join.UserClient.get_user") as mock_get_user:
 
-    # /join command
-    await ptb_app.process_update(mb.command("/join"))
+        # Setup mocks
+        mock_get_trade.return_value = mock_trade
+        mock_join_trade.return_value = True
+        mock_get_user.return_value = {"_id": "222", "username": "buyer"}
 
-    # buyer sends trade id
-    await ptb_app.process_update(mb.text(tid))
+        # Step 1: Start join process
+        await join_handler(mock_buyer_update, mock_context)
 
-    # buyer confirms join
-    await ptb_app.process_update(
-        CallbackQueryBuilder(buyer_id, data=f"confirm_join_{tid}").build()
-    )
+        # Verify join process started - check state was set
+        assert mock_context.user_data.get("state") == "waiting_for_trade_id"
 
-    # Validate DB updated
-    final = trades_db.get_trade(tid)
-    assert final["buyer_id"] == str(buyer_id) 
+        # Step 2: Enter trade ID
+        mock_buyer_update.message.text = test_trade_id
+        mock_context.user_data["state"] = "waiting_for_trade_id"
+
+        await handle_trade_id(mock_buyer_update, mock_context)
+
+        # Verify trade details were shown
+        mock_buyer_update.message.reply_text.assert_called()
+        args, _ = mock_buyer_update.message.reply_text.call_args
+        assert "Trade Details" in args[0]
+        assert "150 USDT" in args[0]
+
+        # Step 3: Confirm join
+        mock_buyer_update.callback_query.data = f"confirm_join_{test_trade_id}"
+
+        await handle_join_callback(mock_buyer_update, mock_context)
+
+        # Verify join was attempted
+        mock_join_trade.assert_called_once_with(test_trade_id, 222)
+
+        # Verify success message
+        mock_buyer_update.callback_query.message.edit_text.assert_called()
+        args, _ = mock_buyer_update.callback_query.message.edit_text.call_args
+        assert "Successfully Joined Trade" in args[0]

@@ -1,6 +1,8 @@
-from config import *
-import requests
 import logging
+
+import requests
+
+from config import *
 from database import TradeType
 
 logger = logging.getLogger(__name__)

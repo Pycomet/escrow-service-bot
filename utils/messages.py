@@ -1,7 +1,9 @@
+from datetime import datetime
+from typing import Optional
+
 from config import *
 from database import *
 from utils.enums import EmojiEnums, MessageTypeEnums, TradeStatusEnums
-from typing import Optional
 
 
 class Messages:
@@ -16,7 +18,7 @@ My purpose is to create a save trade environment for both seller and buyer subje
 
 Your funds are save with me and will be refunded to you if the other party refuses to comply with the rules.
             """
-    
+
     @staticmethod
     def main_menu_welcome() -> str:
         return (
@@ -30,7 +32,7 @@ Your funds are save with me and will be refunded to you if the other party refus
             "📝 Let's create a new trade!\n\n"
             "Please select the type of trade you want to create:"
         )
-    
+
     # ========== ERROR MESSAGES ==========
     @staticmethod
     def trade_creation_in_progress() -> str:
@@ -38,28 +40,26 @@ Your funds are save with me and will be refunded to you if the other party refus
             f"{EmojiEnums.CROSS_MARK.value} You already have a trade creation in progress. "
             "Please complete it or use /cancel to start over."
         )
-    
+
     @staticmethod
     def active_trade_exists(trade_id: str) -> str:
         return (
             f"{EmojiEnums.CROSS_MARK.value} You already have an active trade (#{trade_id}). "
             "Please complete or cancel your current trade before starting a new one."
         )
-    
+
     @staticmethod
     def generic_error() -> str:
-        return (
-            f"{EmojiEnums.CROSS_MARK.value} An error occurred. Please try again or contact support."
-        )
-    
+        return f"{EmojiEnums.CROSS_MARK.value} An error occurred. Please try again or contact support."
+
     @staticmethod
     def trade_not_found(trade_id: str) -> str:
         return f"{EmojiEnums.CROSS_MARK.value} Trade {trade_id} not found. Please contact support."
-    
+
     @staticmethod
     def access_denied() -> str:
         return f"{EmojiEnums.CROSS_MARK.value} Access denied. You don't have permission for this action."
-    
+
     # ========== SUPPORT MESSAGES ==========
     @staticmethod
     def support_menu() -> str:
@@ -67,8 +67,8 @@ Your funds are save with me and will be refunded to you if the other party refus
             f"{EmojiEnums.QUESTION.value} <b>Need Help?</b>\n\n"
             "We're here to help! Choose an option below:"
         )
-    
-    @staticmethod  
+
+    @staticmethod
     def faq() -> str:
         return (
             f"{EmojiEnums.QUESTION.value} <b>Frequently Asked Questions</b>\n\n"
@@ -97,7 +97,7 @@ Your funds are save with me and will be refunded to you if the other party refus
             "🛡️ Encrypting all private data\n"
             "💾 Saving to secure database"
         )
-    
+
     @staticmethod
     def wallet_created_success(wallet: dict, coin_addresses: list) -> str:
         success_text = (
@@ -106,13 +106,13 @@ Your funds are save with me and will be refunded to you if the other party refus
             f"🆔 <b>Wallet ID:</b> <code>{wallet['_id']}</code>\n\n"
             f"🪙 <b>Created {len(coin_addresses)} coin addresses:</b>\n"
         )
-        
+
         for coin_address in coin_addresses[:6]:  # Show first 6
-            coin_symbol = coin_address['coin_symbol']
-            address = coin_address['address']
+            coin_symbol = coin_address["coin_symbol"]
+            address = coin_address["address"]
             display_address = f"{address[:10]}...{address[-6:]}"
             success_text += f"• {coin_symbol}: <code>{display_address}</code>\n"
-        
+
         success_text += (
             f"\n{EmojiEnums.LOCK.value} <b>Security Features:</b>\n"
             f"• All private keys encrypted with AES-256\n"
@@ -120,9 +120,9 @@ Your funds are save with me and will be refunded to you if the other party refus
             f"• One wallet, multiple currencies\n\n"
             f"{EmojiEnums.WARNING.value} <b>Important:</b> Keep your account secure!"
         )
-        
+
         return success_text
-    
+
     @staticmethod
     def wallet_creation_failed() -> str:
         return (
@@ -130,21 +130,21 @@ Your funds are save with me and will be refunded to you if the other party refus
             "An error occurred while creating your wallet. "
             "Please try again or contact support if the problem persists."
         )
-    
+
     @staticmethod
     def wallet_refreshing() -> str:
         return (
             f"{EmojiEnums.REFRESH.value} <b>Refreshing Wallet Balances</b>\n\n"
             "Please wait while we fetch the latest balance information from the blockchain..."
         )
-    
+
     @staticmethod
     def wallet_refreshed_success() -> str:
         return (
             f"{EmojiEnums.CHECK_MARK.value} <b>Balances Refreshed!</b>\n\n"
             "Your wallet balances have been updated with the latest information from the blockchain."
         )
-    
+
     @staticmethod
     def wallet_refresh_partial() -> str:
         return (
@@ -152,11 +152,11 @@ Your funds are save with me and will be refunded to you if the other party refus
             "Some balances may not have been updated due to network issues. "
             "You can try refreshing again in a moment."
         )
-    
+
     @staticmethod
     def wallet_not_found() -> str:
         return f"{EmojiEnums.CROSS_MARK.value} Wallet not found or access denied."
-    
+
     @staticmethod
     def wallet_details(wallet: dict, coin_addresses: list) -> str:
         details_text = f"📊 <b>Wallet Details</b>\n\n"
@@ -164,29 +164,29 @@ Your funds are save with me and will be refunded to you if the other party refus
         details_text += f"🆔 <b>ID:</b> <code>{wallet['_id']}</code>\n"
         details_text += f"👤 <b>Owner:</b> {wallet['user_id']}\n"
         details_text += f"🕐 <b>Created:</b> {wallet['created_at'][:16]}\n\n"
-        
+
         if coin_addresses:
             details_text += f"💰 <b>Coin Addresses ({len(coin_addresses)}):</b>\n\n"
             for coin_address in coin_addresses:
-                coin_symbol = coin_address['coin_symbol']
-                address = coin_address['address']
-                balance = coin_address.get('balance', '0')
-                
+                coin_symbol = coin_address["coin_symbol"]
+                address = coin_address["address"]
+                balance = coin_address.get("balance", "0")
+
                 coin_emoji = {
-                    'BTC': EmojiEnums.BITCOIN.value,
-                    'LTC': EmojiEnums.LITECOIN.value,
-                    'DOGE': EmojiEnums.DOGECOIN.value,
-                    'ETH': EmojiEnums.ETHEREUM.value,
-                    'SOL': EmojiEnums.SOLANA.value,
-                    'USDT': EmojiEnums.TETHER.value,
-                    'BNB': EmojiEnums.YELLOW_CIRCLE.value,
-                    'TRX': EmojiEnums.TRON.value
-                }.get(coin_symbol, '🪙')
-                
+                    "BTC": EmojiEnums.BITCOIN.value,
+                    "LTC": EmojiEnums.LITECOIN.value,
+                    "DOGE": EmojiEnums.DOGECOIN.value,
+                    "ETH": EmojiEnums.ETHEREUM.value,
+                    "SOL": EmojiEnums.SOLANA.value,
+                    "USDT": EmojiEnums.TETHER.value,
+                    "BNB": EmojiEnums.YELLOW_CIRCLE.value,
+                    "TRX": EmojiEnums.TRON.value,
+                }.get(coin_symbol, "🪙")
+
                 details_text += f"{coin_emoji} <b>{coin_symbol}</b>\n"
                 details_text += f"   💰 Balance: {balance}\n"
                 details_text += f"   📍 <code>{address}</code>\n\n"
-        
+
         return details_text
 
     # ========== TRADE MESSAGES ==========
@@ -241,11 +241,14 @@ You can go to payment portal by clicking the button below.
             """
 
     @staticmethod
-    def deposit_instructions(amount: float, currency: str, description: str, payment_url: str, trade_id: str) -> str:
+    def deposit_instructions(
+        amount: float, currency: str, description: str, payment_url: str, trade_id: str
+    ) -> str:
         """Generates the message for crypto deposit instructions."""
         from functions.trade import TradeClient
+
         fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
-        
+
         return f"""
 🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
@@ -267,11 +270,18 @@ If you encounter any issues, please contact support.
         """
 
     @staticmethod
-    def wallet_deposit_instructions(amount: float, currency: str, description: str, receiving_address: str, trade_id: str) -> str:
+    def wallet_deposit_instructions(
+        amount: float,
+        currency: str,
+        description: str,
+        receiving_address: str,
+        trade_id: str,
+    ) -> str:
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
         from functions.trade import TradeClient
+
         fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
-        
+
         return f"""
 🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
@@ -318,16 +328,32 @@ We will notify you once the buyer joins and completes their payment.
     def deposit_confirmed_seller_keyboard(trade: TradeType):
         """Keyboard for seller after deposit is confirmed."""
         # Example: could include a button to view trade details or go to menu
-        return InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"🔗 Share Trade ID: {trade['_id']}", switch_inline_query=f"Join my escrow trade! ID: {trade['_id']}")],
-            [InlineKeyboardButton("📜 View Trade Details", callback_data=f"view_trade_{trade['_id']}")],
-            [InlineKeyboardButton("🏡 Main Menu", callback_data="menu")]
-        ])
+        return InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        f"🔗 Share Trade ID: {trade['_id']}",
+                        switch_inline_query=f"Join my escrow trade! ID: {trade['_id']}",
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "📜 View Trade Details",
+                        callback_data=f"view_trade_{trade['_id']}",
+                    )
+                ],
+                [InlineKeyboardButton("🏡 Main Menu", callback_data="menu")],
+            ]
+        )
 
     @staticmethod
     def deposit_not_confirmed(trade_id: str, status: Optional[str]) -> str:
         """Message when crypto deposit is not yet confirmed."""
-        status_message = f"Current status: {status}" if status else "We could not detect your deposit yet."
+        status_message = (
+            f"Current status: {status}"
+            if status
+            else "We could not detect your deposit yet."
+        )
         return f"""
 ⏳ <b>Deposit Not Yet Confirmed for Trade ID: {trade_id}</b> ⏳
 --------------------------------------------------
@@ -348,7 +374,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
             "This action cannot be undone. If funds have been deposited, "
             "they will be refunded to the original sender."
         )
-    
+
     @staticmethod
     def trade_cancel_not_authorized(trade_id: str) -> str:
         return (
@@ -356,7 +382,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
             f"You are not authorized to cancel trade #{trade_id}. "
             "Only the seller or buyer involved in this trade can cancel it."
         )
-    
+
     @staticmethod
     def trade_cancelled_success(trade_id: str) -> str:
         return (
@@ -364,7 +390,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
             f"Trade #{trade_id} has been successfully cancelled. "
             "Any deposited funds will be refunded."
         )
-    
+
     @staticmethod
     def trade_cancel_failed(trade_id: str) -> str:
         return (
@@ -380,7 +406,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
             "How can we help you with this trade?\n\n"
             "Please select an option below:"
         )
-    
+
     @staticmethod
     def support_ticket_created(ticket_id: str) -> str:
         return (
@@ -393,10 +419,8 @@ If you have made the deposit and it's still not confirmed after some time, pleas
     # ========== DEPOSIT CHECK MESSAGES ==========
     @staticmethod
     def deposit_check_not_implemented(trade_type: str) -> str:
-        return (
-            f"{EmojiEnums.CROSS_MARK.value} Deposit checking is not yet implemented for {trade_type} trades."
-        )
-    
+        return f"{EmojiEnums.CROSS_MARK.value} Deposit checking is not yet implemented for {trade_type} trades."
+
     @staticmethod
     def invalid_deposit_check() -> str:
         return f"{EmojiEnums.CROSS_MARK.value} Invalid deposit check request. Please try again."
@@ -405,7 +429,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
     @staticmethod
     def loading_please_wait() -> str:
         return f"{EmojiEnums.HOURGLASS.value} Please wait..."
-    
+
     @staticmethod
     def processing_request() -> str:
         return f"{EmojiEnums.HOURGLASS.value} Processing your request..."
@@ -414,7 +438,7 @@ If you have made the deposit and it's still not confirmed after some time, pleas
     @staticmethod
     def operation_successful() -> str:
         return f"{EmojiEnums.CHECK_MARK.value} Operation completed successfully!"
-    
+
     @staticmethod
     def changes_saved() -> str:
         return f"{EmojiEnums.CHECK_MARK.value} Changes saved successfully!"
@@ -432,24 +456,24 @@ If you have made the deposit and it's still not confirmed after some time, pleas
             TradeStatusEnums.CANCELLED.value: EmojiEnums.CROSS_MARK.value,
             TradeStatusEnums.ERROR.value: EmojiEnums.CROSS_MARK.value,
         }
-        
+
         emoji = status_emoji_map.get(status, "")
         return f"{emoji} {status.title()}" if emoji else status.title()
-    
+
     @staticmethod
     def format_currency(amount: float, currency: str) -> str:
         """Format currency with appropriate emoji"""
         currency_emoji_map = {
-            'BTC': EmojiEnums.BITCOIN.value,
-            'ETH': EmojiEnums.ETHEREUM.value,
-            'LTC': EmojiEnums.LITECOIN.value,
-            'DOGE': EmojiEnums.DOGECOIN.value,
-            'SOL': EmojiEnums.SOLANA.value,
-            'USDT': EmojiEnums.TETHER.value,
-            'BNB': EmojiEnums.YELLOW_CIRCLE.value,
-            'TRX': EmojiEnums.TRON.value,
+            "BTC": EmojiEnums.BITCOIN.value,
+            "ETH": EmojiEnums.ETHEREUM.value,
+            "LTC": EmojiEnums.LITECOIN.value,
+            "DOGE": EmojiEnums.DOGECOIN.value,
+            "SOL": EmojiEnums.SOLANA.value,
+            "USDT": EmojiEnums.TETHER.value,
+            "BNB": EmojiEnums.YELLOW_CIRCLE.value,
+            "TRX": EmojiEnums.TRON.value,
         }
-        
+
         emoji = currency_emoji_map.get(currency.upper(), "💰")
         return f"{emoji} {amount} {currency.upper()}"
 

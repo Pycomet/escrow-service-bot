@@ -1,60 +1,96 @@
 import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CallbackQueryHandler, CommandHandler, MessageHandler, filters
-from utils.enums import CallbackDataEnums, EmojiEnums
-from utils.messages import Messages
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import (
+    CallbackQueryHandler,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+from config import *
+from functions import *
 from functions.trade import TradeClient
 from functions.user import UserClient
-from config import *
 from utils import *
-from functions import *
+from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.messages import Messages
 
 logger = logging.getLogger(__name__)
 
-async def send_message_or_edit(message, text, reply_markup, is_callback=False, parse_mode=None):
+
+async def send_message_or_edit(
+    message, text, reply_markup, is_callback=False, parse_mode=None
+):
     """Helper function to either send a new message or edit existing one"""
     try:
         if is_callback:
-            return await message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+            return await message.edit_text(
+                text, reply_markup=reply_markup, parse_mode=parse_mode
+            )
         else:
-            return await message.reply_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+            return await message.reply_text(
+                text, reply_markup=reply_markup, parse_mode=parse_mode
+            )
     except Exception as e:
         logger.error(f"Error in send_message_or_edit: {e}")
         raise
+
 
 async def join_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /join command"""
     try:
         is_callback = bool(update.callback_query)
         message = update.callback_query.message if is_callback else update.message
-        
+
         if is_callback:
             await update.callback_query.answer()
-        
+
         await send_message_or_edit(
             message,
             f"{EmojiEnums.MAGNIFYING_GLASS.value} Please enter the Trade ID you want to join:",
-            InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-            ]]),
-            is_callback
+            InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ]
+                ]
+            ),
+            is_callback,
         )
-        
+
         # Set state to wait for trade ID
         context.user_data["state"] = "waiting_for_trade_id"
-        logger.info(f"Set state to waiting_for_trade_id for user {update.effective_user.id}")
+        logger.info(
+            f"Set state to waiting_for_trade_id for user {update.effective_user.id}"
+        )
     except Exception as e:
         logger.error(f"Error in join handler: {e}")
         try:
-            message = update.callback_query.message if update.callback_query else update.message
+            message = (
+                update.callback_query.message
+                if update.callback_query
+                else update.message
+            )
             if message:
                 await send_message_or_edit(
                     message,
                     f"{EmojiEnums.CROSS_MARK.value} An error occurred. Please try again later.",
-                    InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]]),
-                    bool(update.callback_query)
+                    InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
+                    bool(update.callback_query),
                 )
         except Exception as e2:
             logger.error(f"Error sending error message: {e2}")
@@ -64,41 +100,57 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the trade ID input"""
     try:
         if context.user_data.get("state") != "waiting_for_trade_id":
-            logger.info(f"Ignoring message - state is not waiting_for_trade_id: {context.user_data.get('state')}")
+            logger.info(
+                f"Ignoring message - state is not waiting_for_trade_id: {context.user_data.get('state')}"
+            )
             return
-        
+
         trade_id = update.message.text.strip()
         user_id = update.effective_user.id
         logger.info(f"Processing trade ID {trade_id} for user {user_id}")
-        
+
         # Clear state
         context.user_data.pop("state", None)
-        
+
         # Get trade details
         trade = TradeClient.get_trade(trade_id)
         if not trade:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Trade not found. Please check the ID and try again.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Check if trade is available for joining
-        is_active = trade.get('is_active', False)
-        status = str(trade.get('status', '')).lower()
-        trade_type = trade.get('trade_type', '')
-        
+        is_active = trade.get("is_active", False)
+        status = str(trade.get("status", "")).lower()
+        trade_type = trade.get("trade_type", "")
+
         # For CryptoToFiat trades, they become available after seller deposits (status="deposited")
         # For other trade types, check if they're in pending status
         if trade_type == "CryptoToFiat":
             if not is_active or status not in ["deposited", "pending"]:
                 await update.message.reply_text(
                     f"{EmojiEnums.CROSS_MARK.value} This trade is no longer available for joining. The seller may not have deposited yet or the trade may be completed.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
         else:
@@ -106,46 +158,67 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if status != "pending":
                 await update.message.reply_text(
                     f"{EmojiEnums.CROSS_MARK.value} This trade is no longer available for joining (Status: {status}).",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
-        
+
         # Check if user is already involved in the trade
-        seller_id = str(trade.get('seller_id', ''))
-        buyer_id = str(trade.get('buyer_id', ''))
-        
+        seller_id = str(trade.get("seller_id", ""))
+        buyer_id = str(trade.get("buyer_id", ""))
+
         # Check if trade already has a buyer
         if buyer_id and buyer_id != "":
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} This trade already has a buyer and is no longer available.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         if str(user_id) in [seller_id, buyer_id]:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} You are already involved in this trade.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Store trade ID in context for later use
         context.user_data["join_trade_id"] = trade_id
-        
+
         # Show detailed trade information for CryptoToFiat trades
         if trade_type == "CryptoToFiat":
             # Enhanced display with detailed payment information
-            amount = str(trade.get('price', '0'))
-            currency = str(trade.get('currency', 'Unknown'))
-            created_at = str(trade.get('created_at', 'Unknown'))
-            terms = str(trade.get('terms', ''))
-            
+            amount = str(trade.get("price", "0"))
+            currency = str(trade.get("currency", "Unknown"))
+            created_at = str(trade.get("created_at", "Unknown"))
+            terms = str(trade.get("terms", ""))
+
             details = (
                 f"💰 <b>Crypto → Fiat Trade Details</b>\n\n"
                 f"🆔 <b>Trade ID:</b> <code>{trade_id}</code>\n"
@@ -153,10 +226,12 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📅 <b>Created:</b> {created_at}\n"
                 f"✅ <b>Status:</b> Seller has deposited crypto - Ready for buyer\n\n"
             )
-            
+
             if terms:
-                details += f"📋 <b>Payment Instructions from Seller:</b>\n<i>{terms}</i>\n\n"
-            
+                details += (
+                    f"📋 <b>Payment Instructions from Seller:</b>\n<i>{terms}</i>\n\n"
+                )
+
             details += (
                 f"<b>🔄 How this trade works:</b>\n"
                 f"1. You join as the buyer\n"
@@ -170,38 +245,57 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         else:
             # Original simple display for other trade types
-            amount = str(trade.get('price', '0'))
-            currency = str(trade.get('currency', 'Unknown'))
-            created_at = str(trade.get('created_at', 'Unknown'))
-            terms = str(trade.get('terms', ''))
-            
+            amount = str(trade.get("price", "0"))
+            currency = str(trade.get("currency", "Unknown"))
+            created_at = str(trade.get("created_at", "Unknown"))
+            terms = str(trade.get("terms", ""))
+
             details = (
                 f"📋 <b>Trade Details</b>\n\n"
                 f"ID: <code>{trade_id}</code>\n"
                 f"Amount: {amount} {currency}\n"
                 f"Created: {created_at}\n"
             )
-            
+
             if terms:
                 details += f"\nTerms: {terms}\n"
-            
+
             details += "\nWould you like to join this trade as a buyer?"
-        
+
         await update.message.reply_text(
             details,
             parse_mode="html",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton(f"{EmojiEnums.CHECK_MARK.value} Yes, Join Trade", callback_data=f"confirm_join_{trade_id}")],
-                [InlineKeyboardButton(f"{EmojiEnums.CROSS_MARK.value} No, Cancel", callback_data=CallbackDataEnums.MENU.value)]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.CHECK_MARK.value} Yes, Join Trade",
+                            callback_data=f"confirm_join_{trade_id}",
+                        )
+                    ],
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.CROSS_MARK.value} No, Cancel",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ],
+                ]
+            ),
         )
     except Exception as e:
         logger.error(f"Error in handle_trade_id: {e}")
         await update.message.reply_text(
             f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing the trade ID. Please try again later.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ]
+                ]
+            ),
         )
 
 
@@ -210,39 +304,39 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         query = update.callback_query
         await query.answer()
-        
+
         data = query.data
         logger.info(f"Processing join callback with data: {data}")
-        
+
         if data.startswith("confirm_join_"):
             trade_id = data.replace("confirm_join_", "")
             user_id = query.from_user.id
-            
+
             # Join the trade
             success = TradeClient.join_trade(trade_id, user_id)
             if success:
                 # Get updated trade info
                 trade = TradeClient.get_trade(trade_id)
-                
+
                 # Update trade status to "buyer_joined"
                 TradeClient.update_trade_status(trade_id, "buyer_joined")
-                
+
                 # Notify seller if trade exists
-                if trade and trade.get('seller_id'):
+                if trade and trade.get("seller_id"):
                     try:
                         await context.bot.send_message(
-                            chat_id=trade['seller_id'],
+                            chat_id=trade["seller_id"],
                             text=f"{EmojiEnums.CHECK_MARK.value} <b>Buyer Joined Your Trade!</b>\n\n"
-                                 f"Trade ID: <code>{trade_id}</code>\n"
-                                 f"A buyer has joined and will now make the fiat payment as per your instructions.\n\n"
-                                 f"You will be notified when they submit proof of payment for verification.",
-                            parse_mode="html"
+                            f"Trade ID: <code>{trade_id}</code>\n"
+                            f"A buyer has joined and will now make the fiat payment as per your instructions.\n\n"
+                            f"You will be notified when they submit proof of payment for verification.",
+                            parse_mode="html",
                         )
                     except Exception as e:
                         logger.error(f"Failed to notify seller: {e}")
-                
+
                 # Enhanced confirmation message for buyer with detailed next steps
-                trade_type = trade.get('trade_type', '')
+                trade_type = trade.get("trade_type", "")
                 if trade_type == "CryptoToFiat":
                     confirmation_msg = (
                         f"{EmojiEnums.CHECK_MARK.value} <b>Successfully Joined Trade #{trade_id}!</b>\n\n"
@@ -258,69 +352,116 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                         f"<b>🔒 Security:</b> The seller's crypto is safely held in escrow. "
                         f"You will only receive it after they verify your payment."
                     )
-                    
-                    reply_markup = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📤 Submit Payment Proof", callback_data=f"submit_proof_{trade_id}")],
-                        [InlineKeyboardButton("❓ Need Help?", callback_data=f"help_trade_{trade_id}")],
-                        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
-                    ])
+
+                    reply_markup = InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    "📤 Submit Payment Proof",
+                                    callback_data=f"submit_proof_{trade_id}",
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    "❓ Need Help?",
+                                    callback_data=f"help_trade_{trade_id}",
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ],
+                        ]
+                    )
                 else:
                     # Original message for other trade types
                     confirmation_msg = (
                         f"{EmojiEnums.CHECK_MARK.value} You have successfully joined trade #{trade_id}.\n\n"
                         "Please proceed with the payment to complete the trade."
                     )
-                    
-                    reply_markup = InlineKeyboardMarkup([
-                        [InlineKeyboardButton("💳 Make Payment", callback_data=f"pay_{trade_id}")],
-                        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
-                    ])
-                
+
+                    reply_markup = InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    "💳 Make Payment", callback_data=f"pay_{trade_id}"
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ],
+                        ]
+                    )
+
                 await query.message.edit_text(
-                    confirmation_msg,
-                    parse_mode="html",
-                    reply_markup=reply_markup
+                    confirmation_msg, parse_mode="html", reply_markup=reply_markup
                 )
             else:
                 await query.message.edit_text(
                     f"{EmojiEnums.CROSS_MARK.value} Failed to join trade. The trade may no longer be available.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
         elif data.startswith("submit_proof_"):
             # Handle fiat payment proof submission
             trade_id = data.replace("submit_proof_", "")
             user_id = query.from_user.id
-            
+
             # Verify user is the buyer
             trade = TradeClient.get_trade(trade_id)
-            if not trade or str(trade.get('buyer_id')) != str(user_id):
+            if not trade or str(trade.get("buyer_id")) != str(user_id):
                 await query.message.edit_text(
                     f"{EmojiEnums.CROSS_MARK.value} You are not authorized to submit proof for this trade.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
-            
+
             # Check if proof already submitted
-            if trade.get('fiat_payment_proof'):
+            if trade.get("fiat_payment_proof"):
                 await query.message.edit_text(
                     f"{EmojiEnums.INFO.value} <b>Payment Proof Already Submitted</b>\n\n"
                     f"You have already submitted payment proof for trade #{trade_id}.\n"
                     f"The seller is reviewing your submission.\n\n"
                     f"Status: {trade.get('status', 'Unknown')}",
                     parse_mode="html",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
-            
+
             # Set state for photo upload
             context.user_data["awaiting_payment_proof"] = trade_id
-            
+
             await query.message.edit_text(
                 f"📤 <b>Submit Payment Proof for Trade #{trade_id}</b>\n\n"
                 f"Please send a <b>photo or screenshot</b> of your payment confirmation.\n\n"
@@ -332,9 +473,15 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"<b>Accepted formats:</b> JPG, PNG, PDF\n\n"
                 f"📸 <i>Send your payment proof now...</i>",
                 parse_mode="html",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("❌ Cancel", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "❌ Cancel", callback_data=CallbackDataEnums.MENU.value
+                            )
+                        ]
+                    ]
+                ),
             )
         elif data.startswith("pay_"):
             # Original pay logic for non-CryptoToFiat trades
@@ -345,15 +492,33 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             if not trade:
                 await query.message.edit_text(
                     f"{EmojiEnums.CROSS_MARK.value} Trade not found.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
 
             # Ensure user is buyer
-            if str(trade.get('buyer_id')) != str(user_id):
+            if str(trade.get("buyer_id")) != str(user_id):
                 await query.message.edit_text(
                     f"{EmojiEnums.CROSS_MARK.value} You are not authorized to confirm payment for this trade.",
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
 
@@ -364,9 +529,9 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             # Notify seller
             try:
                 await context.bot.send_message(
-                    chat_id=trade['seller_id'],
+                    chat_id=trade["seller_id"],
                     text=f"{EmojiEnums.MONEY_BAG.value} Buyer has confirmed fiat payment for trade #{trade_id}. Please verify and release crypto when ready.",
-                    parse_mode="html"
+                    parse_mode="html",
                 )
             except Exception as e:
                 logger.error(f"Failed to notify seller about fiat payment: {e}")
@@ -374,7 +539,16 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             # Acknowledge buyer
             await query.message.edit_text(
                 f"{EmojiEnums.CHECK_MARK.value} Payment marked as completed. The seller has been notified.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
     except Exception as e:
         logger.error(f"Error in handle_join_callback: {e}")
@@ -382,39 +556,55 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             if query and query.message:
                 await query.message.edit_text(
                     f"{EmojiEnums.CROSS_MARK.value} An error occurred while joining the trade. Please try again later.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
         except Exception as e2:
             logger.error(f"Error sending error message: {e2}")
 
 
-async def handle_payment_proof_upload(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_payment_proof_upload(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
     """Handle payment proof photo/document upload"""
     try:
         trade_id = context.user_data.get("awaiting_payment_proof")
         if not trade_id:
             logger.info("Ignoring upload - not awaiting payment proof")
             return
-        
+
         user_id = update.effective_user.id
-        
+
         # Verify trade and user authorization
         trade = TradeClient.get_trade(trade_id)
-        if not trade or str(trade.get('buyer_id')) != str(user_id):
+        if not trade or str(trade.get("buyer_id")) != str(user_id):
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} You are not authorized to submit proof for this trade.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Get file information
         file_obj = None
         file_type = None
-        
+
         if update.message.photo:
             # Handle photo upload
             file_obj = update.message.photo[-1]  # Get highest resolution
@@ -423,63 +613,93 @@ async def handle_payment_proof_upload(update: Update, context: ContextTypes.DEFA
             # Handle document upload
             file_obj = update.message.document
             file_type = "document"
-            
+
             # Check file type
             mime_type = file_obj.mime_type or ""
-            if not any(allowed in mime_type.lower() for allowed in ['image', 'pdf']):
+            if not any(allowed in mime_type.lower() for allowed in ["image", "pdf"]):
                 await update.message.reply_text(
                     f"{EmojiEnums.CROSS_MARK.value} Invalid file type. Please send a photo (JPG, PNG) or PDF document.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data=CallbackDataEnums.MENU.value,
+                                )
+                            ]
+                        ]
+                    ),
                 )
                 return
         else:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Please send a photo or document as payment proof.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         if not file_obj:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Failed to process the uploaded file. Please try again.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Get file details
         file_id = file_obj.file_id
-        file_size = getattr(file_obj, 'file_size', 0)
-        
+        file_size = getattr(file_obj, "file_size", 0)
+
         # Check file size (limit to 10MB)
         if file_size > 10 * 1024 * 1024:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} File too large. Please upload a file smaller than 10MB.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Store payment proof in database
-        success = TradeClient.add_fiat_payment_proof(trade_id, file_id, file_type, user_id)
-        
+        success = TradeClient.add_fiat_payment_proof(
+            trade_id, file_id, file_type, user_id
+        )
+
         if success:
             # Update trade status
             TradeClient.update_trade_status(trade_id, "proof_submitted")
-            
+
             # Clear the awaiting state
             context.user_data.pop("awaiting_payment_proof", None)
-            
+
             # Notify seller about proof submission
             try:
                 await context.bot.send_message(
-                    chat_id=trade['seller_id'],
+                    chat_id=trade["seller_id"],
                     text=(
                         f"📤 <b>Payment Proof Submitted</b>\n\n"
                         f"Trade ID: <code>{trade_id}</code>\n"
@@ -487,15 +707,32 @@ async def handle_payment_proof_upload(update: Update, context: ContextTypes.DEFA
                         f"Please review and verify the payment proof."
                     ),
                     parse_mode="html",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔍 Review Payment Proof", callback_data=f"review_proof_{trade_id}")],
-                        [InlineKeyboardButton("✅ Approve & Release Crypto", callback_data=f"approve_payment_{trade_id}")],
-                        [InlineKeyboardButton("❌ Reject Payment", callback_data=f"reject_payment_{trade_id}")]
-                    ])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    "🔍 Review Payment Proof",
+                                    callback_data=f"review_proof_{trade_id}",
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    "✅ Approve & Release Crypto",
+                                    callback_data=f"approve_payment_{trade_id}",
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    "❌ Reject Payment",
+                                    callback_data=f"reject_payment_{trade_id}",
+                                )
+                            ],
+                        ]
+                    ),
                 )
             except Exception as e:
                 logger.error(f"Failed to notify seller about proof submission: {e}")
-            
+
             # Confirm to buyer
             await update.message.reply_text(
                 f"{EmojiEnums.CHECK_MARK.value} <b>Payment Proof Submitted!</b>\n\n"
@@ -508,85 +745,144 @@ async def handle_payment_proof_upload(update: Update, context: ContextTypes.DEFA
                 f"<b>Estimated review time:</b> Usually within a few hours\n\n"
                 f"Thank you for using our escrow service!",
                 parse_mode="html",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📊 Check Trade Status", callback_data=f"status_{trade_id}")],
-                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)]
-                ])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "📊 Check Trade Status",
+                                callback_data=f"status_{trade_id}",
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ],
+                    ]
+                ),
             )
         else:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Failed to submit payment proof. Please try again or contact support.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data=CallbackDataEnums.MENU.value,
+                            )
+                        ]
+                    ]
+                ),
             )
     except Exception as e:
         logger.error(f"Error in handle_payment_proof_upload: {e}")
         await update.message.reply_text(
             f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing your payment proof. Please try again.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ]
+                ]
+            ),
         )
 
 
-async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_buyer_address_input(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
     """Handle buyer address input for crypto release"""
     try:
         user_id = str(update.effective_user.id)
         address = update.message.text.strip()
-        
+
         # Find trade awaiting buyer address for this user
-        trade = db.trades.find_one({
-            "buyer_id": user_id,
-            "status": "awaiting_buyer_address",
-            "fiat_payment_approved": True
-        })
-        
+        trade = db.trades.find_one(
+            {
+                "buyer_id": user_id,
+                "status": "awaiting_buyer_address",
+                "fiat_payment_approved": True,
+            }
+        )
+
         if not trade:
             logger.info(f"No trade awaiting address for user {user_id}")
             return
-        
-        trade_id = trade['_id']
-        currency = trade.get('currency', '')
-        
+
+        trade_id = trade["_id"]
+        currency = trade.get("currency", "")
+
         # Basic address validation
         if not address or len(address) < 20:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Invalid address format. Please provide a valid {currency} address.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("❓ Need Help?", callback_data=f"help_address_{trade_id}"),
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "❓ Need Help?",
+                                callback_data=f"help_address_{trade_id}",
+                            ),
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data="menu",
+                            ),
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Additional validation based on currency
         if not _validate_crypto_address(address, currency):
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Invalid {currency} address format. Please check and try again.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("❓ Need Help?", callback_data=f"help_address_{trade_id}"),
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "❓ Need Help?",
+                                callback_data=f"help_address_{trade_id}",
+                            ),
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data="menu",
+                            ),
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Save buyer address
         success = TradeClient.set_buyer_address(trade_id, address)
         if not success:
             await update.message.reply_text(
                 f"{EmojiEnums.CROSS_MARK.value} Failed to save your address. Please try again or contact support.",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data="menu",
+                            )
+                        ]
+                    ]
+                ),
             )
             return
-        
+
         # Calculate amounts
-        original_amount = float(trade.get('price', 0))
-        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(original_amount)
-        
+        original_amount = float(trade.get("price", 0))
+        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(
+            original_amount
+        )
+
         # Show confirmation to buyer
         await update.message.reply_text(
             f"✅ <b>Address Confirmed!</b>\n\n"
@@ -596,18 +892,25 @@ async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAU
             f"🔄 <b>Initiating crypto release...</b>\n"
             f"Please wait while we transfer the crypto to your address.",
             parse_mode="html",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data="menu",
+                        )
+                    ]
+                ]
+            ),
         )
-        
+
         # Initiate crypto release
         release_success = TradeClient.initiate_crypto_release(trade_id)
-        
+
         if release_success:
             # Complete the trade
             TradeClient.complete_trade(trade_id)
-            
+
             # Notify buyer of successful release
             await context.bot.send_message(
                 chat_id=user_id,
@@ -621,16 +924,27 @@ async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAU
                     f"Thank you for using our escrow service! 🚀"
                 ),
                 parse_mode="html",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📊 Trade History", callback_data="trade_history")],
-                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
-                ])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "📊 Trade History", callback_data="trade_history"
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data="menu",
+                            )
+                        ],
+                    ]
+                ),
             )
-            
+
             # Notify seller of completion
             try:
                 await context.bot.send_message(
-                    chat_id=trade['seller_id'],
+                    chat_id=trade["seller_id"],
                     text=(
                         f"🎉 <b>Trade Completed Successfully!</b>\n\n"
                         f"Trade ID: <code>{trade_id}</code>\n\n"
@@ -640,10 +954,21 @@ async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAU
                         f"Trade completed! 🎉"
                     ),
                     parse_mode="html",
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📊 Trade History", callback_data="trade_history")],
-                        [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
-                    ])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    "📊 Trade History", callback_data="trade_history"
+                                )
+                            ],
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data="menu",
+                                )
+                            ],
+                        ]
+                    ),
                 )
             except Exception as e:
                 logger.error(f"Failed to notify seller of completion: {e}")
@@ -659,16 +984,28 @@ async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAU
                     f"Please contact support with your trade ID for assistance."
                 ),
                 parse_mode="html",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}")],
-                    [InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")]
-                ])
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "📞 Contact Support",
+                                url=f"https://t.me/{SUPPORT_USERNAME}",
+                            )
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                callback_data="menu",
+                            )
+                        ],
+                    ]
+                ),
             )
-            
+
             # Notify seller of issue
             try:
                 await context.bot.send_message(
-                    chat_id=trade['seller_id'],
+                    chat_id=trade["seller_id"],
                     text=(
                         f"⚠️ <b>Crypto Release Issue</b>\n\n"
                         f"Trade ID: <code>{trade_id}</code>\n\n"
@@ -677,20 +1014,34 @@ async def handle_buyer_address_input(update: Update, context: ContextTypes.DEFAU
                         f"You may be contacted for additional information."
                     ),
                     parse_mode="html",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-                    ]])
+                    reply_markup=InlineKeyboardMarkup(
+                        [
+                            [
+                                InlineKeyboardButton(
+                                    f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                                    callback_data="menu",
+                                )
+                            ]
+                        ]
+                    ),
                 )
             except Exception as e:
                 logger.error(f"Failed to notify seller of release issue: {e}")
-        
+
     except Exception as e:
         logger.error(f"Error in handle_buyer_address_input: {e}")
         await update.message.reply_text(
             f"{EmojiEnums.CROSS_MARK.value} An error occurred while processing your address. Please try again.",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data="menu")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data="menu",
+                        )
+                    ]
+                ]
+            ),
         )
 
 
@@ -698,23 +1049,39 @@ def _validate_crypto_address(address: str, currency: str) -> bool:
     """Basic crypto address validation"""
     try:
         currency = currency.upper()
-        
-        if currency == 'BTC':
+
+        if currency == "BTC":
             # Bitcoin address validation (basic)
-            return len(address) >= 26 and len(address) <= 35 and (address.startswith('1') or address.startswith('3') or address.startswith('bc1'))
-        elif currency == 'ETH' or currency == 'USDT':
+            return (
+                len(address) >= 26
+                and len(address) <= 35
+                and (
+                    address.startswith("1")
+                    or address.startswith("3")
+                    or address.startswith("bc1")
+                )
+            )
+        elif currency == "ETH" or currency == "USDT":
             # Ethereum address validation (basic)
-            return len(address) == 42 and address.startswith('0x')
-        elif currency == 'LTC':
+            return len(address) == 42 and address.startswith("0x")
+        elif currency == "LTC":
             # Litecoin address validation (basic)
-            return len(address) >= 26 and len(address) <= 35 and (address.startswith('L') or address.startswith('M') or address.startswith('ltc1'))
-        elif currency == 'SOL':
+            return (
+                len(address) >= 26
+                and len(address) <= 35
+                and (
+                    address.startswith("L")
+                    or address.startswith("M")
+                    or address.startswith("ltc1")
+                )
+            )
+        elif currency == "SOL":
             # Solana address validation (basic)
             return len(address) >= 32 and len(address) <= 44
         else:
             # Generic validation
             return len(address) >= 20
-            
+
     except Exception as e:
         logger.error(f"Error validating address: {e}")
         return False
@@ -724,20 +1091,28 @@ def register_handlers(application):
     """Register handlers for the join module"""
     application.add_handler(CommandHandler("join", join_handler))
     # Handle text messages for trade ID input, buyer address input, and rejection reasons
-    application.add_handler(MessageHandler(
-        filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
-        handle_trade_id
-    ))
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_trade_id
+        )
+    )
     # Handle photo uploads for payment proof
-    application.add_handler(MessageHandler(
-        filters.PHOTO & filters.ChatType.PRIVATE,
-        handle_payment_proof_upload
-    ))
+    application.add_handler(
+        MessageHandler(
+            filters.PHOTO & filters.ChatType.PRIVATE, handle_payment_proof_upload
+        )
+    )
     # Handle document uploads for payment proof
-    application.add_handler(MessageHandler(
-        filters.Document.ALL & filters.ChatType.PRIVATE,
-        handle_payment_proof_upload
-    ))
+    application.add_handler(
+        MessageHandler(
+            filters.Document.ALL & filters.ChatType.PRIVATE, handle_payment_proof_upload
+        )
+    )
     # Handle join-related callbacks
-    application.add_handler(CallbackQueryHandler(handle_join_callback, pattern="^(confirm_join_|pay_|submit_proof_|help_trade_)"))
+    application.add_handler(
+        CallbackQueryHandler(
+            handle_join_callback,
+            pattern="^(confirm_join_|pay_|submit_proof_|help_trade_)",
+        )
+    )
     # Note: buyer address input is now handled within handle_trade_id based on state

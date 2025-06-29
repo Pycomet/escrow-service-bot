@@ -1,12 +1,14 @@
 import logging
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
+
 from config import *
 from functions import *
 from utils import *
 from utils.enums import CallbackDataEnums, EmojiEnums
-from utils.messages import Messages
 from utils.keyboard import main_menu
+from utils.messages import Messages
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Get the user's first name
         user_name = update.effective_user.first_name or "User"
-        
+
         welcome_text = (
             f"🎪 <b>Welcome {user_name} to the Telegram Escrow Service Bot!</b>\n\n"
             "I help facilitate secure transactions between buyers and sellers. "
@@ -31,7 +33,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             welcome_text,
-            parse_mode='HTML',
+            parse_mode="HTML",
             reply_markup=await main_menu(update, context),
         )
 
@@ -41,10 +43,17 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{EmojiEnums.CROSS_MARK.value} <b>Welcome!</b>\n\n"
             "Something went wrong, but don't worry - you can still use the bot!\n"
             "Use the menu below to get started:",
-            parse_mode='HTML',
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-            ]])
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ]
+                ]
+            ),
         )
 
 
@@ -63,14 +72,23 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/help - Show this help message\n\n"
         "For more assistance, please contact our support team."
     )
-    
+
     await update.message.reply_text(
         help_text,
         parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}"),
-            InlineKeyboardButton(f"{EmojiEnums.BACK_ARROW.value} Back to Menu", callback_data=CallbackDataEnums.MENU.value)
-        ]])
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}"
+                    ),
+                    InlineKeyboardButton(
+                        f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                        callback_data=CallbackDataEnums.MENU.value,
+                    ),
+                ]
+            ]
+        ),
     )
 
 
