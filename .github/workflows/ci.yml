@@ -167,11 +167,28 @@ jobs:
         make install-dev
 
     - name: Set up environment variables
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL || 'mongodb://localhost:27017' }}
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME || 'escrowbot_test' }}
+        TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || 'test_token' }}
+        ADMIN_ID: ${{ secrets.ADMIN_ID || '123456789' }}
+        BTCPAY_URL: ${{ secrets.BTCPAY_URL }}
+        BTCPAY_API_KEY: ${{ secrets.BTCPAY_API_KEY }}
+        BTCPAY_STORE_ID: ${{ secrets.BTCPAY_STORE_ID }}
+        SUPPORT_USERNAME: ${{ secrets.SUPPORT_USERNAME || 'codefred' }}
+        BOT_FEE_PERCENTAGE: ${{ secrets.BOT_FEE_PERCENTAGE || '2.5' }}
+        DEBUG: ${{ secrets.DEBUG || 'true' }}
       run: |
-        echo "DATABASE_URL=mongodb://localhost:27017" >> $GITHUB_ENV
-        echo "DATABASE_NAME=escrowbot_test" >> $GITHUB_ENV
-        echo "TOKEN=test_token" >> $GITHUB_ENV
-        echo "ADMIN_ID=123456789" >> $GITHUB_ENV
+        echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+        echo "DATABASE_NAME=$DATABASE_NAME" >> $GITHUB_ENV
+        echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+        echo "ADMIN_ID=$ADMIN_ID" >> $GITHUB_ENV
+        echo "BTCPAY_URL=$BTCPAY_URL" >> $GITHUB_ENV
+        echo "BTCPAY_API_KEY=$BTCPAY_API_KEY" >> $GITHUB_ENV
+        echo "BTCPAY_STORE_ID=$BTCPAY_STORE_ID" >> $GITHUB_ENV
+        echo "SUPPORT_USERNAME=$SUPPORT_USERNAME" >> $GITHUB_ENV
+        echo "BOT_FEE_PERCENTAGE=$BOT_FEE_PERCENTAGE" >> $GITHUB_ENV
+        echo "DEBUG=$DEBUG" >> $GITHUB_ENV
 
     - name: Wait for MongoDB
       run: |
@@ -180,6 +197,92 @@ jobs:
     - name: Run integration tests
       run: |
         make test-integration
+
+  # Production Deployment - Only on main branch pushes
+  deploy:
+    name: Production Deployment
+    runs-on: ubuntu-latest
+    needs: [test, security, docker, integration]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        make install-dev
+
+    - name: Set up production environment variables
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        ADMIN_ID: ${{ secrets.ADMIN_ID }}
+        BTCPAY_URL: ${{ secrets.BTCPAY_URL }}
+        BTCPAY_API_KEY: ${{ secrets.BTCPAY_API_KEY }}
+        BTCPAY_STORE_ID: ${{ secrets.BTCPAY_STORE_ID }}
+        SUPPORT_USERNAME: ${{ secrets.SUPPORT_USERNAME }}
+        BOT_FEE_PERCENTAGE: ${{ secrets.BOT_FEE_PERCENTAGE }}
+        DEBUG: ${{ secrets.DEBUG }}
+        WEBHOOK_MODE: ${{ secrets.WEBHOOK_MODE }}
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        PORT: ${{ secrets.PORT }}
+        # Blockchain and wallet secrets
+        WALLET_ENCRYPTION_KEY: ${{ secrets.WALLET_ENCRYPTION_KEY }}
+        SOLANA_FEE_PAYER_SECRET: ${{ secrets.SOLANA_FEE_PAYER_SECRET }}
+        BSC_FEE_PAYER_SECRET: ${{ secrets.BSC_FEE_PAYER_SECRET }}
+        BLOCK_CYPHER_API_TOKEN: ${{ secrets.BLOCK_CYPHER_API_TOKEN }}
+        LTC_FEE_WALLET: ${{ secrets.LTC_FEE_WALLET }}
+        DOGE_FEE_WALLET: ${{ secrets.DOGE_FEE_WALLET }}
+        SOL_RPC_URL: ${{ secrets.SOL_RPC_URL }}
+        INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
+        PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      run: |
+        echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+        echo "DATABASE_NAME=$DATABASE_NAME" >> $GITHUB_ENV
+        echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+        echo "ADMIN_ID=$ADMIN_ID" >> $GITHUB_ENV
+        echo "BTCPAY_URL=$BTCPAY_URL" >> $GITHUB_ENV
+        echo "BTCPAY_API_KEY=$BTCPAY_API_KEY" >> $GITHUB_ENV
+        echo "BTCPAY_STORE_ID=$BTCPAY_STORE_ID" >> $GITHUB_ENV
+        echo "SUPPORT_USERNAME=$SUPPORT_USERNAME" >> $GITHUB_ENV
+        echo "BOT_FEE_PERCENTAGE=$BOT_FEE_PERCENTAGE" >> $GITHUB_ENV
+        echo "DEBUG=$DEBUG" >> $GITHUB_ENV
+        echo "WEBHOOK_MODE=$WEBHOOK_MODE" >> $GITHUB_ENV
+        echo "WEBHOOK_URL=$WEBHOOK_URL" >> $GITHUB_ENV
+        echo "PORT=$PORT" >> $GITHUB_ENV
+        echo "WALLET_ENCRYPTION_KEY=$WALLET_ENCRYPTION_KEY" >> $GITHUB_ENV
+        echo "SOLANA_FEE_PAYER_SECRET=$SOLANA_FEE_PAYER_SECRET" >> $GITHUB_ENV
+        echo "BSC_FEE_PAYER_SECRET=$BSC_FEE_PAYER_SECRET" >> $GITHUB_ENV
+        echo "BLOCK_CYPHER_API_TOKEN=$BLOCK_CYPHER_API_TOKEN" >> $GITHUB_ENV
+        echo "LTC_FEE_WALLET=$LTC_FEE_WALLET" >> $GITHUB_ENV
+        echo "DOGE_FEE_WALLET=$DOGE_FEE_WALLET" >> $GITHUB_ENV
+        echo "SOL_RPC_URL=$SOL_RPC_URL" >> $GITHUB_ENV
+        echo "INFURA_PROJECT_ID=$INFURA_PROJECT_ID" >> $GITHUB_ENV
+        echo "PRIVATE_KEY=$PRIVATE_KEY" >> $GITHUB_ENV
+
+    - name: Run production tests
+      run: |
+        echo "Running production environment tests..."
+        python tests/test_production_config.py
+
+    - name: Build and test Docker image with production config
+      run: |
+        docker build -t escrow-service-bot:production .
+        docker run --rm --env-file <(env | grep -E '^(TOKEN|DATABASE_URL|DATABASE_NAME|ADMIN_ID|BTCPAY|SUPPORT_USERNAME|BOT_FEE_PERCENTAGE|DEBUG|WEBHOOK|PORT|WALLET|SOLANA|BSC|BLOCK_CYPHER|LTC|DOGE|SOL_RPC|INFURA|PRIVATE_KEY)=') escrow-service-bot:production python -c "import config; print('✅ Production config loaded successfully')"
+
+    - name: Deploy to production (placeholder)
+      run: |
+        echo "🚀 Ready to deploy to production!"
+        echo "Add your deployment steps here (e.g., Google Cloud Run, AWS, etc.)"
+        echo "All environment variables are properly configured"
 
   # Performance Tests - Only on main branch pushes
   performance:
@@ -240,7 +343,7 @@ jobs:
   status:
     name: Status Check
     runs-on: ubuntu-latest
-    needs: [test, security, docker, integration, performance, docs]
+    needs: [test, security, docker, integration, deploy, performance, docs]
     if: always()
 
     steps:
@@ -251,6 +354,7 @@ jobs:
         echo "Security job status: ${{ needs.security.result }}"
         echo "Docker job status: ${{ needs.docker.result }}"
         echo "Integration job status: ${{ needs.integration.result }}"
+        echo "Deploy job status: ${{ needs.deploy.result }}"
         echo "Performance job status: ${{ needs.performance.result }}"
         echo "Docs job status: ${{ needs.docs.result }}"
         
