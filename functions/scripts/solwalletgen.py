@@ -1,9 +1,10 @@
+import hashlib
+
 from mnemonic import Mnemonic
-from solders.keypair import Keypair
-import hashlib
-from solders.pubkey import Pubkey
 from nacl.signing import SigningKey
-import hashlib
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
+
 
 def generate_solana_wallet():
     mnemo = Mnemonic("english")
@@ -17,10 +18,11 @@ def generate_solana_wallet():
     solana_keypair = Keypair.from_bytes(full_key)
     public_address = str(solana_keypair.pubkey())
     return {
-        'mnemonic': mnemonic_phrase,
-        'private_key': private_key.hex(),
-        'public_address': public_address
+        "mnemonic": mnemonic_phrase,
+        "private_key": private_key.hex(),
+        "public_address": public_address,
     }
+
 
 # Example usage
 # wallet = generate_solana_wallet()
