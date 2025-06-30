@@ -1,9 +1,11 @@
+import logging
+
+from quart import request
+from telegram import Bot
+
 from config import *
 from functions import *
 from utils import *
-from telegram import Bot
-from quart import request
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +15,11 @@ async def handle_invoice_paid_webhook(data, bot: Bot):
     try:
         logger.info(f"Processing invoice paid webhook for invoice: {data['invoiceId']}")
         trade = TradeClient.get_trade_by_invoice_id(data["invoiceId"])
-        
+
         if not trade:
             logger.error(f"No trade found for invoice ID: {data['invoiceId']}")
             return False
-            
+
         TradeClient.handle_invoice_paid(data["invoiceId"])
         logger.info(f"Trade {trade['_id']} marked as paid")
 
@@ -86,7 +88,7 @@ async def handle_invoice_paid_webhook(data, bot: Bot):
             logger.error(f"Failed to send announcement to review channel: {e}")
 
         return True
-        
+
     except Exception as e:
         logger.error(f"Error in handle_invoice_paid_webhook: {e}", exc_info=True)
         return False
@@ -99,17 +101,19 @@ async def handle_payment_received_webhook(data, bot: Bot):
     if not trade:
         logger.error(f"No trade found for invoice ID: {data['invoiceId']}")
         return
-        
+
     logging.info(f"Trade Data From Webhook: {data}")
-    trade_id = trade.get('_id') if isinstance(trade, dict) else getattr(trade, '_id', None)
+    trade_id = (
+        trade.get("_id") if isinstance(trade, dict) else getattr(trade, "_id", None)
+    )
     if not trade_id:
         logger.error(f"Could not get trade ID from trade object: {trade}")
         return
-        
+
     await bot.send_message(
         chat_id=ADMIN_ID,
         text=f"New payment received for Trade {trade_id}",
-        parse_mode="html"
+        parse_mode="html",
     )
     logger.info(f"Payment received notification sent to admin for trade {trade_id}")
 
@@ -145,7 +149,7 @@ async def process_merchant_webhook(bot: Bot):
     try:
         data = await request.get_json()
         logger.info(f"Received merchant webhook: {data}")
-        
+
         event_type = data["type"]
         logger.info(f"Processing webhook event type: {event_type}")
 
@@ -155,7 +159,9 @@ async def process_merchant_webhook(bot: Bot):
 
         elif event_type in ["InvoicePaymentSettled", "InvoiceSettled"]:
             await handle_invoice_paid_webhook(data, bot)
-            logger.info("Successfully processed InvoicePaymentSettled/InvoiceSettled webhook")
+            logger.info(
+                "Successfully processed InvoicePaymentSettled/InvoiceSettled webhook"
+            )
 
         elif event_type == "InvoiceExpired":
             await handle_invoice_expired_webhook(data, bot)
@@ -166,5 +172,5 @@ async def process_merchant_webhook(bot: Bot):
     except Exception as e:
         logger.error(f"Error processing merchant webhook: {e}", exc_info=True)
         return f"Error: {str(e)}", 500
-    
+
     return "Webhook processed successfully", 200

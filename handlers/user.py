@@ -1,15 +1,18 @@
-from config import *
-from utils import *
-from functions import *
 from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
+from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
+
+from config import *
+from functions import *
+from utils import *
 
 
 async def user_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Returns the user's wallet address
     """
-    await context.bot.send_chat_action(chat_id=update.message.from_user.id, action="typing")
+    await context.bot.send_chat_action(
+        chat_id=update.message.from_user.id, action="typing"
+    )
     user = UserClient.get_user(update.message)
 
     await context.bot.send_message(
@@ -23,7 +26,9 @@ async def update_user_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE)
     """
     Updates the user's wallet address
     """
-    await context.bot.send_chat_action(chat_id=update.message.from_user.id, action="typing")
+    await context.bot.send_chat_action(
+        chat_id=update.message.from_user.id, action="typing"
+    )
     user = UserClient.get_user(update.message)
 
     await context.bot.send_message(
@@ -45,10 +50,11 @@ async def update_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     UserClient.set_wallet(user["_id"], address)
 
     await context.bot.send_message(
-        chat_id=update.message.from_user.id, 
-        text="✅ Wallet updated successfully", 
-        reply_markup=trade_menu()
+        chat_id=update.message.from_user.id,
+        text="✅ Wallet updated successfully",
+        reply_markup=trade_menu(),
     )
+
 
 # Register handlers
 application.add_handler(CommandHandler("wallet", user_wallet))
