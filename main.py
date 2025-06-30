@@ -23,6 +23,11 @@ from utils import *
 def register_handlers():
     """Register all handlers for the bot"""
     try:
+        # Check if application is available (might be None in testing)
+        if application is None:
+            logger.warning("Application is None, skipping handler registration")
+            return
+            
         # Import and register handlers from each module
         from handlers.admin import register_handlers as register_admin
         from handlers.affiliate import register_handlers as register_affiliate
@@ -83,6 +88,12 @@ async def initialize_bot():
     """Initialize the bot in background to not block startup"""
     try:
         logger.info("Initializing Telegram bot...")
+        
+        # Check if application is available (might be None in testing)
+        if application is None:
+            logger.warning("Application is None, skipping bot initialization")
+            return
+            
         await application.initialize()
         await application.start()
         register_handlers()
@@ -137,9 +148,12 @@ async def initialize_bot():
 async def shutdown():
     """Clean up resources after serving"""
     try:
-        await application.stop()
-        await application.shutdown()
-        logger.info("Bot stopped successfully")
+        if application is not None:
+            await application.stop()
+            await application.shutdown()
+            logger.info("Bot stopped successfully")
+        else:
+            logger.info("No application to shutdown")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
@@ -151,11 +165,11 @@ async def health_check():
         status = {
             "status": "ok",
             "message": "Service is running",
-            "details": {"application_running": application.running},
+            "details": {"application_running": application.running if application else False},
         }
 
         # Only check Telegram API status if application is running
-        if application.running:
+        if application and application.running:
             try:
                 # Set a short timeout for the request
                 bot_info = await asyncio.wait_for(application.bot.get_me(), timeout=2.0)
@@ -167,6 +181,9 @@ async def health_check():
             except Exception as bot_err:
                 status["details"]["bot_connected"] = False
                 status["details"]["bot_error"] = str(bot_err)
+        else:
+            status["details"]["bot_connected"] = False
+            status["details"]["bot_error"] = "Application not initialized"
 
         return jsonify(status), 200
     except Exception as e:
@@ -183,6 +200,14 @@ async def health_check():
 async def webhook():
     """Handle incoming webhook updates"""
     try:
+        # Check if application is available
+        if application is None:
+            logger.error("Application is None, cannot process webhook")
+            return (
+                jsonify({"status": "error", "message": "Bot not initialized"}),
+                503,
+            )
+            
         # Initialize the bot if it's not running
         if not application.running:
             logger.info("Bot not running, initializing on demand...")
@@ -219,6 +244,14 @@ async def webhook():
 async def set_webhook():
     """Set the webhook for the bot"""
     try:
+        # Check if application is available
+        if application is None:
+            logger.error("Application is None, cannot set webhook")
+            return (
+                jsonify({"status": "error", "message": "Bot not initialized"}),
+                503,
+            )
+            
         if not application.running:
             await application.initialize()
             await application.start()
@@ -266,6 +299,14 @@ async def set_webhook():
 async def handle_payment_webhook():
     """Handle payment webhook from merchant"""
     try:
+        # Check if application is available
+        if application is None:
+            logger.error("Application is None, cannot process payment webhook")
+            return (
+                jsonify({"status": "error", "message": "Bot not initialized"}),
+                503,
+            )
+            
         if not application.running:
             await application.initialize()
             await application.start()
@@ -289,6 +330,10 @@ async def root():
 
 def run_polling():
     """Run the bot in polling mode"""
+    if application is None:
+        logger.error("Application is None, cannot run in polling mode")
+        return
+        
     register_handlers()  # Register handlers before starting polling
     logger.info("Starting bot in polling mode...")
     application.run_polling(drop_pending_updates=True)
