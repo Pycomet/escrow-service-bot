@@ -1,23 +1,27 @@
 import time
+
 from tronpy import Tron
 from tronpy.keys import PrivateKey
 
-def send_token_tx(private_key_hex, recipient_address, token_amount, token_contract_address, fee_limit=10_000_000):
-   
+
+def send_token_tx(
+    private_key_hex,
+    recipient_address,
+    token_amount,
+    token_contract_address,
+    fee_limit=10_000_000,
+):
+
     client = Tron(network="shasta")
-    
-    
+
     contract = client.get_contract(token_contract_address)
-    
 
     priv_key = PrivateKey(bytes.fromhex(private_key_hex))
-    
-   
+
     sender_address = priv_key.public_key.to_base58check_address()
-    
- 
+
     amount = int(token_amount * 1_000_000)
-    
+
     # Build, sign, and broadcast the transfer transaction
     txn = (
         contract.functions.transfer(recipient_address, amount)
@@ -26,11 +30,11 @@ def send_token_tx(private_key_hex, recipient_address, token_amount, token_contra
         .build()
         .sign(priv_key)
     )
-    
+
     result = txn.broadcast()
     txid = result.get("txid")
     print(f"Transaction broadcasted. TXID: {txid}")
-    
+
     # Poll for transaction info until available (this may take a few seconds)
     tx_info = None
     for _ in range(20):
@@ -38,7 +42,7 @@ def send_token_tx(private_key_hex, recipient_address, token_amount, token_contra
         if tx_info:
             break
         time.sleep(1)
-    
+
     if not tx_info:
         print("Transaction info not available yet.")
     else:
@@ -47,10 +51,13 @@ def send_token_tx(private_key_hex, recipient_address, token_amount, token_contra
         # TRX fee is energy_used in SUN if no free energy is used.
         trx_fee = energy_used  # in SUN (1 TRX = 1,000,000 SUN)
         print(f"Energy used: {energy_used} units")
-        print(f"Approximate TRX fee (if no free Energy available): {trx_fee / 1_000_000} TRX")
+        print(
+            f"Approximate TRX fee (if no free Energy available): {trx_fee / 1_000_000} TRX"
+        )
         print(f"View transaction: https://shasta.tronscan.org/#/transaction/{txid}")
-    
+
     return txid
+
 
 # Example usage:
 if __name__ == "__main__":
@@ -58,5 +65,5 @@ if __name__ == "__main__":
     RECIPIENT = "RECIPIENT_ADDRESS_HERE"
     TOKEN_CONTRACT = "TXy6wdiMaqJBt8TDYgvr8H4SM6csonPVXL"
     TOKEN_AMOUNT = 100
-    
+
     send_token_tx(PRIVATE_KEY, RECIPIENT, TOKEN_AMOUNT, TOKEN_CONTRACT)

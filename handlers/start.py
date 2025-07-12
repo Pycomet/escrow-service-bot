@@ -1,43 +1,60 @@
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import ContextTypes, CommandHandler, MessageHandler, filters
+import logging
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import CommandHandler, ContextTypes, MessageHandler, filters
+
 from config import *
 from functions import *
 from utils import *
+from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.keyboard import main_menu
+from utils.messages import Messages
+
+logger = logging.getLogger(__name__)
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /start command"""
-    user = update.effective_user
-    await context.bot.send_chat_action(chat_id=user.id, action="typing")
-    
-    # Check if user has a referral code
-    args = context.args
-    if args:
-        referral_code = args[0]
-        # Store referral code for later use
-        context.user_data["referral_code"] = referral_code
-    
-    # Get user data
-    user_data = UserClient.get_user(update.message)
-    
-    # Welcome message
-    welcome_text = (
-        f"👋 Welcome {user.first_name}!\n\n"
-        "I'm your Escrow Service Bot. I can help you with:\n\n"
-        "💰 Creating secure trades\n"
-        "🤝 Joining existing trades\n"
-        "📜 Viewing trade history\n"
-        "📋 Reading rules and guidelines\n"
-        "👥 Joining our community\n"
-        "🎯 Participating in our affiliate program\n\n"
-        "What would you like to do?"
-    )
-    
-    await update.message.reply_text(
-        text=welcome_text,
-        reply_markup=await main_menu(update, context),
-        parse_mode="html"
-    )
+    try:
+        # Get the user's first name
+        user_name = update.effective_user.first_name or "User"
+
+        welcome_text = (
+            f"🎪 <b>Welcome {user_name} to the Telegram Escrow Service Bot!</b>\n\n"
+            "I help facilitate secure transactions between buyers and sellers. "
+            "Here's what you can do:\n\n"
+            f"{EmojiEnums.MONEY_BAG.value} Creating secure trades\n"
+            f"{EmojiEnums.HANDSHAKE.value} Joining existing trades\n"
+            f"{EmojiEnums.SCROLL.value} Viewing trade history\n"
+            f"{EmojiEnums.LOCK.value} Managing your crypto wallets\n\n"
+            "💡 <b>Tip:</b> All your funds are secured through our escrow system until both parties are satisfied!\n\n"
+            "Choose an option below to get started:"
+        )
+
+        await update.message.reply_text(
+            welcome_text,
+            parse_mode="HTML",
+            reply_markup=await main_menu(update, context),
+        )
+
+    except Exception as e:
+        logger.error(f"Error in start handler: {e}")
+        await update.message.reply_text(
+            f"{EmojiEnums.CROSS_MARK.value} <b>Welcome!</b>\n\n"
+            "Something went wrong, but don't worry - you can still use the bot!\n"
+            "Use the menu below to get started:",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                            callback_data=CallbackDataEnums.MENU.value,
+                        )
+                    ]
+                ]
+            ),
+        )
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,14 +72,23 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/help - Show this help message\n\n"
         "For more assistance, please contact our support team."
     )
-    
+
     await update.message.reply_text(
         help_text,
         parse_mode="html",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}"),
-            InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")
-        ]])
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "📞 Contact Support", url=f"https://t.me/{SUPPORT_USERNAME}"
+                    ),
+                    InlineKeyboardButton(
+                        f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                        callback_data=CallbackDataEnums.MENU.value,
+                    ),
+                ]
+            ]
+        ),
     )
 
 

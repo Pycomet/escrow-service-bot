@@ -17,4 +17,4 @@ mock_client = MagicMock()
 # Environment settings for tests
 os.environ["TESTING"] = "True"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ["DATABASE_NAME"] = TEST_DATABASE_NAME 
+os.environ["DATABASE_NAME"] = TEST_DATABASE_NAME

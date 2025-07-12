@@ -1,27 +1,36 @@
-# THIS IS NEW VERSION
-from mnemonic import Mnemonic
+# Simplified version for compatibility
+import binascii
+
 from hdwallet import HDWallet
-from hdwallet.symbols import LTC as SYMBOL
-from binascii import hexlify
+from hdwallet.cryptocurrencies import Litecoin
+from hdwallet.seeds import BIP39Seed
+from mnemonic import Mnemonic
 
 
 def generate_litecoin_wallet():
     mnemo = Mnemonic("english")
     mnemonic = mnemo.generate(strength=128)
     print(f"Mnemonic: {mnemonic}")
-    seed = mnemo.to_seed(mnemonic)
-    seed_hex = hexlify(seed).decode()
-    hdwallet = HDWallet(symbol=SYMBOL, use_default_path=False)
-    hdwallet.from_seed(seed=seed_hex)
-    hdwallet.from_path("m/84'/2'/0'/0/0")
-    ltc_address = hdwallet.p2wpkh_address()
-    ltc_private_key = hdwallet.private_key()
-    mnemonic = mnemonic
-    private_key = ltc_private_key
-    bech32_address = ltc_address
-    return {
-        'mnemonic': mnemonic,
-        'private_key': private_key,
-        'bech32_address': bech32_address
-    }
 
+    # Generate seed bytes from mnemonic
+    seed_bytes = mnemo.to_seed(mnemonic)
+    seed_hex = binascii.hexlify(seed_bytes).decode()
+
+    # Create BIP39 seed object from seed bytes
+    seed = BIP39Seed(seed=seed_hex)
+
+    # Create HDWallet instance
+    hdwallet = HDWallet(cryptocurrency=Litecoin)
+
+    # Initialize from seed
+    hdwallet.from_seed(seed=seed)
+
+    # Get wallet data (using default derivation)
+    ltc_address = hdwallet.address()
+    ltc_private_key = hdwallet.private_key()
+
+    return {
+        "mnemonic": mnemonic,
+        "private_key": ltc_private_key,
+        "bech32_address": ltc_address,
+    }

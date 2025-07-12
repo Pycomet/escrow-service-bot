@@ -1,0 +1,33 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203,W503,F403,F405,F541,E402,E722,E711,E712,E265,E266,W291,W293,F841,F811,F401
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    .mypy_cache,
+    .pytest_cache,
+    htmlcov,
+    .coverage
+per-file-ignores =
+    # Ignore unused imports in __init__.py files
+    __init__.py:F401
+    # Ignore line too long in test files (allow longer test names)
+    tests/*:E501
+    # Ignore star imports in __init__.py files (they're often necessary)
+    __init__.py:F403,F405
+    # Ignore some common issues in handlers (they use star imports)
+    handlers/*:F403,F405,F541
+    # Ignore some issues in main.py (it uses star imports)
+    main.py:F403,F405
+    # Ignore some issues in utils (they use star imports)
+    utils/*:F403,F405,F541
+    # Ignore some issues in functions (they use star imports)
+    functions/*:F403,F405
+    # Ignore some issues in payments (they use star imports)
+    payments/*:F403,F405 

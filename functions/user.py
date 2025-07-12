@@ -1,6 +1,11 @@
+import logging
+
 from config import *
 from database import *
+
 from .utils import *
+
+logger = logging.getLogger(__name__)
 
 
 def get_msg_id(msg) -> int:
@@ -40,7 +45,7 @@ class UserClient:
             "disabled": False,
             "created_at": datetime.now(),
         }
-        print(new_user)
+        logger.info(f"Created new user document: {new_user}")
 
         db.users.insert_one(new_user)
         return new_user
