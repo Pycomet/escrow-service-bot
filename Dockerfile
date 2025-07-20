@@ -10,7 +10,7 @@ ENV PORT 8080
 
 # install system dependencies
 RUN apt-get update \
-    && apt-get -y install netcat gcc curl \
+    && apt-get -y install netcat-openbsd gcc curl \
     && apt-get clean
 
 # install python dependencies
