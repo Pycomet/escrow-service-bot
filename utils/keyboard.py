@@ -295,34 +295,34 @@ def currency_menu(type: Optional[str]):
                 f"{EmojiEnums.TETHER.value} {CryptoCurrencyEnums.USDT.value}",
                 f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.USDT.value}",
             ),
-            (
-                f"{EmojiEnums.BITCOIN.value} {CryptoCurrencyEnums.BTC.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BTC.value}",
-            ),
+            # (
+            #     f"{EmojiEnums.BITCOIN.value} {CryptoCurrencyEnums.BTC.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BTC.value}",
+            # ),
             (
                 f"{EmojiEnums.ETHEREUM.value} {CryptoCurrencyEnums.ETH.value}",
                 f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.ETH.value}",
             ),
-            (
-                f"{EmojiEnums.SOLANA.value} {CryptoCurrencyEnums.SOL.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.SOL.value}",
-            ),
-            (
-                f"{EmojiEnums.YELLOW_CIRCLE.value} {CryptoCurrencyEnums.BNB.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BNB.value}",
-            ),
-            (
-                f"{EmojiEnums.LITECOIN.value} {CryptoCurrencyEnums.LTC.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.LTC.value}",
-            ),
-            (
-                f"{EmojiEnums.DOGECOIN.value} {CryptoCurrencyEnums.DOGE.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.DOGE.value}",
-            ),
-            (
-                f"{EmojiEnums.TRON.value} {CryptoCurrencyEnums.TRX.value}",
-                f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.TRX.value}",
-            ),
+            # (
+            #     f"{EmojiEnums.SOLANA.value} {CryptoCurrencyEnums.SOL.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.SOL.value}",
+            # ),
+            # (
+            #     f"{EmojiEnums.YELLOW_CIRCLE.value} {CryptoCurrencyEnums.BNB.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.BNB.value}",
+            # ),
+            # (
+            #     f"{EmojiEnums.LITECOIN.value} {CryptoCurrencyEnums.LTC.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.LTC.value}",
+            # ),
+            # (
+            #     f"{EmojiEnums.DOGECOIN.value} {CryptoCurrencyEnums.DOGE.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.DOGE.value}",
+            # ),
+            # (
+            #     f"{EmojiEnums.TRON.value} {CryptoCurrencyEnums.TRX.value}",
+            #     f"{CallbackDataEnums.CURRENCY_PREFIX.value}{CryptoCurrencyEnums.TRX.value}",
+            # ),
         ]
     else:
         currencies = [
