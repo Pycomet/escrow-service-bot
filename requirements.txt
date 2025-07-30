@@ -40,6 +40,7 @@ pycparser==2.20
 pycryptodome==3.9.7
 pymongo==4.3.3
 pyTelegramBotAPI==3.6.7
+google-generativeai
 # Testing and dev dependencies
 pytest==7.4.0
 pytest-asyncio==0.21.1
@@ -60,3 +61,10 @@ urllib3==2.3.0
 web3==7.6.0
 Werkzeug==2.2.3
 wsproto==1.2.0
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+mongomock
+pytz
