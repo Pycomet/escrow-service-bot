@@ -139,7 +139,7 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
             "📢 <b>Official Channels</b>\n"
             "• Announcements: @{REVIEW_CHANNEL}\n"
             "• Trading Group: @{CONTACT_SUPPORT}\n\n"
-            "• Creator: @{TRADING_CHANNEL}\n"
+            "• Contact Support: @{TRADING_CHANNEL}\n"
             f"{EmojiEnums.HANDSHAKE.value} <b>Community Guidelines</b>\n"
             "• Be respectful to others\n"
             "• No spam or advertising\n"
