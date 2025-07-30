@@ -49,6 +49,10 @@ BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 DATABASE_URL = os.getenv("DATABASE_URL")
 DATABASE_NAME = os.getenv("DATABASE_NAME")
 
+REVIEW_CHANNEL = os.getenv("REVIEW_CHANNEL", "trusted_escrow_bot_reviews")
+CONTACT_SUPPORT = os.getenv("CONTACT_SUPPORT", "trusted_escrow_bot_support")
+TRADING_CHANNEL = os.getenv("TRADING_CHANNEL", "trusted_escrow_bot_trading")
+
 # Bot fee configuration
 BOT_FEE_PERCENTAGE = float(os.getenv("BOT_FEE_PERCENTAGE", "2.5"))  # Default 2.5% fee
 
