@@ -1,0 +1,90 @@
+2025-07-30 04:59:31,278 - config - INFO - MongoDB indexes ensured ✅
+2025-07-30 04:59:31,614 - config - INFO - Starting bot in webhook mode...
+ * Serving Quart app 'config'
+ * Environment: production
+ * Please use an ASGI server (e.g. Hypercorn) directly in production
+ * Debug mode: False
+ * Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-07-30 04:59:31,630 - config - INFO - Starting application initialization...
+2025-07-30 04:59:31,630 - config - INFO - Application ready to serve requests
+2025-07-30 04:59:31,630 - config - INFO - Initializing Telegram bot...
+[2025-07-30 04:59:31 +0100] [21410] [INFO] Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-07-30 04:59:31,630 - hypercorn.error - INFO - Running on http://0.0.0.0:8000 (CTRL + C to quit)
+2025-07-30 04:59:32,049 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/getMe "HTTP/1.1 200 OK"
+2025-07-30 04:59:32,051 - telegram.ext.Application - INFO - Application started
+2025-07-30 04:59:32,247 - handlers.callbacks - INFO - Callback handlers registered successfully
+2025-07-30 04:59:32,248 - config - INFO - All handlers registered successfully
+2025-07-30 04:59:32,248 - config - INFO - Checking for existing webhooks...
+2025-07-30 04:59:32,381 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/getWebhookInfo "HTTP/1.1 200 OK"
+2025-07-30 04:59:32,381 - config - INFO - Webhook is already correctly set. No changes needed.
+2025-07-30 04:59:32,381 - config - INFO - Bot initialized successfully
+2025-07-30 04:59:36,346 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/sendChatAction "HTTP/1.1 200 OK"
+2025-07-30 04:59:36,688 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/sendMessage "HTTP/1.1 200 OK"
+[2025-07-30 04:59:36 +0100] [21410] [INFO] 127.0.0.1:56732 POST /webhook 1.1 200 20 485898
+2025-07-30 04:59:38,020 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 04:59:38,020 - handlers.admin - INFO - Callback data: admin_menu
+2025-07-30 04:59:38,021 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 04:59:38,021 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 04:59:38,161 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:38,163 - handlers.admin - INFO - Admin 577180091 accessing: admin_menu
+2025-07-30 04:59:38,163 - handlers.admin - INFO - Admin 577180091 requesting admin menu
+2025-07-30 04:59:38,300 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:39,088 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+[2025-07-30 04:59:39 +0100] [21410] [INFO] 127.0.0.1:56732 POST /webhook 1.1 200 20 1074848
+2025-07-30 04:59:40,888 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 04:59:40,889 - handlers.admin - INFO - Callback data: admin_broadcast
+2025-07-30 04:59:40,889 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 04:59:40,889 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 04:59:41,179 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:41,181 - handlers.admin - INFO - Admin 577180091 accessing: admin_broadcast
+2025-07-30 04:59:41,319 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:41,468 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+[2025-07-30 04:59:41 +0100] [21410] [INFO] 127.0.0.1:56732 POST /webhook 1.1 200 20 584434
+2025-07-30 04:59:46,339 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 04:59:46,339 - handlers.admin - INFO - Callback data: admin_broadcast_context_system
+2025-07-30 04:59:46,339 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 04:59:46,339 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 04:59:46,479 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:46,480 - handlers.admin - INFO - Admin 577180091 accessing: admin_broadcast_context_system
+2025-07-30 04:59:46,632 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:46,795 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+2025-07-30 04:59:46,797 - handlers.admin - INFO - Generating Gemini message for context: system
+2025-07-30 04:59:53,471 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+[2025-07-30 04:59:53 +0100] [21410] [INFO] 127.0.0.1:56732 POST /webhook 1.1 200 20 7138631
+2025-07-30 04:59:53,625 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 04:59:53,625 - handlers.admin - INFO - Callback data: admin_broadcast_context_system
+2025-07-30 04:59:53,625 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 04:59:53,625 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 04:59:53,763 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:53,765 - handlers.admin - INFO - Admin 577180091 accessing: admin_broadcast_context_system
+2025-07-30 04:59:54,012 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 04:59:54,157 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+2025-07-30 04:59:54,158 - handlers.admin - INFO - Generating Gemini message for context: system
+2025-07-30 05:00:02,360 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+[2025-07-30 05:00:02 +0100] [21410] [INFO] 127.0.0.1:56732 POST /webhook 1.1 200 20 8739939
+2025-07-30 05:00:15,773 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 05:00:15,773 - handlers.admin - INFO - Callback data: admin_broadcast_confirm
+2025-07-30 05:00:15,773 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 05:00:15,773 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 05:00:16,164 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 05:00:16,165 - handlers.admin - INFO - Admin 577180091 accessing: admin_broadcast_confirm
+2025-07-30 05:00:16,291 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 05:00:16,428 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+2025-07-30 05:00:16,430 - handlers.admin - INFO - Starting broadcast to 3 active users
+2025-07-30 05:00:16,583 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/sendMessage "HTTP/1.1 200 OK"
+2025-07-30 05:00:17,235 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/sendMessage "HTTP/1.1 200 OK"
+2025-07-30 05:00:17,909 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/sendMessage "HTTP/1.1 200 OK"
+2025-07-30 05:00:18,549 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+2025-07-30 05:00:18,551 - handlers.admin - INFO - Broadcast completed: 3/3 successful
+2025-07-30 05:00:18,692 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+2025-07-30 05:00:18,695 - handlers.admin - INFO - Broadcast completed by admin 577180091: 3/3 successful
+[2025-07-30 05:00:18 +0100] [21410] [INFO] 127.0.0.1:56753 POST /webhook 1.1 200 20 2927499
+2025-07-30 05:00:18,832 - handlers.admin - INFO - === ADMIN CALLBACK HANDLER TRIGGERED ===
+2025-07-30 05:00:18,832 - handlers.admin - INFO - Callback data: admin_broadcast_confirm
+2025-07-30 05:00:18,832 - handlers.admin - INFO - User ID: 577180091
+2025-07-30 05:00:18,832 - handlers.admin - INFO - Admin ID from config: 577180091
+2025-07-30 05:00:18,961 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 05:00:18,962 - handlers.admin - INFO - Admin 577180091 accessing: admin_broadcast_confirm
+2025-07-30 05:00:19,089 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/answerCallbackQuery "HTTP/1.1 200 OK"
+2025-07-30 05:00:19,228 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1352730431:AAHM8plPIrQVjN3uas7LiGPBWCfIIYUDXkU/editMessageText "HTTP/1.1 200 OK"
+[2025-07-30 05:00:19 +0100] [21410] [INFO] 127.0.0.1:56753 POST /webhook 1.1 200 20 402723

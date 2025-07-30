@@ -57,21 +57,33 @@ class AdminBroadcastManager:
             return "Error: Invalid message context."
 
         prompt = f"""
-        Objective: Create a short, engaging Telegram broadcast message for an escrow trading bot.
-        
+        Objective: Create a short, vibrant, and professional Telegram broadcast message for an escrow trading bot.
+
         Context: {MESSAGE_CONTEXTS[context_type]}
-        
-        Requirements:
-        - Must be under 350 characters.
-        - Start with a relevant, single emoji.
-        - Be professional, clear, and concise.
-        - Mention the official channels: @{TRADING_CHANNEL} (for trading), @{REVIEW_CHANNEL} (for reviews), and @{CONTACT_SUPPORT} (for support).
-        - End with a strong call to action, telling the user to press `/start`.
-        
+
+        Formatting Requirements:
+        - Use Telegram's HTML formatting.
+        - Use a variety of expressive Unicode emojis (like 🛡️, 🚀, 💡, 📣, ✨) to make the message visually engaging.
+        - Structure the message with clear, bolded headings (e.g., `<b>What's New?</b>`).
+        - Embed channel links directly into text for a cleaner look. Example: `<a href="https://t.me/{TRADING_CHANNEL}">Join our Trading Channel</a>`.
+        - Keep the total message under 450 characters.
+        - End with a clear call to action, telling the user to press `/start`.
+
+        Channel Linking Rules:
+        - For 'trading' context, the primary link must be to the Trading Channel: @{TRADING_CHANNEL}.
+        - For 'community' and 'system' contexts, the primary link must be to the Reviews/Announcements Channel: @{REVIEW_CHANNEL}.
+        - For 'important' context, the primary link must be to the Support Channel: @{CONTACT_SUPPORT}.
+        - Other channels can be mentioned secondarily if relevant.
+
         Example for 'trading':
-        💰 Ready for a secure trade? Our platform is online and ready to protect your assets. Join hundreds of successful trades today! Community: @{TRADING_CHANNEL}. Press /start to begin.
+        🚀 <b>Ready to Trade Securely?</b>
+        Our escrow platform is active and protecting transactions 24/7! Join hundreds of successful trades today.
         
-        Now, generate a new message for the context: {context_type}
+        📣 <a href="https://t.me/{TRADING_CHANNEL}">Find trading partners in our community!</a>
+        
+        Press <code>/start</code> to begin.
+
+        Now, generate a new, engaging message for the context: {context_type}
         """
         
         try:
