@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
+import google.generativeai as genai
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     CallbackQueryHandler,
@@ -22,6 +23,467 @@ from functions.wallet import WalletManager
 from utils.enums import EmojiEnums
 
 logger = logging.getLogger(__name__)
+
+# Configure the Gemini API client
+try:
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    if not GEMINI_API_KEY:
+        logger.warning("GEMINI_API_KEY is not set. AI features will be disabled.")
+        genai.configure(api_key="invalid_key")  # Prevent crashing if not set
+    else:
+        genai.configure(api_key=GEMINI_API_KEY)
+except Exception as e:
+    logger.error(f"Failed to configure Gemini API: {e}")
+
+
+MESSAGE_CONTEXTS = {
+    "system": "Generate a brief, professional message about system improvements, new features, and reliability.",
+    "trading": "Create an engaging, short message encouraging users to trade, mentioning platform security and ease of use.",
+    "community": "Write a friendly community update thanking users for their participation and promoting the official channels.",
+    "important": "Craft an urgent but reassuring message about important platform news or a security announcement."
+}
+
+
+class AdminBroadcastManager:
+    """Admin functions for broadcasting messages to users"""
+    
+    @staticmethod
+    async def generate_ai_message(context_type: str) -> str:
+        """
+        Generates a broadcast message using the Gemini API.
+        Falls back to a placeholder message if the API call fails.
+        """
+        if context_type not in MESSAGE_CONTEXTS:
+            return "Error: Invalid message context."
+
+        prompt = f"""
+        Objective: Create a short, vibrant, and professional Telegram broadcast message for an escrow trading bot.
+
+        Context: {MESSAGE_CONTEXTS[context_type]}
+
+        Formatting Requirements:
+        - Use Telegram's HTML formatting.
+        - Use a variety of expressive Unicode emojis (like 🛡️, 🚀, 💡, 📣, ✨) to make the message visually engaging.
+        - Structure the message with clear, bolded headings (e.g., `<b>What's New?</b>`).
+        - Embed channel links directly into text for a cleaner look. Example: `<a href="https://t.me/{TRADING_CHANNEL}">Join our Trading Channel</a>`.
+        - Keep the total message under 450 characters.
+        - End with a clear call to action, telling the user to press `/start`.
+
+        Channel Linking Rules:
+        - For 'trading' context, the primary link must be to the Trading Channel: @{TRADING_CHANNEL}.
+        - For 'community' and 'system' contexts, the primary link must be to the Reviews/Announcements Channel: @{REVIEW_CHANNEL}.
+        - For 'important' context, the primary link must be to the Support Channel: @{CONTACT_SUPPORT}.
+        - Other channels can be mentioned secondarily if relevant.
+
+        Example for 'trading':
+        🚀 <b>Ready to Trade Securely?</b>
+        Our escrow platform is active and protecting transactions 24/7! Join hundreds of successful trades today.
+        
+        📣 <a href="https://t.me/{TRADING_CHANNEL}">Find trading partners in our community!</a>
+        
+        Press <code>/start</code> to begin.
+
+        Now, generate a new, engaging message for the context: {context_type}
+        """
+        
+        try:
+            logger.info(f"Generating Gemini message for context: {context_type}")
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            response = await model.generate_content_async(prompt)
+            
+            if response and response.text:
+                return response.text.strip()
+            else:
+                raise ValueError("Received an empty response from Gemini API.")
+
+        except Exception as e:
+            logger.error(f"Gemini API call failed for context '{context_type}': {e}")
+            
+            # --- Fallback to Placeholder Logic ---
+            logger.info(f"Falling back to placeholder message for context: {context_type}")
+            placeholder_messages = {
+                "system": (
+                    f"🔧 System Update! We've rolled out enhancements for faster and more reliable trading. "
+                    f"Your security is our top priority. For details, see @{REVIEW_CHANNEL}. Press `/start` to continue trading."
+                ),
+                "trading": (
+                    f"💰 Ready for a secure trade? Our escrow service is active and protecting transactions 24/7. "
+                    f"Join our community @{TRADING_CHANNEL} to find partners. Press `/start` to create your trade!"
+                ),
+                "community": (
+                    f"👥 Thank you for being a part of our community! Your trust makes this platform possible. "
+                    f"Share your feedback @{REVIEW_CHANNEL} or get help from @{CONTACT_SUPPORT}. Press `/start` to trade."
+                ),
+                "important": (
+                    f"🚨 Important Notice: Please be aware of scammers. Our official support is only @{CONTACT_SUPPORT}. "
+                    f"We will never ask for your private keys. Stay safe! Press `/start` to use the official bot."
+                )
+            }
+            return placeholder_messages.get(context_type, "Could not generate or retrieve a message.")
+            # --- End Fallback Logic ---
+    
+    @staticmethod
+    async def get_all_users_for_broadcast():
+        """Get all users for broadcasting with detailed statistics"""
+        try:
+            # Get all users from database
+            all_users = list(db.users.find({}))
+            
+            # Categorize users
+            active_users = []
+            disabled_users = []
+            private_chats = []
+            group_chats = []
+            
+            for user in all_users:
+                user_id = str(user.get('_id', ''))
+                chat_id = str(user.get('chat', ''))
+                is_disabled = user.get('disabled', False)
+                
+                # Skip if essential fields are missing
+                if not user_id or not chat_id:
+                    continue
+                
+                if is_disabled:
+                    disabled_users.append(user)
+                else:
+                    active_users.append(user)
+                    
+                # Determine if it's a private chat (positive) or group (negative)
+                try:
+                    chat_id_int = int(chat_id)
+                    if chat_id_int > 0:
+                        private_chats.append(user)
+                    else:
+                        group_chats.append(user)
+                except ValueError:
+                    # If conversion fails, treat as private
+                    private_chats.append(user)
+            
+            return {
+                'all_users': all_users,
+                'active_users': active_users,
+                'disabled_users': disabled_users,
+                'private_chats': private_chats,
+                'group_chats': group_chats,
+                'stats': {
+                    'total_users': len(all_users),
+                    'active_users': len(active_users),
+                    'disabled_users': len(disabled_users),
+                    'private_chats': len(private_chats),
+                    'group_chats': len(group_chats)
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching users for broadcast: {e}")
+            return None
+    
+    @staticmethod
+    async def send_broadcast_message(bot, users_data, message: str, progress_callback=None):
+        """Send broadcast message to users with rate limiting and progress tracking"""
+        results = {
+            'sent_successfully': 0,
+            'failed_sends': 0,
+            'blocked_users': 0,
+            'invalid_chats': 0,
+            'private_successful': 0,
+            'group_successful': 0,
+            'private_failed': 0,
+            'group_failed': 0,
+            'errors': []
+        }
+        
+        active_users = users_data['active_users']
+        total_users = len(active_users)
+        
+        # Rate limiting parameters
+        base_delay = 0.5  # Base delay between messages
+        current_delay = base_delay
+        max_delay = 10.0  # Maximum delay
+        failure_threshold = 3  # Increase delay after this many consecutive failures
+        consecutive_failures = 0
+        
+        logger.info(f"Starting broadcast to {total_users} active users")
+        
+        for index, user in enumerate(active_users, 1):
+            try:
+                user_id = str(user.get('_id', ''))
+                chat_id = str(user.get('chat', ''))
+                user_name = user.get('name', 'User')
+                
+                if not chat_id:
+                    results['invalid_chats'] += 1
+                    continue
+                
+                # Determine chat type
+                is_private = True
+                try:
+                    chat_id_int = int(chat_id)
+                    is_private = chat_id_int > 0
+                except ValueError:
+                    is_private = True
+                
+                # Send message
+                await bot.send_message(
+                    chat_id=chat_id,
+                    text=message,
+                    parse_mode='HTML'
+                )
+                
+                # Success tracking
+                results['sent_successfully'] += 1
+                if is_private:
+                    results['private_successful'] += 1
+                else:
+                    results['group_successful'] += 1
+                    
+                consecutive_failures = 0  # Reset failure counter
+                current_delay = base_delay  # Reset delay
+                
+                logger.debug(f"✅ Sent to {user_name} ({chat_id})")
+                
+            except Exception as e:
+                error_str = str(e).lower()
+                results['failed_sends'] += 1
+                consecutive_failures += 1
+                
+                # Categorize the error
+                if 'blocked' in error_str or 'forbidden' in error_str:
+                    results['blocked_users'] += 1
+                elif 'chat not found' in error_str:
+                    results['invalid_chats'] += 1
+                else:
+                    if is_private:
+                        results['private_failed'] += 1
+                    else:
+                        results['group_failed'] += 1
+                
+                results['errors'].append(f"User {user_id}: {str(e)}")
+                logger.warning(f"❌ Failed to send to {user.get('name', 'Unknown')} ({chat_id}): {e}")
+                
+                # Increase delay after consecutive failures
+                if consecutive_failures >= failure_threshold:
+                    current_delay = min(current_delay * 1.5, max_delay)
+                    logger.info(f"Increased delay to {current_delay:.1f}s due to consecutive failures")
+            
+            # Progress update
+            if progress_callback and index % 10 == 0:  # Update every 10 messages
+                await progress_callback(index, total_users, results)
+            
+            # Rate limiting delay
+            await asyncio.sleep(current_delay)
+        
+        # Final progress update
+        if progress_callback:
+            await progress_callback(total_users, total_users, results)
+        
+        logger.info(f"Broadcast completed: {results['sent_successfully']}/{total_users} successful")
+        return results
+
+
+# Broadcast Handler Functions
+async def admin_broadcast_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show broadcast message type selection"""
+    query = update.callback_query
+    await query.answer()
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔧 System Update", callback_data="admin_broadcast_context_system")],
+        [InlineKeyboardButton("💰 Trading Focus", callback_data="admin_broadcast_context_trading")],
+        [InlineKeyboardButton("👥 Community Message", callback_data="admin_broadcast_context_community")],
+        [InlineKeyboardButton("🚨 Important Notice", callback_data="admin_broadcast_context_important")],
+        [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")]
+    ])
+    
+    await query.edit_message_text(
+        "📢 <b>Select Broadcast Message Type</b>\n\n"
+        "Choose a context, and a message will be generated for your review.",
+        parse_mode="HTML",
+        reply_markup=keyboard
+    )
+
+async def admin_broadcast_context_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate AI message and show confirmation"""
+    query = update.callback_query
+    await query.answer()
+
+    context_type = query.data.replace("admin_broadcast_context_", "")
+    
+    await query.edit_message_text(
+        f"🤖 Generating message for '{context_type}' context...\nPlease wait.",
+        parse_mode="HTML"
+    )
+
+    try:
+        # Generate the AI message
+        generated_message = await AdminBroadcastManager.generate_ai_message(context_type)
+        
+        # Get user statistics
+        users_data = await AdminBroadcastManager.get_all_users_for_broadcast()
+        
+        if not users_data:
+            await query.edit_message_text(
+                "❌ <b>Error:</b> Could not fetch user data.",
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")
+                ]])
+            )
+            return
+            
+        stats = users_data['stats']
+        
+        confirmation_text = (
+            f"📝 <b>Confirm Broadcast</b>\n\n"
+            f"<b>Message Preview:</b>\n"
+            f"--------------------\n"
+            f"{generated_message}\n"
+            f"--------------------\n\n"
+            f"<b>Audience:</b>\n"
+            f"• Will be sent to <b>{stats['active_users']}</b> active users.\n"
+            f"• <b>{stats['disabled_users']}</b> disabled users will be skipped.\n\n"
+            f"⚠️ This action cannot be undone. Do you approve this message?"
+        )
+        
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Send Broadcast", callback_data="admin_broadcast_confirm")],
+            [InlineKeyboardButton("✍️ Regenerate", callback_data=f"admin_broadcast_context_{context_type}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="admin_menu")]
+        ])
+        
+        # Store for the final confirmation step
+        context.user_data['broadcast_users_data'] = users_data
+        context.user_data['broadcast_message'] = generated_message
+
+        await query.edit_message_text(
+            confirmation_text,
+            parse_mode="HTML",
+            reply_markup=keyboard
+        )
+
+    except Exception as e:
+        logger.error(f"Error in broadcast context handler: {e}")
+        await query.edit_message_text(
+            f"❌ <b>Error:</b> {str(e)}",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")
+            ]])
+        )
+
+
+async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast confirmation and execution"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Try to get users data and message from session
+    users_data = context.user_data.get('broadcast_users_data')
+    message = context.user_data.get('broadcast_message')
+    
+    # If session data is missing, guide the user to restart
+    if not users_data or not message:
+        await query.edit_message_text(
+            "❌ <b>Session Expired</b>\n\n"
+            "Your session has expired. Please start the broadcast process again.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Go to Broadcast Menu", callback_data="admin_broadcast")
+            ]])
+        )
+        return
+    
+    # Start broadcast process
+    await query.edit_message_text(
+        f"🚀 <b>Starting Broadcast...</b>\n\n"
+        f"📤 Sending message to {users_data['stats']['active_users']} active users.\n"
+        f"⏳ This may take a few moments...",
+        parse_mode="HTML"
+    )
+    
+    # Create progress callback
+    async def progress_callback(current, total, results):
+        try:
+            progress_percent = (current / total) * 100
+            progress_text = (
+                f"📢 <b>Broadcast in Progress</b>\n\n"
+                f"📊 <b>Progress:</b> {current}/{total} ({progress_percent:.1f}%)\n"
+                f"✅ <b>Successful:</b> {results['sent_successfully']}\n"
+                f"❌ <b>Failed:</b> {results['failed_sends']}\n"
+                f"🚫 <b>Blocked Users:</b> {results['blocked_users']}\n\n"
+                f"📱 <b>Chat Types:</b>\n"
+                f"• Private: ✅{results['private_successful']} ❌{results['private_failed']}\n"
+                f"• Groups: ✅{results['group_successful']} ❌{results['group_failed']}\n\n"
+                f"{'⏳ Processing...' if current < total else '✅ Completed!'}"
+            )
+            
+            keyboard = None if current < total else InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+            ]])
+            
+            await query.edit_message_text(
+                progress_text,
+                parse_mode="HTML",
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Error updating progress: {e}")
+    
+    try:
+        # Execute broadcast
+        results = await AdminBroadcastManager.send_broadcast_message(
+            context.bot, 
+            users_data, 
+            message,
+            progress_callback
+        )
+        
+        # Final results
+        final_text = (
+            f"🎉 <b>Broadcast Completed!</b>\n\n"
+            f"📊 <b>Final Results:</b>\n"
+            f"• Total Targeted: {len(users_data['active_users'])}\n"
+            f"• Successfully Sent: {results['sent_successfully']}\n"
+            f"• Failed Sends: {results['failed_sends']}\n"
+            f"• Blocked Users: {results['blocked_users']}\n"
+            f"• Invalid Chats: {results['invalid_chats']}\n\n"
+            f"📱 <b>By Chat Type:</b>\n"
+            f"• Private Chats: ✅{results['private_successful']} ❌{results['private_failed']}\n"
+            f"• Group Chats: ✅{results['group_successful']} ❌{results['group_failed']}\n\n"
+            f"📈 <b>Success Rate:</b> {(results['sent_successfully']/len(users_data['active_users'])*100):.1f}%\n\n"
+            f"ℹ️ <b>Disabled Users:</b> {users_data['stats']['disabled_users']} (skipped)\n\n"
+            f"✅ Broadcast operation completed successfully!"
+        )
+        
+        await query.edit_message_text(
+            final_text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+            ]])
+        )
+        
+        # Log detailed results
+        logger.info(f"Broadcast completed by admin {query.from_user.id}: "
+                   f"{results['sent_successfully']}/{len(users_data['active_users'])} successful")
+        
+        # Clean up context data
+        context.user_data.pop('broadcast_users_data', None)
+        context.user_data.pop('broadcast_message', None)
+        
+    except Exception as e:
+        logger.error(f"Error during broadcast execution: {e}")
+        await query.edit_message_text(
+            f"❌ <b>Broadcast Failed</b>\n\n"
+            f"An error occurred during the broadcast:\n"
+            f"<code>{str(e)}</code>\n\n"
+            f"Please check the logs and try again.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
+            ]])
+        )
 
 
 class AdminWalletManager:
@@ -757,6 +1219,11 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 InlineKeyboardButton(
                     "📈 Platform Stats", callback_data="admin_platform_stats"
                 ),
+                InlineKeyboardButton(
+                    "📢 Broadcast Message", callback_data="admin_broadcast"
+                ),
+            ],
+            [
                 InlineKeyboardButton("🔙 Back to Menu", callback_data="menu"),
             ],
         ]
@@ -801,6 +1268,10 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await admin_system_status_handler(update, context)
     elif query.data == "admin_platform_stats":
         await admin_platform_stats_handler(update, context)
+    elif query.data == "admin_broadcast":
+        await admin_broadcast_handler(update, context)
+    elif query.data == "admin_broadcast_confirm":
+        await admin_broadcast_confirm_handler(update, context)
     elif query.data == "admin_menu":
         logger.info(f"Admin {user_id} requesting admin menu")
         await show_admin_menu(update, context)
@@ -815,6 +1286,8 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await admin_refresh_user_wallet(update, context, user_id_to_refresh)
     elif query.data.startswith("admin_confirm_send_"):
         await handle_send_confirmation(update, context)
+    elif query.data.startswith("admin_broadcast_context_"):
+        await admin_broadcast_context_handler(update, context)
     else:
         logger.warning(f"Unhandled admin callback: {query.data}")
         await query.edit_message_text(
@@ -1148,6 +1621,11 @@ async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 InlineKeyboardButton(
                     "📈 Platform Stats", callback_data="admin_platform_stats"
                 ),
+                InlineKeyboardButton(
+                    "📢 Broadcast Message", callback_data="admin_broadcast"
+                ),
+            ],
+            [
                 InlineKeyboardButton("🔙 Back to Menu", callback_data="menu"),
             ],
         ]
