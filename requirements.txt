@@ -68,3 +68,4 @@ pytest-asyncio
 pytest-cov
 mongomock
 pytz
+apscheduler

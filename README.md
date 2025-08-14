@@ -149,8 +149,7 @@ make deploy-logs      # Monitor production logs
 │   ├── user.py              # User management
 │   └── wallet.py            # Wallet operations
 ├── payments/                # Payment processors
-│   ├── btcpay.py            # BTCPay integration
-│   └── forgingblock.py      # Alternative payment processor
+│   └── btcpay.py            # BTCPay integration
 ├── tests/                   # Test suite
 │   ├── unit/                # Unit tests
 │   ├── integration/         # Integration tests

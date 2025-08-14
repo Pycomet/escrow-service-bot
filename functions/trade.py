@@ -16,7 +16,16 @@ client = BtcPayAPI()
 
 
 class TradeClient:
-    "House all transactions with database layer"
+    """
+    Handles all trade-related database operations and business logic.
+
+    This class manages the complete lifecycle of escrow trades including:
+    - Trade creation and management
+    - Payment processing and verification
+    - Crypto deposit/release operations
+    - Broker integration
+    - Fee calculations
+    """
 
     @staticmethod
     def open_new_trade(

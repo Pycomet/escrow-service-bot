@@ -14,7 +14,6 @@ from telegram.ext import (
 
 from config import *
 from functions import *
-from handlers import *
 from handlers.webhook import process_merchant_webhook
 from utils import *
 
@@ -27,7 +26,7 @@ def register_handlers():
         if application is None:
             logger.warning("Application is None, skipping handler registration")
             return
-            
+
         # Import and register handlers from each module
         from handlers.admin import register_handlers as register_admin
         from handlers.affiliate import register_handlers as register_affiliate
@@ -88,12 +87,12 @@ async def initialize_bot():
     """Initialize the bot in background to not block startup"""
     try:
         logger.info("Initializing Telegram bot...")
-        
+
         # Check if application is available (might be None in testing)
         if application is None:
             logger.warning("Application is None, skipping bot initialization")
             return
-            
+
         await application.initialize()
         await application.start()
         register_handlers()
@@ -165,7 +164,9 @@ async def health_check():
         status = {
             "status": "ok",
             "message": "Service is running",
-            "details": {"application_running": application.running if application else False},
+            "details": {
+                "application_running": application.running if application else False
+            },
         }
 
         # Only check Telegram API status if application is running
@@ -207,7 +208,7 @@ async def webhook():
                 jsonify({"status": "error", "message": "Bot not initialized"}),
                 503,
             )
-            
+
         # Initialize the bot if it's not running
         if not application.running:
             logger.info("Bot not running, initializing on demand...")
@@ -251,7 +252,7 @@ async def set_webhook():
                 jsonify({"status": "error", "message": "Bot not initialized"}),
                 503,
             )
-            
+
         if not application.running:
             await application.initialize()
             await application.start()
@@ -306,7 +307,7 @@ async def handle_payment_webhook():
                 jsonify({"status": "error", "message": "Bot not initialized"}),
                 503,
             )
-            
+
         if not application.running:
             await application.initialize()
             await application.start()
@@ -333,7 +334,7 @@ def run_polling():
     if application is None:
         logger.error("Application is None, cannot run in polling mode")
         return
-        
+
     register_handlers()  # Register handlers before starting polling
     logger.info("Starting bot in polling mode...")
     application.run_polling(drop_pending_updates=True)

@@ -290,13 +290,7 @@ async def broker_callback_handler(update: Update, context: ContextTypes.DEFAULT_
                 "Trades will appear here once you're assigned as a broker.",
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "🔙 Back", callback_data="/broker_register"
-                            )
-                        ]
-                    ]
+                    [[InlineKeyboardButton("🔙 Back", callback_data="/broker_register")]]
                 ),
             )
             return

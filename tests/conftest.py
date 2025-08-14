@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 # Patch the global Mongo client/db used across the codebase so tests run in-memory.
 # We do this once per test session via an autouse session-scoped fixture.
 
+
 @pytest.fixture(scope="function", autouse=True)
 def _patch_mongo(monkeypatch):
     """Swap out the real MongoDB connection for an in-memory mongomock one."""

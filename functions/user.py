@@ -17,7 +17,14 @@ def get_msg_id(msg) -> int:
 
 
 class UserClient:
-    "Class To Hold All User Related Functions/Transaction With Database"
+    """
+    Handles all user-related database operations and management.
+
+    This class provides functionality for:
+    - User registration and profile management
+    - Wallet address association
+    - User verification status
+    """
 
     @staticmethod
     def get_user(msg) -> UserType:
@@ -63,7 +70,7 @@ class UserClient:
 
     @staticmethod
     def set_wallet(user_id: str, address: str):
-        # import pdb; pdb.set_trace()
+
         user = UserClient.get_user_by_id(user_id)
         if user is not None:
             db.users.update_one({"_id": user_id}, {"$set": {"wallet": address}})

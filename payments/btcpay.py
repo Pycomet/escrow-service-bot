@@ -77,13 +77,3 @@ class BtcPayAPI(object):
         except Exception as e:
             app.logger.error("Error creating invoice via BTCPay API: %s", e)
             return None, None
-
-
-# api = BtcPayAPI()
-# # print(api.create_invoice(trade={
-# #     'price': 500,
-# #     'buyer': "User D",
-# #     'seller': "User J"
-# # }))
-
-# print(api.get_invoice("VDPjEBbfoPpsPMhKme1pD3"))

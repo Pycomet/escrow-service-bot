@@ -95,7 +95,7 @@ async def add_addresses(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         agent = AgentAction().create_agent(update.message.from_user.id)
-        # import pdb; pdb.set_t     race()
+
         affiliate = create_affiliate(agent, str(chat.id))
         logger.debug(f"Affiliate creation result: {affiliate}")
         if affiliate != "Already Exists":
@@ -262,7 +262,19 @@ def register_handlers(application):
     )
 
 
-# Register handlers
-application.add_handler(
+# Use the registry system to avoid import-time application creation
+from .registry import register_handler_later
+
+# Register handlers for later registration
+register_handler_later(
     MessageHandler(filters.Regex("^Add Bot To Your Group"), start_affiliate)
 )
+
+def register_handlers(application):
+    """Register affiliate handlers with the application (for main.py compatibility)"""
+    try:
+        application.add_handler(
+            MessageHandler(filters.Regex("^Add Bot To Your Group"), start_affiliate)
+        )
+    except Exception as e:
+        logger.error(f"Failed to register affiliate handlers: {e}")
