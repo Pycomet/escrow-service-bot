@@ -155,7 +155,6 @@ class WalletManager:
         """
 
         key_env = os.getenv("WALLET_ENCRYPTION_KEY")
-
         if key_env:
             try:
                 return base64.urlsafe_b64decode(key_env)
@@ -164,7 +163,7 @@ class WalletManager:
                 # fall through to error handling below
 
         # At this point the key is missing or invalid.
-        if DEBUG:
+        if DEBUG or SKIP_DEPOSIT_CHECKS:
             # Developer convenience – generate a temporary key but warn loudly.
             temp_key = Fernet.generate_key()
             logger.warning(

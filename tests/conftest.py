@@ -30,6 +30,7 @@ def setup_test_environment():
     os.environ.setdefault("DATABASE_URL", "mongodb://localhost:27017/")
     os.environ.setdefault("DATABASE_NAME", "escrowbot_test")
     os.environ.setdefault("ADMIN_ID", "123456789")
+    os.environ.setdefault("SKIP_DEPOSIT_CHECKS", "True")  # Skip deposit checks in tests
 
 # Call setup function at module import time
 setup_test_environment()

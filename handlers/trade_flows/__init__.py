@@ -24,7 +24,8 @@ class TradeFlowHandler:
             flow_class = CryptoFiatFlow
         elif trade_type == TradeTypeEnums.CRYPTO_CRYPTO.value:
             # Ensure CryptoCryptoFlow exists and has a 'start_initial_setup' method
-            flow_class = CryptoCryptoFlow
+            # flow_class = CryptoCryptoFlow # TODO: Uncomment this when the crypto-crypto flow is implemented
+            flow_class = CryptoFiatFlow
         elif trade_type == TradeTypeEnums.CRYPTO_PRODUCT.value:
             # Ensure CryptoProductFlow exists and has a 'start_initial_setup' method
             flow_class = CryptoProductFlow
@@ -72,7 +73,8 @@ class TradeFlowHandler:
         if trade_type == TradeTypeEnums.CRYPTO_FIAT.value:
             flow_class = CryptoFiatFlow
         elif trade_type == TradeTypeEnums.CRYPTO_CRYPTO.value:
-            flow_class = CryptoCryptoFlow
+            # flow_class = CryptoCryptoFlow # TODO: Uncomment this when the crypto-crypto flow is implemented
+            flow_class = CryptoFiatFlow
         elif trade_type == TradeTypeEnums.CRYPTO_PRODUCT.value:
             flow_class = CryptoProductFlow
         elif trade_type == TradeTypeEnums.MARKET_SHOP.value:

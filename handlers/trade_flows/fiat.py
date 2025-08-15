@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
+import os
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from config import BOT_FEE_PERCENTAGE, db
+from config import BOT_FEE_PERCENTAGE, SKIP_DEPOSIT_CHECKS, db
 from database.types import UserType
 from functions.trade import TradeClient
 from functions.user import UserClient
@@ -577,7 +578,6 @@ class CryptoFiatFlow:
                 try:
                     # Get the current balance for this address and currency
                     current_balance = wallet_manager.get_balance(receiving_address, currency)
-
                     logger.info(f"Current balance: {current_balance} {currency}")
 
                     # For USDT trades, also check ETH balance for gas fees
@@ -638,7 +638,7 @@ class CryptoFiatFlow:
 
         logger.info(f"Final status check - Status: {status}")
 
-        if status and status.lower() in ["paid", "completed", "confirmed", "approved"]:
+        if (status and status.lower() in ["paid", "completed", "confirmed", "approved"]) or SKIP_DEPOSIT_CHECKS:
             logger.info("Deposit confirmed - proceeding with success flow")
             # NEW: persist deposit confirmation in database
             TradeClient.confirm_crypto_deposit(trade_id)

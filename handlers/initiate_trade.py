@@ -21,6 +21,7 @@ from config import db
 from functions import *
 from functions.trade import TradeClient
 from functions.user import UserClient
+from handlers.join import join_handler
 from handlers.trade_flows import TradeFlowHandler
 
 # Import flow classes and their specific state constants
@@ -30,14 +31,14 @@ from handlers.trade_flows.fiat import (
     AWAITING_BROKER_SELECTION,
     AWAITING_CURRENCY,
     AWAITING_DESCRIPTION,
-    CryptoFiatFlow,
+    CryptoFiatFlow
 )
 from utils import *
 from utils.enums import CallbackDataEnums, EmojiEnums, TradeTypeEnums
 from utils.keyboard import trade_type_menu
 from utils.messages import Messages
 
-# from handlers.trade_flows.crypto import CryptoCryptoFlow # etc.
+from handlers.trade_flows.crypto import CryptoCryptoFlow
 # from handlers.trade_flows.product import CryptoProductFlow
 # from handlers.trade_flows.market import MarketShopFlow
 
@@ -468,8 +469,8 @@ async def dispatch_to_flow(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if active_flow_name == CryptoFiatFlow.FLOW_NAME:
         target_flow_class = CryptoFiatFlow
     # Add elif for other flows when they are implemented
-    # elif active_flow_name == CryptoCryptoFlow.FLOW_NAME:
-    #     target_flow_class = CryptoCryptoFlow
+    elif active_flow_name == CryptoCryptoFlow.FLOW_NAME:
+        target_flow_class = CryptoFiatFlow # TODO: Uncomment this when the crypto-crypto flow is implemented
 
     if not target_flow_class:
         logging.error(
