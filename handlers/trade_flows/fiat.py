@@ -556,34 +556,62 @@ class CryptoFiatFlow:
 
         if is_wallet_trade:
             # Blockchain checking logic - check actual wallet balance
+            
             wallet_manager = WalletManager()
-            expected_amount = float(trade.get("price", 0))
+            base_amount = float(trade.get("price", 0))
             currency = trade.get("currency")
             receiving_address = trade.get("receiving_address")
 
+            # Calculate the total deposit required including fees and gas
+            fee_data = TradeClient.calculate_trade_fee_with_gas(base_amount, currency)
+            expected_amount = fee_data['total_deposit_required']
+
             logger.info(
-                f"Checking wallet balance - Address: {receiving_address}, Expected: {expected_amount} {currency}"
+                f"Checking wallet balance - Address: {receiving_address}"
+            )
+            logger.info(
+                f"Base amount: {base_amount} {currency}, Total expected (with fees): {expected_amount} {currency}"
             )
 
             if receiving_address and expected_amount > 0:
                 try:
                     # Get the current balance for this address and currency
-                    # current_balance = wallet_manager.get_balance(receiving_address, currency)
-                    current_balance = expected_amount  # TODO: REMOVE THIS HACK
+                    current_balance = wallet_manager.get_balance(receiving_address, currency)
 
                     logger.info(f"Current balance: {current_balance} {currency}")
 
-                    # Check if the balance meets or exceeds the expected amount
-                    if current_balance >= expected_amount:
+                    # For USDT trades, also check ETH balance for gas fees
+                    gas_sufficient = True
+                    if currency == "USDT":
+                        # Get the seller's wallet to check ETH balance for gas
+                        seller_wallet_id = trade.get("seller_wallet_id")
+                        if seller_wallet_id:
+                            # Get ETH address from the same wallet
+                            eth_coin_address = WalletManager.get_wallet_coin_address(seller_wallet_id, "ETH")
+                            if eth_coin_address:
+                                eth_balance = wallet_manager.get_balance(eth_coin_address["address"], "ETH")
+                                required_eth = fee_data['total_gas_fees']
+                                logger.info(f"ETH balance for gas: {eth_balance}, Required: {required_eth}")
+                                if eth_balance < required_eth:
+                                    gas_sufficient = False
+                                    logger.warning(f"Insufficient ETH for gas fees: has {eth_balance}, need {required_eth}")
+
+                    # Check if the balance meets or exceeds the expected amount (including fees)
+                    if current_balance >= expected_amount and gas_sufficient:
                         status = "confirmed"
                         logger.info(
-                            f"Wallet trade - balance sufficient, status: {status}"
+                            f"Wallet trade - balance sufficient (has {current_balance}, need {expected_amount}), status: {status}"
                         )
-                    elif current_balance > 0:
+                    elif current_balance > 0 or not gas_sufficient:
                         status = "partial"
-                        logger.info(
-                            f"Wallet trade - partial payment received, status: {status}"
-                        )
+                        if not gas_sufficient:
+                            logger.info(
+                                f"Wallet trade - insufficient gas fees for USDT transaction, status: {status}"
+                            )
+                        else:
+                            logger.info(
+                                f"Wallet trade - partial payment received (has {current_balance}, need {expected_amount}), status: {status}"
+                            )
                     else:
                         status = "pending"
                         logger.info(
@@ -658,9 +686,29 @@ class CryptoFiatFlow:
             status_message = f"⏳ Checking deposit status for trade {trade_id}...\n\n"
 
             if is_wallet_trade:
+                # Show the total deposit required including fees
+                base_amount = float(trade.get("price", 0))
+                currency = trade.get("currency")
+                fee_data = TradeClient.calculate_trade_fee_with_gas(base_amount, currency)
+                expected_total = fee_data['total_deposit_required']
+                
                 status_message += (
-                    f"💰 Expected deposit: {trade['price']} {trade['currency']}\n"
+                    f"💰 Expected deposit: {expected_total} {currency} (includes fees)\n"
                 )
+                
+                # For USDT trades, also show ETH requirement for gas
+                if currency == "USDT":
+                    # Format ETH amount properly
+                    def format_eth_amount(amount):
+                        if amount < 0.0001:
+                            return f"{amount:.8f}"
+                        elif amount < 0.001:
+                            return f"{amount:.6f}"
+                        else:
+                            return f"{amount:.4f}"
+                    
+                    formatted_gas_fees = format_eth_amount(fee_data['total_gas_fees'])
+                    status_message += f"⚡ ETH required for gas: {formatted_gas_fees} ETH\n"
                 status_message += f"📍 Deposit address: {trade.get('receiving_address', 'Address not found')}\n"
                 status_message += f"💳 Current balance: {current_balance if 'current_balance' in locals() else 'Checking...'} {currency}\n\n"
 

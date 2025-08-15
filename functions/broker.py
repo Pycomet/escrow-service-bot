@@ -12,7 +12,16 @@ logger = logging.getLogger(__name__)
 
 
 class BrokerClient:
-    """Handle all broker-related database operations"""
+    """
+    Handles all broker-related database operations and management.
+
+    This class manages the broker system including:
+    - Broker registration and verification
+    - Commission rate management
+    - Trade specialization and ratings
+    - Trade mediation and dispute resolution
+    - Performance tracking and statistics
+    """
 
     @staticmethod
     def register_broker(

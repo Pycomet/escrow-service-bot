@@ -193,58 +193,50 @@ Your funds are save with me and will be refunded to you if the other party refus
     @staticmethod
     def trade_created(trade: TradeType) -> str:
         return f"""
-📝 <b>New Escrow Trade Opened (ID - {trade['_id']})</b> 📝
---------------------------------------------------
-<b>Terms Of Contract:</b> {trade['terms']}
+📝 <b>New Escrow Trade Created</b>
 
-<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
-<b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
+🆔 <b>Trade ID:</b> <code>{trade['_id']}</code>
+💰 <b>Amount:</b> {trade['price']} {trade['currency']}
+📋 <b>Terms:</b> {trade.get('terms', 'No terms specified')}
+📅 <b>Created:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
 
-Ensure that you only share the unique Trade ID with the counterparty. This will allow them to seamlessly join the trade and complete the transaction. All relevant information will be shared upon joining, or they can proceed with the payment through the portal link above.
-
-Trade window only lasts for 60 minutes, contact the buyer right away.
+Share your Trade ID with the buyer to let them join this trade.
             """
 
     @staticmethod
     def trade_joined(trade: TradeType, status: str) -> str:
         return f"""
-📝 <b>Trade Payment Details - {trade['_id']}</b> 
------------------------------------
-<b>Terms Of Contract:</b> {trade['terms']}
+🤝 <b>Trade Joined Successfully</b>
 
-<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
-<b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
-<b>Payment Status:</b> {status}
+🆔 <b>Trade ID:</b> <code>{trade['_id']}</code>
+💰 <b>Amount:</b> {trade['price']} {trade['currency']}
+📋 <b>Terms:</b> {trade.get('terms', 'No terms specified')}
+📊 <b>Status:</b> {status}
 
-<b>Please follow the url below to make payment on our secured portal. Click the button to confirm after you make payment</b>
-
-You can go to payment portal by clicking the button below.
+Follow the payment instructions and confirm when complete.
                 """
 
     @staticmethod
     def trade_details(trade: TradeType, status: str) -> str:
         return f"""
-📝 <b>Trade Details - {trade['_id']}</b> 
------------------------------------
-<b>Terms Of Contract:</b> {trade['terms']}
-<b>Trade State:</b> {'Active' if trade['is_active'] is True else 'Inactive'}
+📊 <b>Trade Details</b>
 
-<b>Buyer's ID: </b> {trade['buyer_id'] if 'buyer_id' in trade else "N/A"}
-<b>Seller's ID: </b> {trade['seller_id']}
+🆔 <b>Trade ID:</b> <code>{trade['_id']}</code>
+💰 <b>Amount:</b> {trade['price']} {trade['currency']}
+📋 <b>Terms:</b> {trade.get('terms', 'No terms specified')}
+📊 <b>Status:</b> {status}
+🔄 <b>Active:</b> {'Yes' if trade.get('is_active') else 'No'}
 
-<b>Transaction Amount:</b> {trade['price']} {trade['currency']}
-<b>Preferred Payment Method:</b> Bitcoin
-<b>Trade Initiated On:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
-<b>Payment Status:</b> {status}
+👤 <b>Seller:</b> {trade.get('seller_id', 'N/A')}
+👤 <b>Buyer:</b> {trade.get('buyer_id', 'None yet')}
+📅 <b>Created:</b> {datetime.strftime(trade['created_at'], "%Y-%m-%d %H:%M:%S")}
             """
 
     @staticmethod
     def deposit_instructions(
         amount: float, currency: str, description: str, payment_url: str, trade_id: str
     ) -> str:
-        """Generates the message for crypto deposit instructions."""
+        """Generates the message for crypto deposit instructions (BTCPay-based)."""
         from functions.trade import TradeClient
 
         fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
@@ -255,10 +247,13 @@ You can go to payment portal by clicking the button below.
 
 To proceed with this trade, you (the seller) need to deposit the specified crypto amount into escrow.
 
-<b>Amount to Deposit:</b> {total_deposit_required} {currency}
-<b>Buyer will receive:</b> {amount} {currency}
-<b>Your Trade Description/Terms:</b> {description}
+<b>📊 Deposit Breakdown:</b>
+• Amount to buyer: <b>{amount} {currency}</b>
+• Bot service fee: <b>{fee_amount} {currency}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total Deposit Required: {total_deposit_required} {currency}</b>
 
+<b>📋 Trade Terms:</b> {description}
 
 Please use the secure payment link below to make your deposit. This will take you to our payment provider where you can complete the transaction.
 
@@ -279,31 +274,101 @@ If you encounter any issues, please contact support.
     ) -> str:
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
         from functions.trade import TradeClient
+        from functions.scripts.utils import get_eth_price
 
-        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
-
-        return f"""
-🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
+        # Use new gas-inclusive fee calculation
+        fee_data = TradeClient.calculate_trade_fee_with_gas(amount, currency)
+        gas_info = TradeClient.get_gas_requirements_for_currency(currency)
+        
+        breakdown = fee_data['breakdown']
+        
+        # Get ETH price for USD equivalent and format gas fees properly
+        eth_price = get_eth_price()
+        gas_fees_usd = ""
+        
+        # Format ETH gas fees to avoid scientific notation
+        def format_eth_amount(amount):
+            """Format small ETH amounts to avoid scientific notation"""
+            if amount < 0.0001:
+                return f"{amount:.8f}"  # Show 8 decimal places for very small amounts
+            elif amount < 0.001:
+                return f"{amount:.6f}"  # Show 6 decimal places for small amounts
+            else:
+                return f"{amount:.4f}"  # Show 4 decimal places for larger amounts
+        
+        formatted_gas_fees = format_eth_amount(fee_data['total_gas_fees'])
+        
+        if eth_price and fee_data['total_gas_fees']:
+            usd_value = fee_data['total_gas_fees'] * eth_price
+            gas_fees_usd = f" (~${usd_value:.2f} USD)"
+        
+        if currency == "ETH":
+            # ETH trades: all costs combined
+            formatted_gas_fees_eth = format_eth_amount(fee_data['total_gas_fees'])
+            formatted_total_deposit = format_eth_amount(fee_data['total_deposit_required'])
+            
+            return f"""
+🔒 <b>ETH Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
 
-To proceed with this trade, you (the seller) need to deposit the specified crypto amount to your escrow wallet address.
+<b>💰 Deposit Address (ETH):</b>
+<code>{receiving_address}</code>
 
-<b>Amount to Deposit:</b> {total_deposit_required} {currency}
-<b>Buyer will receive:</b> {amount} {currency}
-<b>Your Trade Description/Terms:</b> {description}
+<b>📊 Deposit Breakdown:</b>
+• Amount to buyer: <b>{breakdown['amount_to_buyer']} ETH</b>
+• Bot service fee: <b>{breakdown['bot_fee']} ETH</b>
+• Gas fees: <b>{formatted_gas_fees_eth} ETH</b>{gas_fees_usd}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total Deposit Required: {formatted_total_deposit} ETH</b>
+
+<b>🔥 Gas Fee Info:</b>
+{gas_info['explanation']}. Covers all transaction fees for buyer payout and bot fee transfer.
+
+<b>📋 Trade Terms:</b> {description}
+
+<b>⚠️ Important Instructions:</b>
+• Send exactly <b>{formatted_total_deposit} ETH</b> to the address above
+• Must be sent on Ethereum network
+• Gas fees calculated with 20% buffer for price fluctuations
+• Double-check address before sending
+• This address is unique to your wallet
+
+After you have successfully made the deposit, click "✅ I've Made Deposit" to confirm.
+        """
+        
+        else:  # USDT and other tokens
+            return f"""
+🔒 <b>{currency} Deposit Required for Trade ID: {trade_id}</b> 🔒
+--------------------------------------------------
 
 <b>💰 Deposit Address ({currency}):</b>
 <code>{receiving_address}</code>
 
-<b>⚠️ Important:</b>
-• Send exactly {total_deposit_required} {currency} to the address above
-• Make sure you're sending on the correct network (Ethereum for ETH/USDT)
-• Double-check the address before sending
-• This address is unique to your wallet - funds sent here belong to you
+<b>📊 {currency} Deposit Breakdown:</b>
+• Amount to buyer: <b>{breakdown['amount_to_buyer']} {currency}</b>
+• Bot service fee: <b>{breakdown['bot_fee']} {currency}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total {currency} Required: {fee_data['total_deposit_required']} {currency}</b>
 
-After you have successfully made the deposit, please click the "✅ I've Made Deposit" button to confirm.
+<b>⚡ ETH Required for Gas Fees:</b>
+• Gas fees: <b>{formatted_gas_fees} ETH</b>{gas_fees_usd}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total ETH Required: {formatted_gas_fees} ETH</b>
 
-If you encounter any issues, please contact support.
+<b>🔥 Why ETH is Required:</b>
+{gas_info['eth_required_reason']}. Gas covers all transaction fees for {currency} transfers and bot payouts.
+
+<b>📋 Trade Terms:</b> {description}
+
+<b>⚠️ Critical Instructions:</b>
+• Send <b>{fee_data['total_deposit_required']} {currency}</b> to the address above
+• Your wallet MUST also have <b>{formatted_gas_fees} ETH</b> for gas fees
+• Both must be sent on Ethereum network
+• Gas fees calculated with 20% buffer for price fluctuations
+• Insufficient ETH will cause transaction failures
+• Double-check address before sending
+
+After making both deposits, click "✅ I've Made Deposit" to confirm.
         """
 
     @staticmethod

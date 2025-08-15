@@ -1,142 +1,85 @@
-# .github/workflows/deploy.yml
-name: Trigger Cloud Build
+name: Deploy to Production
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch: # Allow manual triggering
+    branches: [ main ]
+  release:
+    types: [ published ]
 
 jobs:
-  trigger-cloud-build:
+  deploy:
     runs-on: ubuntu-latest
-
+    name: Deploy to Cloud Run
+    if: github.ref == 'refs/heads/main'
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      # Create service account key file from secret
-      - name: Set up GCP service account key
-        run: |
-          echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-sa-key.json
-          echo "Service account key file created at /tmp/gcp-sa-key.json"
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
 
-      # Authenticate directly with gcloud using the key file
-      - name: Authenticate with gcloud
-        run: |
-          gcloud auth activate-service-account --key-file=/tmp/gcp-sa-key.json
-          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
-          
-          # Verify gcloud is authenticated successfully
-          echo "Active gcloud account:"
-          gcloud auth list --filter=status:ACTIVE --format="value(account)"
-          
-          # Verify project is set correctly
-          echo "Active project:"
-          gcloud config get-value project
+    - name: Configure Docker to use gcloud as a credential helper
+      run: |
+        gcloud auth configure-docker
 
-      # Submit build to Cloud Build 
-      - name: Submit to Cloud Build
-        run: |
-          # Get the current commit SHA
-          COMMIT_SHA=$(git rev-parse HEAD)
-          echo "Triggering Cloud Build for commit: ${COMMIT_SHA}"
-          
-          # Submit the build to Cloud Build
-          gcloud builds submit --config=cloudbuild.yaml \
-            --substitutions=COMMIT_SHA=${COMMIT_SHA} \
-            --project=${{ secrets.GCP_PROJECT_ID }}
-            
-          echo "✅ Cloud Build triggered successfully!"
-            
-      # Clean up service account key
-      - name: Clean up service account key
-        if: always() # Run even if previous steps fail
-        run: |
-          rm -f /tmp/gcp-sa-key.json
-          echo "Service account key file removed"
+    - name: Build and push Docker image
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }} .
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }}
 
-      # Build Docker image
-      - name: Build Docker image
-        run: |
-          IMAGE_NAME="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-run-source-deploy/escrow-service-bot:${{ github.sha }}"
-          echo "Building Docker image: ${IMAGE_NAME}"
-          docker build -t "${IMAGE_NAME}" .
-          echo "IMAGE_BUILT=${IMAGE_NAME}" >> $GITHUB_ENV
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy escrow-service-bot \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/escrow-service-bot:${{ github.sha }} \
+          --platform managed \
+          --region us-central1 \
+          --allow-unauthenticated \
+          --set-env-vars="TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+          --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+          --set-env-vars="ADMIN_ID=${{ secrets.ADMIN_ID }}" \
+          --set-env-vars="WEBHOOK_MODE=True" \
+          --set-env-vars="WEBHOOK_URL=${{ secrets.WEBHOOK_URL }}" \
+          --set-env-vars="BTCPAY_URL=${{ secrets.BTCPAY_URL }}" \
+          --set-env-vars="BTCPAY_STORE_ID=${{ secrets.BTCPAY_STORE_ID }}" \
+          --set-env-vars="BTCPAY_SECRET=${{ secrets.BTCPAY_SECRET }}" \
+          --set-env-vars="BTCPAY_API_KEY=${{ secrets.BTCPAY_API_KEY }}" \
+          --set-env-vars="GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" \
+          --memory 1Gi \
+          --cpu 1 \
+          --concurrency 80 \
+          --timeout 300
 
-      # Push Docker image to Artifact Registry
-      - name: Push Docker image to Artifact Registry
-        run: |
-          echo "Pushing image: ${{ env.IMAGE_BUILT }}"
-          docker push "${{ env.IMAGE_BUILT }}"
-          
-      # Verify image is accessible before deploying
-      - name: Verify image is accessible
-        run: |
-          echo "Verifying image is accessible in Artifact Registry..."
-          
-          # Wait for up to 60 seconds for the image to be accessible
-          max_attempts=12
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Attempt $attempt of $max_attempts..."
-            
-            if gcloud artifacts docker images describe "${{ env.IMAGE_BUILT }}" --project=${{ secrets.GCP_PROJECT_ID }} --quiet; then
-              echo "✅ Image is accessible and ready for deployment!"
-              break
-            else
-              echo "Image not yet accessible, waiting 5 seconds..."
-              sleep 5
-              attempt=$((attempt + 1))
-            fi
-          done
-          
-          if [ $attempt -gt $max_attempts ]; then
-            echo "❌ Timed out waiting for image to be accessible"
-            exit 1
-          fi
+    - name: Verify deployment
+      run: |
+        SERVICE_URL=$(gcloud run services describe escrow-service-bot --region=us-central1 --format='value(status.url)')
+        echo "Service deployed at: $SERVICE_URL"
+        
+        # Health check
+        curl -f "$SERVICE_URL/health" || exit 1
+        echo "✅ Deployment verified successfully"
 
-      # Deploy to Cloud Run
-      - name: Deploy to Cloud Run
-        run: |
-          echo "Deploying image to Cloud Run: ${{ env.IMAGE_BUILT }}"
-          
-          # Retry deployment up to 3 times
-          max_attempts=3
-          attempt=1
-          while [ $attempt -le $max_attempts ]; do
-            echo "Deployment attempt $attempt of $max_attempts..."
-            
-            if gcloud run deploy escrow-service-bot \
-              --image "${{ env.IMAGE_BUILT }}" \
-              --region us-central1 \
-              --platform managed \
-              --allow-unauthenticated \
-              --project=${{ secrets.GCP_PROJECT_ID }} \
-              --timeout=600s \
-              --cpu=1 \
-              --memory=512Mi \
-              --cpu-boost \
-              --no-traffic; then
-              
-              echo "✅ Deployment succeeded!"
-              
-              # Now migrate traffic to the new revision
-              echo "Migrating traffic to new revision..."
-              gcloud run services update-traffic escrow-service-bot \
-                --region us-central1 \
-                --project=${{ secrets.GCP_PROJECT_ID }} \
-                --to-latest
-              
-              break
-            else
-              echo "Deployment failed, waiting 15 seconds before retry..."
-              sleep 15
-              attempt=$((attempt + 1))
-            fi
-          done
-          
-          if [ $attempt -gt $max_attempts ]; then
-            echo "❌ All deployment attempts failed"
-            exit 1
-          fi
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify Deployment
+    needs: deploy
+    if: always()
+    
+    steps:
+    - name: Notify Telegram on success
+      if: needs.deploy.result == 'success'
+      run: |
+        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d chat_id="${{ secrets.ADMIN_ID }}" \
+          -d text="✅ Escrow Service Bot deployed successfully to production! 🚀%0A%0ACommit: ${{ github.sha }}%0ABranch: ${{ github.ref_name }}"
+
+    - name: Notify Telegram on failure  
+      if: needs.deploy.result == 'failure'
+      run: |
+        curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d chat_id="${{ secrets.ADMIN_ID }}" \
+          -d text="❌ Escrow Service Bot deployment FAILED! 🚨%0A%0ACommit: ${{ github.sha }}%0ABranch: ${{ github.ref_name }}%0A%0APlease check the GitHub Actions logs."

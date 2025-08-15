@@ -55,13 +55,7 @@ class TradeFlowHandler:
                 await update.callback_query.message.edit_text(
                     f"🛠️ The setup for {trade_type} trades is currently under construction. Please check back later.",
                     reply_markup=InlineKeyboardMarkup(
-                        [
-                            [
-                                InlineKeyboardButton(
-                                    "🔙 Back to Menu", callback_data="menu"
-                                )
-                            ]
-                        ]
+                        [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
                     ),
                 )
             return False
@@ -99,55 +93,4 @@ class TradeFlowHandler:
             logger.warning(
                 f"Flow class {flow_class} or method {method_name} not found for {trade_type}."
             )
-            return False
-
-    # The existing route_trade_flow might be deprecated or adapted if all flow logic starts via initiate_flow_setup
-    # For now, keeping it as it might be used by other parts of the system (e.g. resuming a trade)
-    @staticmethod
-    async def route_trade_flow(
-        update: Update, context: ContextTypes.DEFAULT_TYPE, trade_type: str
-    ):
-        """Route to specific trade flow based on trade type (original method)."""
-        if trade_type == TradeTypeEnums.CRYPTO_FIAT.value:
-            # from .fiat import CryptoFiatFlow # Already imported at top
-            return await CryptoFiatFlow.handle_flow(update, context)
-
-        elif trade_type == TradeTypeEnums.CRYPTO_CRYPTO.value:
-            # from .crypto import CryptoCryptoFlow
-            return await CryptoCryptoFlow.handle_flow(update, context)
-
-        elif trade_type == TradeTypeEnums.CRYPTO_PRODUCT.value:
-            # from .product import CryptoProductFlow
-            return await CryptoProductFlow.handle_flow(update, context)
-
-        elif trade_type == TradeTypeEnums.MARKET_SHOP.value:
-            # from .market import MarketShopFlow
-            return await MarketShopFlow.handle_flow(update, context)
-
-        else:
-            # This part is unlikely to be hit if called from handle_trade_description, which is being removed.
-            # However, if other parts call it, this error handling is useful.
-            # Check if update.message exists before trying to use it.
-            target_message = (
-                update.callback_query.message
-                if update.callback_query
-                else update.message
-            )
-            if target_message:
-                await target_message.reply_text(
-                    "❌ Invalid trade type encountered during routing.",
-                    reply_markup=InlineKeyboardMarkup(
-                        [
-                            [
-                                InlineKeyboardButton(
-                                    "🔙 Back to Menu", callback_data="menu"
-                                )
-                            ]
-                        ]
-                    ),
-                )
-            else:
-                logger.error(
-                    "route_trade_flow: No message object found in update to send error."
-                )
             return False

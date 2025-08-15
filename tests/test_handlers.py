@@ -11,25 +11,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from telegram import CallbackQuery, Chat, InlineKeyboardMarkup, Message, Update, User
 from telegram.ext import ContextTypes
 
-# handle_check_deposit_callback is in handlers.callbacks, not initiate_trade
 from handlers.callbacks import handle_broker_callbacks, handle_deposit_check_callback
-
-# Updated imports: removed handle_trade_amount, handle_trade_currency, handle_trade_description
-from handlers.initiate_trade import (
-    dispatch_to_flow,  # For testing the dispatcher if needed, though flow tests might cover it
-)
-from handlers.initiate_trade import (
-    handle_trade_type_selection,  # Assuming this is the correct handler for type selection logic testing
-)
 from handlers.initiate_trade import (
     cancel_handler,
+    dispatch_to_flow,
+    handle_trade_type_selection,
     initiate_trade_handler,
 )
-
-# Import TradeFlowHandler if we need to mock its methods called by initiate_trade handlers
 from handlers.trade_flows import TradeFlowHandler
-from utils.enums import TradeTypeEnums  # For setting up trade_type in tests
-from utils.keyboard import trade_type_menu  # Import trade_type_menu
+from utils.enums import TradeTypeEnums
+from utils.keyboard import trade_type_menu
 
 
 @pytest.fixture

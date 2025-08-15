@@ -78,21 +78,6 @@ async def main_menu(update=None, context=None):
     return InlineKeyboardMarkup(keyboard)
 
 
-def group_menu():
-    "Return Join Or Sell"
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    text=emoji.emojize("Join A Trade :man:"),
-                    url="https://t.me/trusted_escrow_bot?message=start",
-                )
-            ]
-        ]
-    )
-    return keyboard
-
-
 def trade_menu():
     "Return Join Or Sell"
     keyboard = ReplyKeyboardMarkup(
@@ -100,34 +85,6 @@ def trade_menu():
             [KeyboardButton("Open New Trade 📒"), KeyboardButton("Join A Trade 📝")],
             [KeyboardButton("Trade History 📚"), KeyboardButton("Rules 📜")],
             [KeyboardButton("Community 🌐"), KeyboardButton("FAQs ❓")],
-        ],
-        resize_keyboard=True,
-    )
-    return keyboard
-
-
-def seller_menu():
-    "Return Seller Options"
-    keyboard = ReplyKeyboardMarkup(
-        [
-            [KeyboardButton(emoji.emojize("Initiate Trade :ledger:"))],
-            [KeyboardButton(emoji.emojize("Delete Trade :closed_book:"))],
-            [KeyboardButton(emoji.emojize("Trade History :books:"))],
-            [KeyboardButton(emoji.emojize("Rules :scroll:"))],
-        ],
-        resize_keyboard=True,
-    )
-    return keyboard
-
-
-def buyer_menu():
-    "Return Buyer Options"
-    keyboard = ReplyKeyboardMarkup(
-        [
-            [KeyboardButton(emoji.emojize("Join Trade :memo:"))],
-            [KeyboardButton(emoji.emojize("Report Trade :open_file_folder:"))],
-            [KeyboardButton(emoji.emojize("Trade History :books:"))],
-            [KeyboardButton(emoji.emojize("Rules :scroll:"))],
         ],
         resize_keyboard=True,
     )
@@ -248,27 +205,6 @@ def refunds():
                     callback_data="close_trade",
                 )
             ],
-        ]
-    )
-    return keyboard
-
-
-def select_trade():
-    keyboard = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    text=emoji.emojize("View Trades IDs"),
-                    callback_data="all_trades",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    text=emoji.emojize("Delete A Trade"),
-                    callback_data="delete_trade",
-                )
-            ],
-            [InlineKeyboardButton(text="Preview Trade", callback_data="view_trade")],
         ]
     )
     return keyboard

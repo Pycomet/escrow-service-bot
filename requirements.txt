@@ -24,7 +24,7 @@ h11==0.14.0
 h2==4.2.0
 hpack==4.1.0
 httpcore==1.0.7
-httpx==0.28.1
+httpx>=0.27.2,<0.28.0
 Hypercorn==0.17.3
 hyperframe==6.1.0
 idna==2.9
@@ -50,7 +50,7 @@ mongomock==4.1.2
 python-dotenv==0.13.0
 # Include PTB testing extras for in-memory Application harness
 python-telegram-bot[tests]==22.0
-pytz==2021.1
+pytz==2024.1
 quart==0.18.4
 requests==2.32.3
 six==1.15.0
@@ -68,3 +68,5 @@ pytest-asyncio
 pytest-cov
 mongomock
 pytz
+apscheduler==3.10.4
+solathon>=1.0.5,<1.1.0

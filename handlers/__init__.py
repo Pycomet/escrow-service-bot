@@ -27,6 +27,3 @@ __all__ = [
     "verdict",
     "wallet",
 ]
-
-# Register handlers
-application.add_handler(CommandHandler("start", start))
