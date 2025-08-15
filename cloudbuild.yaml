@@ -22,10 +22,17 @@ steps:
       - '--cpu=1'
       - '--memory=512Mi'
       - '--cpu-boost'
+      - '--min-instances=1'
+      - '--max-instances=1'
+      - '--concurrency=80'
 
 # Store images in Artifact Registry  
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/escrow-service-bot:$COMMIT_SHA'
 
 # Use a longer timeout for the build process
-timeout: '1200s' 
+timeout: '1200s'
+
+# Required IAM permissions for Cloud Build
+options:
+  logging: CLOUD_LOGGING_ONLY
