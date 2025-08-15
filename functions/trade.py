@@ -592,7 +592,9 @@ class TradeClient:
 
     @staticmethod
     def calculate_trade_fee(amount: float) -> tuple[float, float]:
-        """Calculate bot fee and total deposit amount for trade
+        """Calculate bot fee and total deposit amount for trade (legacy method)
+        
+        DEPRECATED: Use calculate_trade_fee_with_gas for wallet-based trades
 
         Args:
             amount: The amount the buyer will receive
@@ -605,6 +607,145 @@ class TradeClient:
         fee_amount = amount * (BOT_FEE_PERCENTAGE / 100)
         total_deposit_required = amount + fee_amount
         return fee_amount, total_deposit_required
+
+    @staticmethod
+    def calculate_trade_fee_with_gas(amount: float, currency: str) -> dict:
+        """Calculate comprehensive fee breakdown including gas costs
+        
+        Args:
+            amount: The amount the buyer will receive
+            currency: Currency symbol (ETH, USDT, etc.)
+            
+        Returns:
+            dict: {
+                'bot_fee': float,
+                'gas_fee_user_payout': float,      # Gas for sending to buyer
+                'gas_fee_bot_payout': float,       # Gas for bot fee payout
+                'total_gas_fees': float,           # Sum of all gas fees
+                'total_deposit_required': float,   # Total amount seller must deposit
+                'breakdown': dict                  # Detailed breakdown for display
+            }
+        """
+        from config import BOT_FEE_PERCENTAGE
+        
+        # Bot fee calculation
+        bot_fee = amount * (BOT_FEE_PERCENTAGE / 100)
+        
+        # Gas fee estimation based on current network conditions
+        gas_fees = TradeClient._estimate_gas_fees(currency)
+        
+        # For ETH trades: user payout + bot payout both use ETH gas
+        # For USDT trades: user payout uses ETH gas, bot payout uses ETH gas
+        gas_fee_user_payout = gas_fees['user_payout']
+        gas_fee_bot_payout = gas_fees['bot_payout']
+        total_gas_fees = gas_fee_user_payout + gas_fee_bot_payout
+        
+        # Total deposit calculation
+        if currency == "ETH":
+            # For ETH: amount + bot_fee + gas_fees (all in ETH)
+            total_deposit_required = amount + bot_fee + total_gas_fees
+        else:
+            # For USDT: amount + bot_fee (in USDT) + gas_fees (in ETH, separate requirement)
+            total_deposit_required = amount + bot_fee  # USDT amount
+            # Note: gas fees will be required separately in ETH
+        
+        return {
+            'bot_fee': bot_fee,
+            'gas_fee_user_payout': gas_fee_user_payout,
+            'gas_fee_bot_payout': gas_fee_bot_payout,
+            'total_gas_fees': total_gas_fees,
+            'total_deposit_required': total_deposit_required,
+            'breakdown': {
+                'amount_to_buyer': amount,
+                'bot_fee': bot_fee,
+                'bot_fee_percentage': BOT_FEE_PERCENTAGE,
+                'gas_for_buyer_payout': gas_fee_user_payout,
+                'gas_for_bot_payout': gas_fee_bot_payout,
+                'total_gas_required': total_gas_fees,
+                'currency': currency
+            }
+        }
+    
+    @staticmethod
+    def _estimate_gas_fees(currency: str) -> dict:
+        """Estimate gas fees for both user and bot payouts
+        
+        Returns:
+            dict: {'user_payout': float, 'bot_payout': float}  # Both in ETH
+        """
+        try:
+            from functions.wallet import WalletManager
+            from web3 import Web3
+            
+            # Get current gas price from network
+            if currency in ["ETH", "USDT"]:
+                web3 = WalletManager._get_web3_connection(
+                    WalletManager.SUPPORTED_COINS.get(currency, WalletManager.SUPPORTED_COINS["ETH"])
+                )
+                if web3:
+                    current_gas_price = web3.eth.gas_price
+                    
+                    if currency == "ETH":
+                        # ETH transfers: 21,000 gas each
+                        user_payout_gas = 21000
+                        bot_payout_gas = 21000
+                    else:  # USDT
+                        # USDT transfers: ~64,000 gas each
+                        user_payout_gas = 65000
+                        bot_payout_gas = 65000
+                    
+                    # Convert to ETH with 20% buffer for price fluctuations
+                    user_payout_fee = float(web3.from_wei(user_payout_gas * current_gas_price * 1.2, 'ether'))
+                    bot_payout_fee = float(web3.from_wei(bot_payout_gas * current_gas_price * 1.2, 'ether'))
+                    
+                    return {
+                        'user_payout': user_payout_fee,
+                        'bot_payout': bot_payout_fee
+                    }
+        except Exception as e:
+            logger.warning(f"Could not get real-time gas prices: {e}")
+        
+        # Fallback to conservative estimates if network unavailable
+        if currency == "ETH":
+            return {
+                'user_payout': 0.001,  # ~21k gas at 47 gwei
+                'bot_payout': 0.001
+            }
+        else:  # USDT and other tokens
+            return {
+                'user_payout': 0.003,  # ~65k gas at 47 gwei
+                'bot_payout': 0.003
+            }
+    
+    @staticmethod
+    def get_gas_requirements_for_currency(currency: str) -> dict:
+        """Get gas requirements explanation for a specific currency
+        
+        Returns:
+            dict: Information about gas requirements for user display
+        """
+        if currency == "ETH":
+            return {
+                'requires_separate_eth': False,
+                'explanation': 'Gas fees are included in the total ETH deposit amount',
+                'gas_used_for': ['Transfer to buyer', 'Bot fee payout'],
+                'combined_deposit': True
+            }
+        elif currency == "USDT":
+            return {
+                'requires_separate_eth': True,
+                'explanation': 'ETH is required for gas fees in addition to USDT amount',
+                'gas_used_for': ['Transfer USDT to buyer', 'Bot fee payout'],
+                'combined_deposit': False,
+                'eth_required_reason': 'USDT runs on Ethereum network and requires ETH for transaction fees'
+            }
+        else:
+            return {
+                'requires_separate_eth': True,
+                'explanation': f'ETH is required for gas fees in addition to {currency} amount',
+                'gas_used_for': [f'Transfer {currency} to buyer', 'Bot fee payout'],
+                'combined_deposit': False
+            }
 
     @staticmethod
     def set_buyer_address(
@@ -641,11 +782,23 @@ class TradeClient:
                 logger.error(f"Trade {trade_id} missing buyer address")
                 return False
 
-            # Calculate fee and net amount
+            # Calculate fee and gas amounts using gas-aware calculation
             original_amount = float(trade.get("price", 0))
-            fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(
-                original_amount
-            )
+            currency = trade.get("currency")
+            
+            # Use gas-inclusive calculation for wallet-based trades
+            if trade.get("is_wallet_trade"):
+                fee_data = TradeClient.calculate_trade_fee_with_gas(original_amount, currency)
+                fee_amount = fee_data['bot_fee']
+                total_gas_fees = fee_data['total_gas_fees']
+                logger.info(f"Gas-aware release: Bot fee={fee_amount}, Gas fees={total_gas_fees}")
+            else:
+                # Legacy calculation for BTCPay trades
+                fee_amount, _ = TradeClient.calculate_trade_fee(original_amount)
+                total_gas_fees = 0
+                logger.info(f"Legacy release: Bot fee={fee_amount}")
+            
+            available_for_bot = fee_amount  # Bot gets the full fee since gas was pre-calculated
 
             # For wallet-based trades (ETH/USDT), initiate transfer
             if trade.get("is_wallet_trade"):
@@ -668,20 +821,28 @@ class TradeClient:
                 )
 
                 if success:
-                    # Update trade with release information
-                    db.trades.update_one(
-                        {"_id": trade_id},
-                        {
-                            "$set": {
-                                "crypto_released": True,
-                                "crypto_release_amount": original_amount,  # Record what was sent to buyer
-                                "bot_fee_amount": fee_amount,
-                                "crypto_release_time": datetime.now(),
-                                "status": "crypto_released",
-                                "updated_at": datetime.now(),
+                    # Update trade with release information including gas fee accounting
+                    update_data = {
+                        "crypto_released": True,
+                        "crypto_release_amount": original_amount,  # Record what was sent to buyer
+                        "bot_fee_amount": available_for_bot,  # Bot fee after gas accounting
+                        "crypto_release_time": datetime.now(),
+                        "status": "crypto_released",
+                        "updated_at": datetime.now(),
+                    }
+                    
+                    # Add gas fee information for wallet-based trades
+                    if trade.get("is_wallet_trade"):
+                        update_data.update({
+                            "gas_fees_reserved": total_gas_fees,
+                            "total_deposit_with_gas": fee_data['total_deposit_required'],
+                            "gas_fee_breakdown": {
+                                "user_payout_gas": fee_data['gas_fee_user_payout'],
+                                "bot_payout_gas": fee_data['gas_fee_bot_payout']
                             }
-                        },
-                    )
+                        })
+                    
+                    db.trades.update_one({"_id": trade_id}, {"$set": update_data})
                     logger.info(
                         f"Crypto released for trade {trade_id}: {original_amount} {currency} to {buyer_address}"
                     )

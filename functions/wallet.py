@@ -885,23 +885,29 @@ class WalletManager:
                 logger.error(f"Unsupported currency: {currency}")
                 return False
 
-            # For now, we'll simulate the transfer (in production, implement actual blockchain transactions)
-            # TODO: Implement actual blockchain transfers using Web3, Solana SDK, etc.
+            # Execute blockchain transfer
             if DEBUG:
                 logger.warning(
                     f"DEBUG MODE: Simulating transfer of {amount} {currency} to {to_address}"
                 )
-                transfer_success = True
-                tx_hash = f"simulated_tx_{generate_id()[:16]}"
+                transfer_result = {
+                    "success": True,
+                    "tx_hash": f"simulated_tx_{generate_id()[:16]}",
+                    "gas_used": 21000 if currency == "ETH" else 65000,
+                    "gas_fee_eth": 0.001  # Simulated gas fee
+                }
             else:
-                # In production, implement actual transfers here
-                transfer_success = WalletManager._execute_blockchain_transfer(
+                # Execute actual blockchain transfer
+                transfer_result = WalletManager._execute_blockchain_transfer(
                     coin_config, coin_address, to_address, amount, wallet_manager
                 )
-                tx_hash = f"real_tx_{generate_id()[:16]}"  # Replace with actual tx hash
 
-            if transfer_success:
-                # Record transaction
+            if transfer_result.get("success", False):
+                tx_hash = transfer_result.get("tx_hash")
+                gas_used = transfer_result.get("gas_used", 0)
+                gas_fee_eth = transfer_result.get("gas_fee_eth", 0.0)
+                
+                # Record transaction with gas fee information
                 transaction_record = {
                     "_id": generate_id(),
                     "wallet_id": from_wallet_id,
@@ -913,13 +919,35 @@ class WalletManager:
                     "tx_hash": tx_hash,
                     "trade_id": trade_id,
                     "status": "completed",
+                    "gas_used": gas_used,
+                    "gas_fee_eth": gas_fee_eth,
                     "created_at": datetime.now().isoformat(),
                 }
 
                 db.wallet_transactions.insert_one(transaction_record)
 
-                # Update coin address balance (subtract transferred amount)
+                # Update coin address balance (subtract transferred amount and gas fees if ETH)
                 new_balance = current_balance - amount
+                if currency == "ETH":
+                    # For ETH transfers, also subtract gas fees from ETH balance
+                    new_balance -= gas_fee_eth
+                elif gas_fee_eth > 0:
+                    # For ERC-20 transfers, subtract gas fees from ETH balance in the same wallet
+                    eth_address = WalletManager.get_wallet_coin_address(from_wallet_id, "ETH")
+                    if eth_address:
+                        eth_balance = wallet_manager.get_balance(eth_address["address"], "ETH")
+                        new_eth_balance = max(0, eth_balance - gas_fee_eth)
+                        db.coin_addresses.update_one(
+                            {"_id": eth_address["_id"]},
+                            {
+                                "$set": {
+                                    "balance": str(new_eth_balance),
+                                    "updated_at": datetime.now().isoformat(),
+                                }
+                            },
+                        )
+                        logger.info(f"Deducted {gas_fee_eth} ETH gas fee from ETH balance")
+
                 db.coin_addresses.update_one(
                     {"_id": coin_address["_id"]},
                     {
@@ -930,7 +958,7 @@ class WalletManager:
                     },
                 )
 
-                logger.info(f"Transfer completed: {tx_hash}")
+                logger.info(f"Transfer completed: {tx_hash}, Gas fee: {gas_fee_eth} ETH")
                 return True
             else:
                 logger.error(f"Blockchain transfer failed for {amount} {currency}")
@@ -947,8 +975,12 @@ class WalletManager:
         to_address: str,
         amount: float,
         wallet_manager,
-    ) -> bool:
-        """Execute actual blockchain transfer (placeholder for production implementation)"""
+    ) -> dict:
+        """Execute actual blockchain transfer
+        
+        Returns:
+            dict: {"success": bool, "tx_hash": str, "gas_used": int, "gas_fee_eth": float}
+        """
         try:
             network_type = coin_config.get("network_type")
 
@@ -957,20 +989,20 @@ class WalletManager:
                     coin_config, from_coin_address, to_address, amount, wallet_manager
                 )
             elif network_type == "bitcoin":
-                return WalletManager._execute_bitcoin_transfer(
-                    coin_config, from_coin_address, to_address, amount, wallet_manager
-                )
+                # Bitcoin transfers not implemented yet
+                logger.warning("Bitcoin transfers not yet implemented")
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
             elif network_type == "solana":
-                return WalletManager._execute_solana_transfer(
-                    coin_config, from_coin_address, to_address, amount, wallet_manager
-                )
+                # Solana transfers not implemented yet  
+                logger.warning("Solana transfers not yet implemented")
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
             else:
                 logger.error(f"Unsupported network type: {network_type}")
-                return False
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
 
         except Exception as e:
             logger.error(f"Error executing blockchain transfer: {e}")
-            return False
+            return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
 
     @staticmethod
     def _execute_ethereum_transfer(
@@ -979,29 +1011,53 @@ class WalletManager:
         to_address: str,
         amount: float,
         wallet_manager,
-    ) -> bool:
-        """Execute Ethereum/ERC-20 transfer"""
+    ) -> dict:
+        """Execute Ethereum/ERC-20 transfer
+        
+        Returns:
+            dict: {"success": bool, "tx_hash": str, "gas_used": int, "gas_fee_eth": float}
+        """
         try:
             if not WEB3_AVAILABLE:
                 logger.error("Web3 libraries not available for Ethereum transfer")
-                return False
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
 
-            # TODO: Implement actual Ethereum transfer
-            # This would involve:
-            # 1. Decrypt private key from coin_address
-            # 2. Create transaction
-            # 3. Sign transaction
-            # 4. Send to network
-            # 5. Wait for confirmation
+            from web3 import Web3
+            from eth_account import Account
+            
+            # Get Web3 connection
+            web3 = WalletManager._get_web3_connection(coin_config)
+            if not web3:
+                logger.error("Failed to connect to Ethereum network")
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
 
-            logger.warning(
-                "Ethereum transfer not yet implemented - returning success for testing"
-            )
-            return True
+            # Decrypt private key
+            private_key = wallet_manager._decrypt_data(from_coin_address["private_key_encrypted"])
+            if not private_key.startswith("0x"):
+                private_key = "0x" + private_key
+                
+            from_address = from_coin_address["address"]
+            
+            # Validate addresses
+            from_address = Web3.to_checksum_address(from_address)
+            to_address = Web3.to_checksum_address(to_address)
+            
+            logger.info(f"Executing {coin_config['symbol']} transfer: {amount} from {from_address} to {to_address}")
+            
+            if coin_config.get("is_token", False):
+                # ERC-20 token transfer (USDT, etc.)
+                return WalletManager._execute_erc20_transfer(
+                    web3, private_key, from_address, to_address, amount, coin_config
+                )
+            else:
+                # Native ETH transfer
+                return WalletManager._execute_eth_transfer(
+                    web3, private_key, from_address, to_address, amount
+                )
 
         except Exception as e:
             logger.error(f"Error in Ethereum transfer: {e}")
-            return False
+            return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
 
     @staticmethod
     def _execute_bitcoin_transfer(
@@ -1042,3 +1098,230 @@ class WalletManager:
         except Exception as e:
             logger.error(f"Error in Solana transfer: {e}")
             return False
+
+    @staticmethod
+    def _get_web3_connection(coin_config: dict):
+        """Get a Web3 connection with fallback RPCs"""
+        try:
+            from web3 import Web3
+            
+            # Primary RPC from config
+            primary_rpc_url = None
+            if coin_config.get("is_token") and coin_config.get("parent_coin"):
+                parent_config = WalletManager.SUPPORTED_COINS.get(coin_config["parent_coin"], {})
+                primary_rpc_url = parent_config.get("rpc_url")
+            else:
+                primary_rpc_url = coin_config.get("rpc_url")
+            
+            # Fallback RPCs
+            fallback_rpcs = [
+                "https://eth.llamarpc.com",
+                "https://rpc.ankr.com/eth",
+                "https://ethereum.publicnode.com",
+                "https://eth-mainnet.g.alchemy.com/v2/demo"
+            ]
+            
+            # Build list of RPCs to try
+            rpcs_to_try = []
+            if primary_rpc_url and "YOUR_INFURA_KEY" not in primary_rpc_url:
+                rpcs_to_try.append(primary_rpc_url)
+            rpcs_to_try.extend(fallback_rpcs)
+            
+            # Try each RPC until one works
+            for rpc_url in rpcs_to_try:
+                try:
+                    web3 = Web3(Web3.HTTPProvider(rpc_url, request_kwargs={'timeout': 15}))
+                    if web3.is_connected():
+                        logger.info(f"Connected to Ethereum RPC: {rpc_url}")
+                        return web3
+                except Exception as rpc_error:
+                    logger.warning(f"Failed to connect to {rpc_url}: {rpc_error}")
+                    continue
+            
+            logger.error("Could not connect to any Ethereum RPC")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting Web3 connection: {e}")
+            return None
+
+    @staticmethod  
+    def _execute_eth_transfer(web3, private_key: str, from_address: str, to_address: str, amount: float) -> dict:
+        """Execute native ETH transfer"""
+        try:
+            from web3 import Web3
+            from eth_account import Account
+            
+            # Convert amount to Wei
+            amount_wei = web3.to_wei(amount, 'ether')
+            
+            # Get nonce
+            nonce = web3.eth.get_transaction_count(from_address)
+            
+            # Get current gas price
+            gas_price = web3.eth.gas_price
+            
+            # Build transaction
+            transaction = {
+                'to': to_address,
+                'value': amount_wei,
+                'gas': 21000,  # Standard ETH transfer gas limit
+                'gasPrice': gas_price,
+                'nonce': nonce,
+                'chainId': web3.eth.chain_id
+            }
+            
+            # Sign transaction
+            signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
+            
+            # Send transaction
+            tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            tx_hash_hex = tx_hash.hex()
+            
+            logger.info(f"ETH transfer sent: {tx_hash_hex}")
+            
+            # Wait for transaction receipt (with timeout)
+            try:
+                receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+                gas_used = receipt.gasUsed
+                gas_fee_eth = float(web3.from_wei(gas_used * gas_price, 'ether'))
+                
+                if receipt.status == 1:
+                    logger.info(f"ETH transfer confirmed: {tx_hash_hex}, Gas used: {gas_used}")
+                    return {
+                        "success": True,
+                        "tx_hash": tx_hash_hex,
+                        "gas_used": gas_used,
+                        "gas_fee_eth": gas_fee_eth
+                    }
+                else:
+                    logger.error(f"ETH transfer failed: {tx_hash_hex}")
+                    return {"success": False, "tx_hash": tx_hash_hex, "gas_used": gas_used, "gas_fee_eth": gas_fee_eth}
+                    
+            except Exception as receipt_error:
+                logger.warning(f"Could not get receipt for {tx_hash_hex}: {receipt_error}")
+                # Transaction was sent, but we couldn't confirm
+                gas_fee_eth = float(web3.from_wei(21000 * gas_price, 'ether'))  # Estimated
+                return {
+                    "success": True,  # Assume success since transaction was sent
+                    "tx_hash": tx_hash_hex,
+                    "gas_used": 21000,
+                    "gas_fee_eth": gas_fee_eth
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in ETH transfer: {e}")
+            return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
+
+    @staticmethod
+    def _execute_erc20_transfer(web3, private_key: str, from_address: str, to_address: str, amount: float, coin_config: dict) -> dict:
+        """Execute ERC-20 token transfer (USDT, etc.)"""
+        try:
+            from web3 import Web3
+            from eth_account import Account
+            
+            # ERC-20 ABI for transfer function
+            ERC20_ABI = [
+                {
+                    "constant": False,
+                    "inputs": [
+                        {"name": "_to", "type": "address"},
+                        {"name": "_value", "type": "uint256"}
+                    ],
+                    "name": "transfer",
+                    "outputs": [{"name": "", "type": "bool"}],
+                    "payable": False,
+                    "stateMutability": "nonpayable",
+                    "type": "function"
+                },
+                {
+                    "constant": True,
+                    "inputs": [],
+                    "name": "decimals",
+                    "outputs": [{"name": "", "type": "uint8"}],
+                    "payable": False,
+                    "stateMutability": "view",
+                    "type": "function"
+                }
+            ]
+            
+            # Get contract
+            contract_address = coin_config.get("contract_address")
+            if not contract_address:
+                logger.error(f"No contract address for {coin_config['symbol']}")
+                return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}
+                
+            contract = web3.eth.contract(
+                address=Web3.to_checksum_address(contract_address),
+                abi=ERC20_ABI
+            )
+            
+            # Convert amount to token units (considering decimals)
+            decimals = coin_config.get("decimals", 18)
+            amount_units = int(amount * (10 ** decimals))
+            
+            # Get nonce
+            nonce = web3.eth.get_transaction_count(from_address)
+            
+            # Get current gas price
+            gas_price = web3.eth.gas_price
+            
+            # Build transaction
+            transaction = contract.functions.transfer(
+                to_address, amount_units
+            ).build_transaction({
+                'from': from_address,
+                'gas': 100000,  # Estimate for ERC-20 transfer
+                'gasPrice': gas_price,
+                'nonce': nonce,
+                'chainId': web3.eth.chain_id
+            })
+            
+            # Estimate gas more precisely
+            try:
+                estimated_gas = web3.eth.estimate_gas(transaction)
+                transaction['gas'] = int(estimated_gas * 1.2)  # Add 20% buffer
+            except Exception as gas_error:
+                logger.warning(f"Could not estimate gas, using default: {gas_error}")
+            
+            # Sign transaction
+            signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
+            
+            # Send transaction
+            tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
+            tx_hash_hex = tx_hash.hex()
+            
+            logger.info(f"{coin_config['symbol']} transfer sent: {tx_hash_hex}")
+            
+            # Wait for transaction receipt
+            try:
+                receipt = web3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+                gas_used = receipt.gasUsed
+                gas_fee_eth = float(web3.from_wei(gas_used * gas_price, 'ether'))
+                
+                if receipt.status == 1:
+                    logger.info(f"{coin_config['symbol']} transfer confirmed: {tx_hash_hex}, Gas used: {gas_used}")
+                    return {
+                        "success": True,
+                        "tx_hash": tx_hash_hex,
+                        "gas_used": gas_used,
+                        "gas_fee_eth": gas_fee_eth
+                    }
+                else:
+                    logger.error(f"{coin_config['symbol']} transfer failed: {tx_hash_hex}")
+                    return {"success": False, "tx_hash": tx_hash_hex, "gas_used": gas_used, "gas_fee_eth": gas_fee_eth}
+                    
+            except Exception as receipt_error:
+                logger.warning(f"Could not get receipt for {tx_hash_hex}: {receipt_error}")
+                # Transaction was sent, but we couldn't confirm
+                gas_fee_eth = float(web3.from_wei(transaction['gas'] * gas_price, 'ether'))  # Estimated
+                return {
+                    "success": True,  # Assume success since transaction was sent
+                    "tx_hash": tx_hash_hex,
+                    "gas_used": transaction['gas'],
+                    "gas_fee_eth": gas_fee_eth
+                }
+                
+        except Exception as e:
+            logger.error(f"Error in {coin_config['symbol']} transfer: {e}")
+            return {"success": False, "tx_hash": None, "gas_used": 0, "gas_fee_eth": 0.0}

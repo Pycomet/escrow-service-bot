@@ -236,7 +236,7 @@ Follow the payment instructions and confirm when complete.
     def deposit_instructions(
         amount: float, currency: str, description: str, payment_url: str, trade_id: str
     ) -> str:
-        """Generates the message for crypto deposit instructions."""
+        """Generates the message for crypto deposit instructions (BTCPay-based)."""
         from functions.trade import TradeClient
 
         fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
@@ -247,10 +247,13 @@ Follow the payment instructions and confirm when complete.
 
 To proceed with this trade, you (the seller) need to deposit the specified crypto amount into escrow.
 
-<b>Amount to Deposit:</b> {total_deposit_required} {currency}
-<b>Buyer will receive:</b> {amount} {currency}
-<b>Your Trade Description/Terms:</b> {description}
+<b>📊 Deposit Breakdown:</b>
+• Amount to buyer: <b>{amount} {currency}</b>
+• Bot service fee (2.5%): <b>{fee_amount} {currency}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total Deposit Required: {total_deposit_required} {currency}</b>
 
+<b>📋 Trade Terms:</b> {description}
 
 Please use the secure payment link below to make your deposit. This will take you to our payment provider where you can complete the transaction.
 
@@ -272,30 +275,76 @@ If you encounter any issues, please contact support.
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
         from functions.trade import TradeClient
 
-        fee_amount, total_deposit_required = TradeClient.calculate_trade_fee(amount)
-
-        return f"""
-🔒 <b>Crypto Deposit Required for Trade ID: {trade_id}</b> 🔒
+        # Use new gas-inclusive fee calculation
+        fee_data = TradeClient.calculate_trade_fee_with_gas(amount, currency)
+        gas_info = TradeClient.get_gas_requirements_for_currency(currency)
+        
+        breakdown = fee_data['breakdown']
+        
+        if currency == "ETH":
+            # ETH trades: all costs combined
+            return f"""
+🔒 <b>ETH Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
 
-To proceed with this trade, you (the seller) need to deposit the specified crypto amount to your escrow wallet address.
+<b>💰 Deposit Address (ETH):</b>
+<code>{receiving_address}</code>
 
-<b>Amount to Deposit:</b> {total_deposit_required} {currency}
-<b>Buyer will receive:</b> {amount} {currency}
-<b>Your Trade Description/Terms:</b> {description}
+<b>📊 Deposit Breakdown:</b>
+• Amount to buyer: <b>{breakdown['amount_to_buyer']} ETH</b>
+• Bot service fee ({breakdown['bot_fee_percentage']}%): <b>{breakdown['bot_fee']} ETH</b>
+• Gas fees: <b>{fee_data['total_gas_fees']} ETH</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total Deposit Required: {fee_data['total_deposit_required']} ETH</b>
+
+<b>🔥 Gas Fee Info:</b>
+{gas_info['explanation']}. Covers all transaction fees for buyer payout and bot fee transfer.
+
+<b>📋 Trade Terms:</b> {description}
+
+<b>⚠️ Important Instructions:</b>
+• Send exactly <b>{fee_data['total_deposit_required']} ETH</b> to the address above
+• Must be sent on Ethereum network
+• Gas fees calculated with 20% buffer for price fluctuations
+• Double-check address before sending
+• This address is unique to your wallet
+
+After you have successfully made the deposit, click "✅ I've Made Deposit" to confirm.
+        """
+        
+        else:  # USDT and other tokens
+            return f"""
+🔒 <b>{currency} Deposit Required for Trade ID: {trade_id}</b> 🔒
+--------------------------------------------------
 
 <b>💰 Deposit Address ({currency}):</b>
 <code>{receiving_address}</code>
 
-<b>⚠️ Important:</b>
-• Send exactly {total_deposit_required} {currency} to the address above
-• Make sure you're sending on the correct network (Ethereum for ETH/USDT)
-• Double-check the address before sending
-• This address is unique to your wallet - funds sent here belong to you
+<b>📊 {currency} Deposit Breakdown:</b>
+• Amount to buyer: <b>{breakdown['amount_to_buyer']} {currency}</b>
+• Bot service fee ({breakdown['bot_fee_percentage']}%): <b>{breakdown['bot_fee']} {currency}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total {currency} Required: {fee_data['total_deposit_required']} {currency}</b>
 
-After you have successfully made the deposit, please click the "✅ I've Made Deposit" button to confirm.
+<b>⚡ ETH Required for Gas Fees:</b>
+• Gas fees: <b>{fee_data['total_gas_fees']} ETH</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>💳 Total ETH Required: {fee_data['total_gas_fees']} ETH</b>
 
-If you encounter any issues, please contact support.
+<b>🔥 Why ETH is Required:</b>
+{gas_info['eth_required_reason']}. Gas covers all transaction fees for {currency} transfers and bot payouts.
+
+<b>📋 Trade Terms:</b> {description}
+
+<b>⚠️ Critical Instructions:</b>
+• Send <b>{fee_data['total_deposit_required']} {currency}</b> to the address above
+• Your wallet MUST also have <b>{fee_data['total_gas_fees']} ETH</b> for gas fees
+• Both must be sent on Ethereum network
+• Gas fees calculated with 20% buffer for price fluctuations
+• Insufficient ETH will cause transaction failures
+• Double-check address before sending
+
+After making both deposits, click "✅ I've Made Deposit" to confirm.
         """
 
     @staticmethod

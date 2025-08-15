@@ -568,8 +568,7 @@ class CryptoFiatFlow:
             if receiving_address and expected_amount > 0:
                 try:
                     # Get the current balance for this address and currency
-                    # current_balance = wallet_manager.get_balance(receiving_address, currency)
-                    current_balance = expected_amount  # TODO: REMOVE THIS HACK
+                    current_balance = wallet_manager.get_balance(receiving_address, currency)
 
                     logger.info(f"Current balance: {current_balance} {currency}")
 
