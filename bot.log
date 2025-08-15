@@ -11,16 +11,3 @@
 2025-08-15 20:43:12,857 - config - INFO - Initializing Telegram bot...
 [2025-08-15 20:43:12 +0000] [8714] [INFO] Running on http://0.0.0.0:8000 (CTRL + C to quit)
 2025-08-15 20:43:12,858 - hypercorn.error - INFO - Running on http://0.0.0.0:8000 (CTRL + C to quit)
-2025-08-15 20:43:13,418 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1370101617:AAEUBaCu74QvJ3e90fADUsdeUmHvwzv8sN8/getMe "HTTP/1.1 200 OK"
-2025-08-15 20:43:13,419 - apscheduler.scheduler - INFO - Scheduler started
-2025-08-15 20:43:13,420 - telegram.ext.Application - INFO - Application started
-2025-08-15 20:43:13,764 - handlers.callbacks - INFO - Callback handlers registered successfully
-2025-08-15 20:43:13,765 - config - INFO - All handlers registered successfully
-2025-08-15 20:43:13,765 - config - INFO - Checking for existing webhooks...
-2025-08-15 20:43:13,957 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot1370101617:AAEUBaCu74QvJ3e90fADUsdeUmHvwzv8sN8/getWebhookInfo "HTTP/1.1 200 OK"
-2025-08-15 20:43:13,958 - config - INFO - Webhook is already correctly set. No changes needed.
-2025-08-15 20:43:13,958 - config - INFO - Bot initialized successfully
-2025-08-15 20:43:22,897 - telegram.ext.Application - INFO - Application is stopping. This might take a moment.
-2025-08-15 20:43:22,897 - apscheduler.scheduler - INFO - Scheduler has been shut down
-2025-08-15 20:43:22,908 - telegram.ext.Application - INFO - Application.stop() complete
-2025-08-15 20:43:22,909 - config - INFO - Bot stopped successfully
