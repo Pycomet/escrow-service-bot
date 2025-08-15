@@ -197,59 +197,32 @@ class TestAdminBroadcastHandlers:
     async def test_admin_broadcast_handler_success(
         self, mock_update_callback, mock_context
     ):
-        """Test successful broadcast handler initiation"""
+        """Test broadcast handler shows message type selection menu"""
 
-        mock_users_data = {
-            "stats": {
-                "total_users": 10,
-                "active_users": 8,
-                "disabled_users": 2,
-                "private_chats": 6,
-                "group_chats": 4,
-            }
-        }
+        await admin_broadcast_handler(mock_update_callback, mock_context)
 
-        with patch.object(
-            AdminBroadcastManager,
-            "get_all_users_for_broadcast",
-            return_value=mock_users_data,
-        ), patch.object(
-            AdminBroadcastManager,
-            "create_broadcast_message",
-            return_value="Test message",
-        ):
+        # Verify message type selection menu was sent
+        mock_update_callback.callback_query.edit_message_text.assert_called_once()
+        args = mock_update_callback.callback_query.edit_message_text.call_args
 
-            await admin_broadcast_handler(mock_update_callback, mock_context)
-
-            # Verify confirmation message was sent
-            mock_update_callback.callback_query.edit_message_text.assert_called_once()
-            args = mock_update_callback.callback_query.edit_message_text.call_args
-
-            assert "Broadcast Message Confirmation" in args[0][0]
-            assert "8" in args[0][0]  # active users count
-            assert "2" in args[0][0]  # disabled users count
-
-            # Verify users data stored in context
-            assert "broadcast_users_data" in mock_context.user_data
+        assert "Select Broadcast Message Type" in args[0][0]
+        # The message text doesn't contain the button text, so we check the message content
+        assert "Choose a context" in args[0][0]
 
     @pytest.mark.asyncio
     async def test_admin_broadcast_handler_no_users(
         self, mock_update_callback, mock_context
     ):
-        """Test broadcast handler when no users found"""
+        """Test broadcast handler shows message type selection menu regardless of user count"""
 
-        with patch.object(
-            AdminBroadcastManager, "get_all_users_for_broadcast", return_value=None
-        ):
+        await admin_broadcast_handler(mock_update_callback, mock_context)
 
-            await admin_broadcast_handler(mock_update_callback, mock_context)
+        # Verify message type selection menu was sent (no error)
+        mock_update_callback.callback_query.edit_message_text.assert_called_once()
+        args = mock_update_callback.callback_query.edit_message_text.call_args
 
-            # Verify error message was sent
-            mock_update_callback.callback_query.edit_message_text.assert_called_once()
-            args = mock_update_callback.callback_query.edit_message_text.call_args
-
-            assert "Error" in args[0][0]
-            assert "Failed to fetch user data" in args[0][0]
+        assert "Select Broadcast Message Type" in args[0][0]
+        # No error message expected in new implementation
 
     @pytest.mark.asyncio
     async def test_admin_broadcast_confirm_handler_success(
@@ -257,12 +230,13 @@ class TestAdminBroadcastHandlers:
     ):
         """Test successful broadcast confirmation and execution"""
 
-        # Setup context with users data
+        # Setup context with users data and message
         mock_users_data = {
             "active_users": [{"_id": "123", "chat": "123", "name": "Alice"}],
             "stats": {"active_users": 1, "disabled_users": 0},
         }
         mock_context.user_data["broadcast_users_data"] = mock_users_data
+        mock_context.user_data["broadcast_message"] = "Test message"
 
         # Mock successful broadcast result
         mock_result = {
@@ -310,7 +284,7 @@ class TestAdminBroadcastHandlers:
         mock_update_callback.callback_query.edit_message_text.assert_called_once()
         args = mock_update_callback.callback_query.edit_message_text.call_args
 
-        assert "Session expired" in args[0][0]
+        assert "Session Expired" in args[0][0]
 
     @pytest.mark.asyncio
     async def test_admin_broadcast_confirm_handler_broadcast_failure(
@@ -318,29 +292,30 @@ class TestAdminBroadcastHandlers:
     ):
         """Test broadcast confirmation when broadcast execution fails"""
 
-        # Setup context with users data
+        # Setup context with users data and message
         mock_users_data = {
             "active_users": [{"_id": "123", "chat": "123", "name": "Alice"}],
-            "stats": {"active_users": 1},
+            "stats": {"active_users": 1, "disabled_users": 0},
         }
         mock_context.user_data["broadcast_users_data"] = mock_users_data
+        mock_context.user_data["broadcast_message"] = "Test message"
 
+        # Mock broadcast failure
         with patch.object(
-            AdminBroadcastManager,
-            "send_broadcast_message",
-            side_effect=Exception("Network error"),
+            AdminBroadcastManager, "send_broadcast_message", side_effect=Exception("Broadcast failed")
         ):
 
             await admin_broadcast_confirm_handler(mock_update_callback, mock_context)
 
-            # Verify error message was sent
-            final_call_args = (
-                mock_update_callback.callback_query.edit_message_text.call_args_list[-1]
-            )
+            # Verify error message was sent (called twice: progress + error)
+            assert mock_update_callback.callback_query.edit_message_text.call_count == 2
+            
+            # Check the final error message
+            final_call_args = mock_update_callback.callback_query.edit_message_text.call_args_list[-1]
             final_message = final_call_args[0][0]
 
             assert "Broadcast Failed" in final_message
-            assert "Network error" in final_message
+            assert "Broadcast failed" in final_message
 
 
 if __name__ == "__main__":
