@@ -69,3 +69,4 @@ pytest-cov
 mongomock
 pytz
 apscheduler==3.10.4
+solathon
