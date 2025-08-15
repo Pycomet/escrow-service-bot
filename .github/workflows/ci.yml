@@ -134,10 +134,6 @@ jobs:
         echo "BTCPAY_SECRET=${BTCPAY_SECRET}" >> .env
         echo "BTCPAY_API_KEY=${BTCPAY_API_KEY}" >> .env
 
-    - name: Wait for MongoDB
-      run: |
-        timeout 30s bash -c 'until mongosh --eval "db.adminCommand(\"ping\")" > /dev/null 2>&1; do sleep 1; done'
-
     - name: Run tests with coverage
       run: |
         pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term
