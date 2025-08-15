@@ -249,7 +249,7 @@ To proceed with this trade, you (the seller) need to deposit the specified crypt
 
 <b>📊 Deposit Breakdown:</b>
 • Amount to buyer: <b>{amount} {currency}</b>
-• Bot service fee (2.5%): <b>{fee_amount} {currency}</b>
+• Bot service fee: <b>{fee_amount} {currency}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>💳 Total Deposit Required: {total_deposit_required} {currency}</b>
 
@@ -274,6 +274,7 @@ If you encounter any issues, please contact support.
     ) -> str:
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
         from functions.trade import TradeClient
+        from functions.scripts.utils import get_eth_price
 
         # Use new gas-inclusive fee calculation
         fee_data = TradeClient.calculate_trade_fee_with_gas(amount, currency)
@@ -281,8 +282,31 @@ If you encounter any issues, please contact support.
         
         breakdown = fee_data['breakdown']
         
+        # Get ETH price for USD equivalent and format gas fees properly
+        eth_price = get_eth_price()
+        gas_fees_usd = ""
+        
+        # Format ETH gas fees to avoid scientific notation
+        def format_eth_amount(amount):
+            """Format small ETH amounts to avoid scientific notation"""
+            if amount < 0.0001:
+                return f"{amount:.8f}"  # Show 8 decimal places for very small amounts
+            elif amount < 0.001:
+                return f"{amount:.6f}"  # Show 6 decimal places for small amounts
+            else:
+                return f"{amount:.4f}"  # Show 4 decimal places for larger amounts
+        
+        formatted_gas_fees = format_eth_amount(fee_data['total_gas_fees'])
+        
+        if eth_price and fee_data['total_gas_fees']:
+            usd_value = fee_data['total_gas_fees'] * eth_price
+            gas_fees_usd = f" (~${usd_value:.2f} USD)"
+        
         if currency == "ETH":
             # ETH trades: all costs combined
+            formatted_gas_fees_eth = format_eth_amount(fee_data['total_gas_fees'])
+            formatted_total_deposit = format_eth_amount(fee_data['total_deposit_required'])
+            
             return f"""
 🔒 <b>ETH Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
@@ -292,10 +316,10 @@ If you encounter any issues, please contact support.
 
 <b>📊 Deposit Breakdown:</b>
 • Amount to buyer: <b>{breakdown['amount_to_buyer']} ETH</b>
-• Bot service fee ({breakdown['bot_fee_percentage']}%): <b>{breakdown['bot_fee']} ETH</b>
-• Gas fees: <b>{fee_data['total_gas_fees']} ETH</b>
+• Bot service fee: <b>{breakdown['bot_fee']} ETH</b>
+• Gas fees: <b>{formatted_gas_fees_eth} ETH</b>{gas_fees_usd}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>💳 Total Deposit Required: {fee_data['total_deposit_required']} ETH</b>
+<b>💳 Total Deposit Required: {formatted_total_deposit} ETH</b>
 
 <b>🔥 Gas Fee Info:</b>
 {gas_info['explanation']}. Covers all transaction fees for buyer payout and bot fee transfer.
@@ -303,7 +327,7 @@ If you encounter any issues, please contact support.
 <b>📋 Trade Terms:</b> {description}
 
 <b>⚠️ Important Instructions:</b>
-• Send exactly <b>{fee_data['total_deposit_required']} ETH</b> to the address above
+• Send exactly <b>{formatted_total_deposit} ETH</b> to the address above
 • Must be sent on Ethereum network
 • Gas fees calculated with 20% buffer for price fluctuations
 • Double-check address before sending
@@ -322,14 +346,14 @@ After you have successfully made the deposit, click "✅ I've Made Deposit" to c
 
 <b>📊 {currency} Deposit Breakdown:</b>
 • Amount to buyer: <b>{breakdown['amount_to_buyer']} {currency}</b>
-• Bot service fee ({breakdown['bot_fee_percentage']}%): <b>{breakdown['bot_fee']} {currency}</b>
+• Bot service fee: <b>{breakdown['bot_fee']} {currency}</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>💳 Total {currency} Required: {fee_data['total_deposit_required']} {currency}</b>
 
 <b>⚡ ETH Required for Gas Fees:</b>
-• Gas fees: <b>{fee_data['total_gas_fees']} ETH</b>
+• Gas fees: <b>{formatted_gas_fees} ETH</b>{gas_fees_usd}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<b>💳 Total ETH Required: {fee_data['total_gas_fees']} ETH</b>
+<b>💳 Total ETH Required: {formatted_gas_fees} ETH</b>
 
 <b>🔥 Why ETH is Required:</b>
 {gas_info['eth_required_reason']}. Gas covers all transaction fees for {currency} transfers and bot payouts.
@@ -338,7 +362,7 @@ After you have successfully made the deposit, click "✅ I've Made Deposit" to c
 
 <b>⚠️ Critical Instructions:</b>
 • Send <b>{fee_data['total_deposit_required']} {currency}</b> to the address above
-• Your wallet MUST also have <b>{fee_data['total_gas_fees']} ETH</b> for gas fees
+• Your wallet MUST also have <b>{formatted_gas_fees} ETH</b> for gas fees
 • Both must be sent on Ethereum network
 • Gas fees calculated with 20% buffer for price fluctuations
 • Insufficient ETH will cause transaction failures

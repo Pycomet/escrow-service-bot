@@ -50,7 +50,7 @@ mongomock==4.1.2
 python-dotenv==0.13.0
 # Include PTB testing extras for in-memory Application harness
 python-telegram-bot[tests]==22.0
-pytz==2021.1
+pytz==2024.1
 quart==0.18.4
 requests==2.32.3
 six==1.15.0
@@ -68,4 +68,4 @@ pytest-asyncio
 pytest-cov
 mongomock
 pytz
-apscheduler
+apscheduler==3.10.4

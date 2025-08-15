@@ -270,6 +270,18 @@ def get_trx_price():
         return False
 
 
+def get_eth_price():
+    """Get current ETH price in USD from CoinGecko API"""
+    url = "https://api.coingecko.com/api/v3/simple/price"
+    params = {"ids": "ethereum", "vs_currencies": "usd"}
+    try:
+        resp = requests.get(url, params=params)
+        data = resp.json()
+        return data.get("ethereum", {}).get("usd", None)
+    except requests.RequestException as e:
+        return None
+
+
 def get_estimated_energy_cost():
     # Credits: https://gist.github.com/andelf/65121c2c7f81e773f5f879d9992843f8
     # Energy costs in trx for USDT transafer on tron chain

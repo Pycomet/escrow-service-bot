@@ -59,7 +59,7 @@ load_dotenv()
 
 # Enable debug mode via environment variable (default False)
 # This allows certain components (e.g., wallet manager) to be more lenient during local development.
-DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 # Configuration variables
 TOKEN = os.getenv("TOKEN")  # Keep as TOKEN to maintain compatibility
@@ -76,8 +76,8 @@ BTCPAY_URL = os.getenv("BTCPAY_URL")
 BTCPAY_API_KEY = os.getenv("BTCPAY_API_KEY")
 BTCPAY_STORE_ID = os.getenv("BTCPAY_STORE_ID")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_URL = os.getenv("DATABASE_URL", "mongodb://localhost:27017/")
+DATABASE_NAME = os.getenv("DATABASE_NAME", "escrow_bot_db")
 
 REVIEW_CHANNEL = os.getenv("REVIEW_CHANNEL", "trusted_escrow_bot_reviews")
 CONTACT_SUPPORT = os.getenv("CONTACT_SUPPORT", "trusted_escrow_bot_support")
@@ -95,31 +95,44 @@ def get_application():
     global _application
     if _application is None and TOKEN:
         try:
-            # Try to create application with proper timezone handling
+            # Force system timezone to UTC with pytz to avoid scheduler issues
             import pytz
-            from apscheduler.schedulers.asyncio import AsyncIOScheduler
-            from telegram.ext import JobQueue
+            import time
             
-            # Create scheduler with explicit pytz timezone
-            scheduler = AsyncIOScheduler(timezone=pytz.UTC)
-            job_queue = JobQueue()
-            job_queue.scheduler = scheduler
+            # Set timezone environment and call tzset if available  
+            os.environ['TZ'] = 'UTC'
+            if hasattr(time, 'tzset'):
+                time.tzset()
             
+            # Patch APScheduler's astimezone function to handle timezone issues
+            import apscheduler.util as util
+            original_astimezone = util.astimezone
+            
+            def patched_astimezone(tz):
+                if tz is None:
+                    return pytz.UTC
+                if isinstance(tz, str):
+                    return pytz.timezone(tz)
+                # Return the timezone as-is if it's already a timezone object
+                return tz
+            
+            util.astimezone = patched_astimezone
+            
+            # Try to create application - the builder will create a JobQueue by default
             _application = (
                 Application.builder()
                 .token(TOKEN)
-                .job_queue(job_queue)
                 .build()
             )
+            
+            # Restore original function
+            util.astimezone = original_astimezone
+            
+            logger.info("Successfully created application with patched timezone handling")
         except Exception as e:
-            logger.warning(f"Failed to create application with job queue: {e}")
-            # Fallback: create application without job queue
-            _application = (
-                Application.builder()
-                .token(TOKEN)
-                .job_queue(None)  # Disable job queue to avoid timezone issues
-                .build()
-            )
+            logger.error(f"Failed to create application: {e}")
+            # Return None to trigger mock usage - don't try complex fallbacks
+            return None
     return _application
 
 
