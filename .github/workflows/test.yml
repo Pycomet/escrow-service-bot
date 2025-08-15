@@ -87,28 +87,3 @@ jobs:
           .pytest_cache/
           *.log
         retention-days: 30
-
-    - name: Comment PR with test results
-      if: github.event_name == 'pull_request' && failure()
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '❌ **Tests Failed**\n\nPlease check the test results in the Actions tab and fix any failing tests before merging.'
-          });
-
-    - name: Comment PR with success
-      if: github.event_name == 'pull_request' && success()
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: '✅ **All Tests Passed**\n\nGreat job! All tests are passing and the code is ready for review.'
-          });

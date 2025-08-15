@@ -59,7 +59,7 @@ load_dotenv()
 
 # Enable debug mode via environment variable (default False)
 # This allows certain components (e.g., wallet manager) to be more lenient during local development.
-DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
 # Configuration variables
 TOKEN = os.getenv("TOKEN")  # Keep as TOKEN to maintain compatibility

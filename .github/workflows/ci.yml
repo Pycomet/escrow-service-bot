@@ -195,16 +195,6 @@ jobs:
         print('✅ Configuration loads successfully')
         "
 
-  pr-summary:
-    runs-on: ubuntu-latest
-    name: PR Summary
-    needs: [lint-and-format, test, build-check]
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Comment PR with results
-      uses: actions/github-script@v6
-      with:
         script: |
           const { data: checkRuns } = await github.rest.checks.listForRef({
             owner: context.repo.owner,
