@@ -77,5 +77,6 @@ def register_handlers(application):
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
             handle_report_description,
-        )
+        ),
+        group=3  # Higher priority than trade flow dispatch
     )

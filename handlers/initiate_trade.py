@@ -856,9 +856,10 @@ def register_handlers(application):
     # NOTE: broker_yes, broker_no, and select_broker_ callbacks are handled
     # by callbacks.py handle_broker_callbacks - removed duplicate registrations
 
-    # Message handler for trade flow dispatch
+    # Message handler for trade flow dispatch (lowest priority)
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, dispatch_to_flow
-        )
+        ),
+        group=5  # Lower priority - only handles trade creation flows
     )
