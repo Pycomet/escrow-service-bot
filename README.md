@@ -92,6 +92,83 @@ make help
 - **Audit Trails**: Complete transaction history
 - **Admin Controls**: Restricted access to sensitive operations
 
+## 🤖 Bot Commands & Features
+
+### 📱 User Commands
+
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `/start` | Welcome message and main menu | Start interacting with the bot |
+| `/help` | Show help information | Get assistance and guidance |
+| `/trade` | Create a new trade | Initiate a new escrow transaction |
+| `/join` | Join an existing trade | Enter a trade ID to join as buyer |
+| `/status` | Show your active trades | View current trade status |
+| `/history` | View trade history | See completed and past trades |
+| `/wallet` | Manage your wallets | View and manage crypto wallets |
+| `/editwallet` | Edit wallet settings | Modify wallet configurations |
+| `/rules` | Platform trading rules | Read terms and conditions |
+| `/community` | Community guidelines | Community rules and info |
+| `/review` | Review completed trades | Rate and review trading partners |
+| `/report` | Report issues | Report problems or disputes |
+| `/affiliate` | Affiliate program | Join referral program |
+| `/broker` | Become a broker | Apply for broker status |
+| `/disputes` | Dispute resolution | Handle trade disputes |
+| `/cancel` | Cancel current action | Stop ongoing processes |
+
+### 👨‍💼 Admin Commands
+
+| Command | Description | Access Level |
+|---------|-------------|--------------|
+| `/admin` | Access admin panel | Admin only |
+| `/debug` | Debug user state | Admin only |
+| `/delete_trade` | Delete trades | Admin only |
+
+### 🔄 Interactive Features
+
+#### Trade Management
+- **Create Trades**: Step-by-step trade creation with multiple cryptocurrencies
+- **Join Trades**: Simple trade joining with ID verification
+- **Payment Proof**: Upload images/documents as payment evidence
+- **Status Tracking**: Real-time trade status updates
+- **Dispute Resolution**: Built-in mediation system
+
+#### Wallet Operations
+- **Multi-Wallet Support**: Create and manage multiple crypto wallets
+- **Balance Checking**: Real-time balance updates
+- **Transaction History**: Complete transaction logs
+- **Wallet Refresh**: Manual balance refresh options
+
+#### Broker System
+- **Broker Registration**: Apply to become a verified broker
+- **Commission Tracking**: Automatic commission calculations
+- **Reputation System**: Rating and review system for brokers
+- **Trade Mediation**: Professional dispute resolution
+
+### 🎯 State-Based Interactions
+
+The bot uses intelligent state management to handle complex workflows:
+
+- **Trade Creation Flow**: Multi-step process with validation
+- **Join Process**: Trade ID verification and buyer onboarding  
+- **Broker Registration**: Multi-step application process
+- **Report System**: Structured issue reporting
+- **Admin Operations**: Secure administrative functions
+
+### 📊 Handler Architecture
+
+The bot uses a priority-based handler system to ensure proper message routing:
+
+| Priority | Handler Type | Purpose |
+|----------|--------------|---------|
+| **Group 0** | Command Handlers | Process all bot commands |
+| **Group 1** | Join Flow | Handle trade joining process |
+| **Group 2** | Broker Flow | Handle broker registration |
+| **Group 3** | Report Flow | Handle issue reporting |
+| **Group 5** | Trade Flow | Handle trade creation |
+| **Group 10** | Admin Flow | Handle admin operations |
+
+This architecture prevents handler conflicts and ensures reliable message processing.
+
 ## 🏗️ Architecture
 
 ```
@@ -197,6 +274,7 @@ WEBHOOK_URL=https://your-domain.com/webhook
 4. Commit your changes: `git commit -m 'Add feature'`
 5. Push to the branch: `git push origin feature-name`
 6. Submit a pull request
+
 
 ## 📄 License
 

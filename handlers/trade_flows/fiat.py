@@ -475,8 +475,9 @@ class CryptoFiatFlow:
                 ),
             )
         # Trade creation part of this flow is done, further steps are deposit confirmation
-        # The 'trade_creation' dict might be cleared after this, or kept until deposit is confirmed.
-        # For now, we keep it until deposit is confirmed.
+        # Clear trade creation data now that the trade is successfully created in database
+        context.user_data.pop("trade_creation", None)
+        logger.info(f"Trade creation context cleared for trade {trade['_id']}")
         return True
 
     @staticmethod  # Renamed from handle_deposit
@@ -927,6 +928,11 @@ class CryptoFiatFlow:
                 if success:
                     # Request buyer address for crypto release
                     TradeClient.request_buyer_address(trade_id)
+                    
+                    # Set context state for buyer address input
+                    # Note: We need to set this for the buyer, not the current user (seller)
+                    buyer_context_key = f"awaiting_buyer_address_{trade['buyer_id']}"
+                    # This will be handled by the message dispatcher
 
                     # Calculate fee information to show seller
                     original_amount = float(trade.get("price", 0))
@@ -953,6 +959,12 @@ class CryptoFiatFlow:
                             parse_mode="html",
                             reply_markup=InlineKeyboardMarkup(
                                 [
+                                    [
+                                        InlineKeyboardButton(
+                                            "📊 Check Payment Status",
+                                            callback_data=f"payment_status_{trade_id}",
+                                        )
+                                    ],
                                     [
                                         InlineKeyboardButton(
                                             "❓ Need Help?",
