@@ -102,16 +102,20 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = str(update.effective_user.id)
         
         # Check if this is buyer address input (after payment approval)
-        awaiting_address_trade = db.trades.find_one({
-            "buyer_id": user_id,
-            "status": "awaiting_buyer_address", 
-            "fiat_payment_approved": True
-        })
-        
-        if awaiting_address_trade:
-            logger.info(f"Processing buyer address input for user {user_id}")
-            await handle_buyer_address_input(update, context)
-            return
+        try:
+            awaiting_address_trade = db.trades.find_one({
+                "buyer_id": user_id,
+                "status": "awaiting_buyer_address", 
+                "fiat_payment_approved": True
+            })
+            
+            if awaiting_address_trade:
+                logger.info(f"Processing buyer address input for user {user_id}")
+                await handle_buyer_address_input(update, context)
+                return
+        except Exception as e:
+            logger.warning(f"Could not check for awaiting address trade: {e}")
+            # Continue with normal trade ID processing
         
         # Otherwise handle trade ID input
         if context.user_data.get("state") != "waiting_for_trade_id":
