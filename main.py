@@ -96,6 +96,14 @@ async def initialize_bot():
         await application.initialize()
         await application.start()
         register_handlers()
+        
+        # Initialize community content scheduler
+        try:
+            from community.scheduler import start_community_scheduler
+            await start_community_scheduler()
+            logger.info("Community content scheduler initialized")
+        except Exception as scheduler_error:
+            logger.error(f"Failed to initialize community scheduler: {scheduler_error}")
 
         # Set webhook if in webhook mode
         if WEBHOOK_MODE and WEBHOOK_URL:
