@@ -131,7 +131,10 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
     """Handle community guidelines display"""
     try:
         query = update.callback_query
-        await query.answer()
+        
+        # Handle both callback queries and direct commands
+        if query:
+            await query.answer()
 
         community_text = (
             "🌐 <b>Join Our Community</b>\n\n"
@@ -169,25 +172,42 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
             ]
         )
 
-        await query.edit_message_text(
-            community_text, parse_mode="HTML", reply_markup=keyboard
-        )
+        # Send response based on whether it's a callback query or command
+        if query:
+            await query.edit_message_text(
+                community_text, parse_mode="HTML", reply_markup=keyboard
+            )
+        else:
+            await update.message.reply_text(
+                community_text, parse_mode="HTML", reply_markup=keyboard
+            )
 
     except Exception as e:
         logger.error(f"Error in community rules handler: {e}")
-        await query.edit_message_text(
-            f"{EmojiEnums.CROSS_MARK.value} Error loading community information. Please try again.",
-            reply_markup=InlineKeyboardMarkup(
+        
+        # Handle error response based on context
+        error_text = f"{EmojiEnums.CROSS_MARK.value} Error loading community information. Please try again."
+        error_keyboard = InlineKeyboardMarkup(
+            [
                 [
-                    [
-                        InlineKeyboardButton(
-                            f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
-                            callback_data=CallbackDataEnums.MENU.value,
-                        )
-                    ]
+                    InlineKeyboardButton(
+                        f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
+                        callback_data=CallbackDataEnums.MENU.value,
+                    )
                 ]
-            ),
+            ]
         )
+        
+        if query:
+            await query.edit_message_text(
+                error_text,
+                reply_markup=error_keyboard,
+            )
+        else:
+            await update.message.reply_text(
+                error_text,
+                reply_markup=error_keyboard,
+            )
 
 
 async def community_info_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

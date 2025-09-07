@@ -476,6 +476,105 @@ class CommunityAdminHandlers:
             )
     
     @staticmethod
+    async def stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show detailed community statistics"""
+        query = update.callback_query
+        user_id = query.from_user.id
+        
+        if not await AdminWalletManager.is_admin(user_id):
+            await query.answer("❌ Access denied.")
+            return
+        
+        await query.answer()
+        
+        try:
+            poster = CommunityPoster()
+            stats = await poster.get_posting_stats()
+            
+            # Get additional stats from database
+            from datetime import datetime, timedelta
+            
+            # Posts in last 30 days
+            thirty_days_ago = datetime.now() - timedelta(days=30)
+            recent_posts = list(db.community_posts.find({
+                "timestamp": {"$gte": thirty_days_ago}
+            }).sort("timestamp", -1))
+            
+            # Calculate success rate by content type
+            content_type_stats = {}
+            for post in recent_posts:
+                content_type = post.get('content_type', 'unknown')
+                if content_type not in content_type_stats:
+                    content_type_stats[content_type] = {'total': 0, 'success': 0}
+                
+                content_type_stats[content_type]['total'] += 1
+                if post.get('success', False):
+                    content_type_stats[content_type]['success'] += 1
+            
+            # Get scheduler status
+            scheduler = await get_community_scheduler()
+            scheduler_status = scheduler.get_status()
+            
+            stats_text = f"""📊 <b>Community Statistics</b>
+
+📈 <b>Overall Performance:</b>
+• Total Posts (30 days): {len(recent_posts)}
+• Success Rate: {stats['success_rate']:.1f}%
+• Posts Today: {len([p for p in recent_posts if p.get('timestamp', datetime.min).date() == datetime.now().date()])}
+• Posts This Week: {stats['recent_posts_7_days']}
+
+📝 <b>Content Type Breakdown:</b>"""
+            
+            for content_type, type_stats in content_type_stats.items():
+                success_rate = (type_stats['success'] / type_stats['total'] * 100) if type_stats['total'] > 0 else 0
+                stats_text += f"\n• {content_type.replace('_', ' ').title()}: {type_stats['total']} posts ({success_rate:.1f}% success)"
+            
+            stats_text += f"""
+
+⚙️ <b>System Status:</b>
+• Scheduler: {'🟢 Running' if scheduler_status.get('running') else '🔴 Stopped'}
+• Active Jobs: {scheduler_status.get('total_jobs', 0)}
+• Database Status: {'🟢 Connected' if db else '🔴 Disconnected'}
+
+📅 <b>Recent Activity:</b>"""
+            
+            # Show last 3 posts
+            for i, post in enumerate(recent_posts[:3], 1):
+                timestamp = post.get('timestamp', datetime.now())
+                content_type = post.get('content_type', 'Unknown')
+                success = post.get('success', False)
+                status_emoji = "✅" if success else "❌"
+                
+                if isinstance(timestamp, datetime):
+                    time_str = timestamp.strftime('%m/%d %H:%M')
+                else:
+                    time_str = str(timestamp)[:16]
+                
+                stats_text += f"\n{i}. {status_emoji} {content_type.replace('_', ' ').title()} - {time_str}"
+            
+            if not recent_posts:
+                stats_text += "\nNo recent posts found."
+            
+            await query.edit_message_text(
+                stats_text,
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back", callback_data="admin_community")
+                ]])
+            )
+            
+        except Exception as e:
+            logger.error(f"Error loading statistics: {e}")
+            await query.edit_message_text(
+                f"❌ <b>Error Loading Statistics</b>\n\n"
+                f"Could not load community statistics: {str(e)}",
+                parse_mode='HTML',
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back", callback_data="admin_community")
+                ]])
+            )
+    
+    @staticmethod
     async def restart_scheduler_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Restart the community scheduler"""
         query = update.callback_query

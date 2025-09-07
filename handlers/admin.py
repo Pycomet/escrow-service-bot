@@ -1337,6 +1337,9 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
     elif query.data == "community_view_posts":
         from community.admin_handlers import CommunityAdminHandlers
         await CommunityAdminHandlers.view_posts_handler(update, context)
+    elif query.data == "community_stats":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.stats_handler(update, context)
     elif query.data == "community_restart":
         from community.admin_handlers import CommunityAdminHandlers
         await CommunityAdminHandlers.restart_scheduler_handler(update, context)
