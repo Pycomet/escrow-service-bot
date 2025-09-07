@@ -1244,6 +1244,11 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 ),
             ],
             [
+                InlineKeyboardButton(
+                    "🏘️ Community Content", callback_data="admin_community"
+                ),
+            ],
+            [
                 InlineKeyboardButton("🔙 Back to Menu", callback_data="menu"),
             ],
         ]
@@ -1308,6 +1313,33 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await handle_send_confirmation(update, context)
     elif query.data.startswith("admin_broadcast_context_"):
         await admin_broadcast_context_handler(update, context)
+    elif query.data == "admin_community":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.community_menu_handler(update, context)
+    elif query.data == "community_post_now":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.post_now_handler(update, context)
+    elif query.data.startswith("post_now_"):
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.execute_post_now(update, context)
+    elif query.data == "community_settings":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.settings_handler(update, context)
+    elif query.data == "community_toggle_posting":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.toggle_posting_handler(update, context)
+    elif query.data == "community_test":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.test_system_handler(update, context)
+    elif query.data == "community_post_test":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.post_test_message_handler(update, context)
+    elif query.data == "community_view_posts":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.view_posts_handler(update, context)
+    elif query.data == "community_restart":
+        from community.admin_handlers import CommunityAdminHandlers
+        await CommunityAdminHandlers.restart_scheduler_handler(update, context)
     else:
         logger.warning(f"Unhandled admin callback: {query.data}")
         await query.edit_message_text(
@@ -1631,6 +1663,11 @@ async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ),
                 InlineKeyboardButton(
                     "📢 Broadcast Message", callback_data="admin_broadcast"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    "🏘️ Community Content", callback_data="admin_community"
                 ),
             ],
             [

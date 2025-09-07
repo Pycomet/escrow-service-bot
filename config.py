@@ -83,6 +83,9 @@ REVIEW_CHANNEL = os.getenv("REVIEW_CHANNEL", "trusted_escrow_bot_reviews")
 CONTACT_SUPPORT = os.getenv("CONTACT_SUPPORT", "trusted_escrow_bot_support")
 TRADING_CHANNEL = os.getenv("TRADING_CHANNEL", "trusted_escrow_bot_trading")
 
+# Community content channel configuration
+COMMUNITY_CHANNEL_ID = os.getenv("COMMUNITY_CHANNEL_ID")  # Should be set to your channel ID (e.g., "@your_channel" or "-1001234567890")
+
 # Bot fee configuration
 BOT_FEE_PERCENTAGE = float(os.getenv("BOT_FEE_PERCENTAGE", "2.5"))  # Default 2.5% fee
 
