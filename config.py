@@ -6,15 +6,16 @@ import string
 import sys
 
 # Fix timezone issues before importing other modules
-os.environ['TZ'] = 'UTC'
-if hasattr(os, 'tzset'):
+os.environ["TZ"] = "UTC"
+if hasattr(os, "tzset"):
     os.tzset()
 
 # Force pytz timezone for APScheduler compatibility
 try:
-    import pytz
     import time
-    
+
+    import pytz
+
     # Monkey patch APScheduler's astimezone function to always return pytz.UTC
     def astimezone_patch(tz):
         if tz is None:
@@ -22,15 +23,16 @@ try:
         if isinstance(tz, str):
             return pytz.timezone(tz)
         return pytz.UTC
-    
+
     # Apply the patches before importing telegram modules
     import apscheduler.util
+
     apscheduler.util.astimezone = astimezone_patch
     apscheduler.util.get_localzone = lambda: pytz.UTC
-    
+
     # Set system timezone to UTC using pytz
-    os.environ['TZ'] = 'UTC'
-    if hasattr(time, 'tzset'):
+    os.environ["TZ"] = "UTC"
+    if hasattr(time, "tzset"):
         time.tzset()
 except ImportError:
     pass
@@ -83,8 +85,14 @@ REVIEW_CHANNEL = os.getenv("REVIEW_CHANNEL", "trusted_escrow_bot_reviews")
 CONTACT_SUPPORT = os.getenv("CONTACT_SUPPORT", "trusted_escrow_bot_support")
 TRADING_CHANNEL = os.getenv("TRADING_CHANNEL", "trusted_escrow_bot_trading")
 
+# Bot branding configuration
+BOT_NAME = os.getenv("BOT_NAME", "Trusted Escrow Bot")
+COMPANY_NAME = os.getenv("COMPANY_NAME", "Trusted Escrow")
+
 # Community content channel configuration
-COMMUNITY_CHANNEL_ID = os.getenv("COMMUNITY_CHANNEL_ID")  # Should be set to your channel ID (e.g., "@your_channel" or "-1001234567890")
+COMMUNITY_CHANNEL_ID = os.getenv(
+    "COMMUNITY_CHANNEL_ID"
+)  # Should be set to your channel ID (e.g., "@your_channel" or "-1001234567890")
 
 # Bot fee configuration
 BOT_FEE_PERCENTAGE = float(os.getenv("BOT_FEE_PERCENTAGE", "2.5"))  # Default 2.5% fee
@@ -99,18 +107,20 @@ def get_application():
     if _application is None and TOKEN:
         try:
             # Force system timezone to UTC with pytz to avoid scheduler issues
-            import pytz
             import time
-            
-            # Set timezone environment and call tzset if available  
-            os.environ['TZ'] = 'UTC'
-            if hasattr(time, 'tzset'):
+
+            import pytz
+
+            # Set timezone environment and call tzset if available
+            os.environ["TZ"] = "UTC"
+            if hasattr(time, "tzset"):
                 time.tzset()
-            
+
             # Patch APScheduler's astimezone function to handle timezone issues
             import apscheduler.util as util
+
             original_astimezone = util.astimezone
-            
+
             def patched_astimezone(tz):
                 if tz is None:
                     return pytz.UTC
@@ -118,20 +128,18 @@ def get_application():
                     return pytz.timezone(tz)
                 # Return the timezone as-is if it's already a timezone object
                 return tz
-            
+
             util.astimezone = patched_astimezone
-            
+
             # Try to create application - the builder will create a JobQueue by default
-            _application = (
-                Application.builder()
-                .token(TOKEN)
-                .build()
-            )
-            
+            _application = Application.builder().token(TOKEN).build()
+
             # Restore original function
             util.astimezone = original_astimezone
-            
-            logger.info("Successfully created application with patched timezone handling")
+
+            logger.info(
+                "Successfully created application with patched timezone handling"
+            )
         except Exception as e:
             logger.error(f"Failed to create application: {e}")
             # Return None to trigger mock usage - don't try complex fallbacks
@@ -182,7 +190,9 @@ class ApplicationProxy:
         except Exception as e:
             # If there's any error creating the application (like timezone issues),
             # fall back to mock application to allow imports to succeed
-            logger.warning(f"Failed to get application ({e}), using mock for import compatibility")
+            logger.warning(
+                f"Failed to get application ({e}), using mock for import compatibility"
+            )
             return getattr(MockApplication(), name)
 
 
