@@ -18,8 +18,8 @@ from telegram.ext import (
 
 from config import *
 from functions.trade import TradeClient
-from functions.utils import generate_id
 from functions.user import UserClient
+from functions.utils import generate_id
 from functions.wallet import WalletManager
 from utils.enums import EmojiEnums
 
@@ -106,20 +106,33 @@ class AdminBroadcastManager:
             )
             placeholder_messages = {
                 "system": (
-                    f"🔧 System Update! We've rolled out enhancements for faster and more reliable trading. "
-                    f"Your security is our top priority. For details, see @{REVIEW_CHANNEL}. Press `/start` to continue trading."
+                    f"🔧 <b>System Update</b>\n\n"
+                    f"We've rolled out enhancements for faster and more reliable trading. "
+                    f"Your security is our top priority.\n\n"
+                    f"📣 For details, see @{REVIEW_CHANNEL}\n\n"
+                    f"Press <code>/start</code> to continue trading with {BOT_NAME}."
                 ),
                 "trading": (
-                    f"💰 Ready for a secure trade? Our escrow service is active and protecting transactions 24/7. "
-                    f"Join our community @{TRADING_CHANNEL} to find partners. Press `/start` to create your trade!"
+                    f"💰 <b>Ready for a secure trade?</b>\n\n"
+                    f"Our escrow service is active and protecting transactions 24/7. "
+                    f"Join our community to find trusted trading partners.\n\n"
+                    f"📣 Community: @{TRADING_CHANNEL}\n\n"
+                    f"Press <code>/start</code> to create your trade with {BOT_NAME}!"
                 ),
                 "community": (
-                    f"👥 Thank you for being a part of our community! Your trust makes this platform possible. "
-                    f"Share your feedback @{REVIEW_CHANNEL} or get help from @{CONTACT_SUPPORT}. Press `/start` to trade."
+                    f"👥 <b>Thank you for being part of our community!</b>\n\n"
+                    f"Your trust makes this platform possible. "
+                    f"We're committed to providing secure trading services.\n\n"
+                    f"📣 Feedback: @{REVIEW_CHANNEL}\n"
+                    f"🆘 Support: @{CONTACT_SUPPORT}\n\n"
+                    f"Press <code>/start</code> to trade with {BOT_NAME}."
                 ),
                 "important": (
-                    f"🚨 Important Notice: Please be aware of scammers. Our official support is only @{CONTACT_SUPPORT}. "
-                    f"We will never ask for your private keys. Stay safe! Press `/start` to use the official bot."
+                    f"🚨 <b>Important Security Notice</b>\n\n"
+                    f"Please be aware of scammers impersonating {COMPANY_NAME}. "
+                    f"Our official support is only @{CONTACT_SUPPORT}.\n\n"
+                    f"⚠️ We will never ask for your private keys or passwords.\n\n"
+                    f"Stay safe! Press <code>/start</code> to use the official {BOT_NAME}."
                 ),
             }
             return placeholder_messages.get(
@@ -130,7 +143,7 @@ class AdminBroadcastManager:
     @staticmethod
     def create_broadcast_message() -> str:
         """Create a standard broadcast message for testing purposes"""
-        return f"""🚀 <b>Your Escrow Service: Now Faster & More Secure!</b>
+        return f"""🚀 <b>{BOT_NAME}: Now Faster & More Secure!</b>
 
 Our platform continues to evolve with enhanced security features and improved user experience! ✨
 
@@ -139,7 +152,7 @@ Our platform continues to evolve with enhanced security features and improved us
 • Faster processing times
 • Improved user interface
 
-📣 Join our community:
+📣 <b>Join our community:</b>
 • Reviews & Updates: @{REVIEW_CHANNEL}
 • Active Trading: @{TRADING_CHANNEL}
 • Support: @{CONTACT_SUPPORT}
@@ -316,25 +329,45 @@ async def admin_broadcast_handler(update: Update, context: ContextTypes.DEFAULT_
     query = update.callback_query
     await query.answer()
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔧 System Update", callback_data="admin_broadcast_context_system")],
-        [InlineKeyboardButton("💰 Trading Focus", callback_data="admin_broadcast_context_trading")],
-        [InlineKeyboardButton("👥 Community Message", callback_data="admin_broadcast_context_community")],
-        [InlineKeyboardButton("🚨 Important Notice", callback_data="admin_broadcast_context_important")],
-        [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")]
-    ])
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "🔧 System Update", callback_data="admin_broadcast_context_system"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "💰 Trading Focus", callback_data="admin_broadcast_context_trading"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "👥 Community Message",
+                    callback_data="admin_broadcast_context_community",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🚨 Important Notice",
+                    callback_data="admin_broadcast_context_important",
+                )
+            ],
+            [InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")],
+        ]
+    )
 
     await query.edit_message_text(
         "📢 <b>Select Broadcast Message Type</b>\n\n"
         "Choose a context, and a message will be generated for your review.",
         parse_mode="HTML",
-        reply_markup=keyboard
+        reply_markup=keyboard,
     )
 
 
-
-
-async def admin_broadcast_context_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_broadcast_context_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
     """Generate AI message and show confirmation"""
     query = update.callback_query
     await query.answer()
@@ -343,12 +376,14 @@ async def admin_broadcast_context_handler(update: Update, context: ContextTypes.
 
     await query.edit_message_text(
         f"🤖 Generating message for '{context_type}' context...\nPlease wait.",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
     try:
         # Generate the AI message
-        generated_message = await AdminBroadcastManager.generate_ai_message(context_type)
+        generated_message = await AdminBroadcastManager.generate_ai_message(
+            context_type
+        )
 
         # Get user statistics
         users_data = await AdminBroadcastManager.get_all_users_for_broadcast()
@@ -357,13 +392,13 @@ async def admin_broadcast_context_handler(update: Update, context: ContextTypes.
             await query.edit_message_text(
                 "❌ <b>Error:</b> Could not fetch user data.",
                 parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")
-                ]])
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")]]
+                ),
             )
             return
 
-        stats = users_data['stats']
+        stats = users_data["stats"]
 
         confirmation_text = (
             f"📝 <b>Confirm Broadcast</b>\n\n"
@@ -377,20 +412,29 @@ async def admin_broadcast_context_handler(update: Update, context: ContextTypes.
             f"⚠️ This action cannot be undone. Do you approve this message?"
         )
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ Send Broadcast", callback_data="admin_broadcast_confirm")],
-            [InlineKeyboardButton("✍️ Regenerate", callback_data=f"admin_broadcast_context_{context_type}")],
-            [InlineKeyboardButton("❌ Cancel", callback_data="admin_menu")]
-        ])
+        keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "✅ Send Broadcast", callback_data="admin_broadcast_confirm"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "✍️ Regenerate",
+                        callback_data=f"admin_broadcast_context_{context_type}",
+                    )
+                ],
+                [InlineKeyboardButton("❌ Cancel", callback_data="admin_menu")],
+            ]
+        )
 
         # Store for the final confirmation step
-        context.user_data['broadcast_users_data'] = users_data
-        context.user_data['broadcast_message'] = generated_message
+        context.user_data["broadcast_users_data"] = users_data
+        context.user_data["broadcast_message"] = generated_message
 
         await query.edit_message_text(
-            confirmation_text,
-            parse_mode="HTML",
-            reply_markup=keyboard
+            confirmation_text, parse_mode="HTML", reply_markup=keyboard
         )
 
     except Exception as e:
@@ -398,20 +442,22 @@ async def admin_broadcast_context_handler(update: Update, context: ContextTypes.
         await query.edit_message_text(
             f"❌ <b>Error:</b> {str(e)}",
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 Back", callback_data="admin_broadcast")]]
+            ),
         )
 
 
-async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_broadcast_confirm_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
     """Handle broadcast confirmation and execution"""
     query = update.callback_query
     await query.answer()
 
     # Try to get users data and message from session
-    users_data = context.user_data.get('broadcast_users_data')
-    message = context.user_data.get('broadcast_message')
+    users_data = context.user_data.get("broadcast_users_data")
+    message = context.user_data.get("broadcast_message")
 
     # If session data is missing, guide the user to restart
     if not users_data or not message:
@@ -419,9 +465,15 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
             "❌ <b>Session Expired</b>\n\n"
             "Your session has expired. Please start the broadcast process again.",
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Go to Broadcast Menu", callback_data="admin_broadcast")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 Go to Broadcast Menu", callback_data="admin_broadcast"
+                        )
+                    ]
+                ]
+            ),
         )
         return
 
@@ -430,7 +482,7 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
         f"🚀 <b>Starting Broadcast...</b>\n\n"
         f"📤 Sending message to {users_data['stats']['active_users']} active users.\n"
         f"⏳ This may take a few moments...",
-        parse_mode="HTML"
+        parse_mode="HTML",
     )
 
     # Create progress callback
@@ -449,14 +501,22 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
                 f"{'⏳ Processing...' if current < total else '✅ Completed!'}"
             )
 
-            keyboard = None if current < total else InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
-            ]])
+            keyboard = (
+                None
+                if current < total
+                else InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "🔙 Back to Admin Menu", callback_data="admin_menu"
+                            )
+                        ]
+                    ]
+                )
+            )
 
             await query.edit_message_text(
-                progress_text,
-                parse_mode="HTML",
-                reply_markup=keyboard
+                progress_text, parse_mode="HTML", reply_markup=keyboard
             )
         except Exception as e:
             logger.error(f"Error updating progress: {e}")
@@ -464,10 +524,7 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
     try:
         # Execute broadcast
         results = await AdminBroadcastManager.send_broadcast_message(
-            context.bot, 
-            users_data, 
-            message,
-            progress_callback
+            context.bot, users_data, message, progress_callback
         )
 
         # Final results
@@ -490,18 +547,26 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
         await query.edit_message_text(
             final_text,
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 Back to Admin Menu", callback_data="admin_menu"
+                        )
+                    ]
+                ]
+            ),
         )
 
         # Log detailed results
-        logger.info(f"Broadcast completed by admin {query.from_user.id}: "
-                   f"{results['sent_successfully']}/{len(users_data['active_users'])} successful")
+        logger.info(
+            f"Broadcast completed by admin {query.from_user.id}: "
+            f"{results['sent_successfully']}/{len(users_data['active_users'])} successful"
+        )
 
         # Clean up context data
-        context.user_data.pop('broadcast_users_data', None)
-        context.user_data.pop('broadcast_message', None)
+        context.user_data.pop("broadcast_users_data", None)
+        context.user_data.pop("broadcast_message", None)
 
     except Exception as e:
         logger.error(f"Error during broadcast execution: {e}")
@@ -511,9 +576,15 @@ async def admin_broadcast_confirm_handler(update: Update, context: ContextTypes.
             f"<code>{str(e)}</code>\n\n"
             f"Please check the logs and try again.",
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back to Admin Menu", callback_data="admin_menu")
-            ]])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 Back to Admin Menu", callback_data="admin_menu"
+                        )
+                    ]
+                ]
+            ),
         )
 
 
@@ -1315,33 +1386,43 @@ async def admin_callback_handler(update: Update, context: ContextTypes.DEFAULT_T
         await admin_broadcast_context_handler(update, context)
     elif query.data == "admin_community":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.community_menu_handler(update, context)
     elif query.data == "community_post_now":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.post_now_handler(update, context)
     elif query.data.startswith("post_now_"):
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.execute_post_now(update, context)
     elif query.data == "community_settings":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.settings_handler(update, context)
     elif query.data == "community_toggle_posting":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.toggle_posting_handler(update, context)
     elif query.data == "community_test":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.test_system_handler(update, context)
     elif query.data == "community_post_test":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.post_test_message_handler(update, context)
     elif query.data == "community_view_posts":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.view_posts_handler(update, context)
     elif query.data == "community_stats":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.stats_handler(update, context)
     elif query.data == "community_restart":
         from community.admin_handlers import CommunityAdminHandlers
+
         await CommunityAdminHandlers.restart_scheduler_handler(update, context)
     else:
         logger.warning(f"Unhandled admin callback: {query.data}")

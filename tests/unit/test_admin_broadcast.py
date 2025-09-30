@@ -23,8 +23,8 @@ from telegram.ext import ContextTypes
 
 from handlers.admin import (
     AdminBroadcastManager,
-    admin_broadcast_handler,
     admin_broadcast_confirm_handler,
+    admin_broadcast_handler,
 )
 
 
@@ -80,16 +80,20 @@ class TestAdminBroadcastManager:
 
         with patch("handlers.admin.REVIEW_CHANNEL", "test_reviews"), patch(
             "handlers.admin.TRADING_CHANNEL", "test_trading"
-        ), patch("handlers.admin.CONTACT_SUPPORT", "test_support"):
+        ), patch("handlers.admin.CONTACT_SUPPORT", "test_support"), patch(
+            "handlers.admin.BOT_NAME", "Test Bot"
+        ):
 
             message = AdminBroadcastManager.create_broadcast_message()
 
             assert "🚀" in message
-            assert "Your Escrow Service: Now Faster & More Secure!" in message
+            assert "Test Bot: Now Faster & More Secure!" in message
             assert "@test_reviews" in message
             assert "@test_trading" in message
             assert "@test_support" in message
             assert "<code>/start</code>" in message
+            assert "\n\n" in message  # Verify proper spacing
+            assert len(message.split("\n")) > 5  # Multiple lines expected
             assert len(message) > 100  # Ensure message has substantial content
 
     @pytest.mark.asyncio
@@ -302,16 +306,20 @@ class TestAdminBroadcastHandlers:
 
         # Mock broadcast failure
         with patch.object(
-            AdminBroadcastManager, "send_broadcast_message", side_effect=Exception("Broadcast failed")
+            AdminBroadcastManager,
+            "send_broadcast_message",
+            side_effect=Exception("Broadcast failed"),
         ):
 
             await admin_broadcast_confirm_handler(mock_update_callback, mock_context)
 
             # Verify error message was sent (called twice: progress + error)
             assert mock_update_callback.callback_query.edit_message_text.call_count == 2
-            
+
             # Check the final error message
-            final_call_args = mock_update_callback.callback_query.edit_message_text.call_args_list[-1]
+            final_call_args = (
+                mock_update_callback.callback_query.edit_message_text.call_args_list[-1]
+            )
             final_message = final_call_args[0][0]
 
             assert "Broadcast Failed" in final_message
