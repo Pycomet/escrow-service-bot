@@ -12,11 +12,11 @@ class Messages:
     @staticmethod
     def welcome(name: str) -> str:
         return f"""
-🎪 <b>Welcome to the Telegram Escrow Service {name} </b>
-    
-My purpose is to create a save trade environment for both seller and buyer subject to my rules.
+🎪 <b>Welcome to the Telegram Escrow Service {name}!</b>
 
-Your funds are save with me and will be refunded to you if the other party refuses to comply with the rules.
+My purpose is to create a safe trade environment for both seller and buyer subject to my rules.
+
+Your funds are safe with me and will be refunded to you if the other party refuses to comply with the rules.
             """
 
     @staticmethod
