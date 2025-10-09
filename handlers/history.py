@@ -8,7 +8,7 @@ from functions import *
 from functions.trade import TradeClient
 from functions.user import UserClient
 from utils import *
-from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.enums import CallbackDataEnums, EmojiEnums, TradeTypeEnums
 from utils.messages import Messages
 from utils.trade_status import format_trade_status, get_trade_status
 
@@ -188,7 +188,7 @@ async def handle_trade_view_callback(
             details = (
                 f"{EmojiEnums.CLIPBOARD.value} <b>Trade Details</b>\n\n"
                 f"ID: <code>{trade.get('_id', 'Unknown')}</code>\n"
-                f"Type: {trade.get('trade_type', 'Unknown')}\n"
+                f"Type: {TradeTypeEnums.get_display_name(trade.get('trade_type', 'Unknown'))}\n"
                 f"Status: {status_emoji} {formatted_status}\n"
                 f"Amount: {trade.get('price', '0')} {trade.get('currency', 'Unknown')}\n"
                 f"Created: {trade.get('created_at', 'Unknown')}\n"

@@ -7,6 +7,42 @@ class TradeTypeEnums(Enum):
     CRYPTO_PRODUCT = "CryptoToProduct"
     MARKET_SHOP = "MarketShop"
 
+    @staticmethod
+    def get_display_name(trade_type: str) -> str:
+        """Get full display name with emoji for trade type
+
+        Args:
+            trade_type: Raw trade type value (e.g., "CryptoToFiat")
+
+        Returns:
+            Display name with emoji (e.g., "💰 Crypto → Fiat Trade")
+        """
+        display_names = {
+            "CryptoToFiat": "💰 Crypto → Fiat Trade",
+            "CryptoToCrypto": "🔄 Crypto Swap",
+            "CryptoToProduct": "🛍️ Buy Goods with Crypto",
+            "MarketShop": "🏪 Marketplace Listing",
+        }
+        return display_names.get(trade_type, trade_type)
+
+    @staticmethod
+    def get_short_display_name(trade_type: str) -> str:
+        """Get short display name without emoji for trade type
+
+        Args:
+            trade_type: Raw trade type value (e.g., "CryptoToFiat")
+
+        Returns:
+            Short display name (e.g., "Crypto → Fiat")
+        """
+        short_names = {
+            "CryptoToFiat": "Crypto → Fiat",
+            "CryptoToCrypto": "Crypto Swap",
+            "CryptoToProduct": "Buy Goods",
+            "MarketShop": "Marketplace",
+        }
+        return short_names.get(trade_type, trade_type)
+
 
 class TradeStatusEnums(Enum):
     PENDING = "pending"
