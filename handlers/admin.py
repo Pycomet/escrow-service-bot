@@ -21,7 +21,7 @@ from functions.trade import TradeClient
 from functions.user import UserClient
 from functions.utils import generate_id
 from functions.wallet import WalletManager
-from utils.enums import EmojiEnums
+from utils.enums import EmojiEnums, TradeTypeEnums
 
 logger = logging.getLogger(__name__)
 
@@ -1532,7 +1532,9 @@ async def admin_all_trades_handler(update: Update, context: ContextTypes.DEFAULT
 
             trades_text += f"<b>{i+1}. Trade #{trade_id[:8]}...</b>\n"
             trades_text += f"   💰 {amount} {currency}\n"
-            trades_text += f"   🔄 Type: {trade_type}\n"
+            trades_text += (
+                f"   🔄 Type: {TradeTypeEnums.get_short_display_name(trade_type)}\n"
+            )
             trades_text += f"   👤 Seller: {seller_id}\n"
             trades_text += (
                 f"   🛒 Buyer: {buyer_id if buyer_id != '' else 'Waiting...'}\n\n"
@@ -1646,7 +1648,9 @@ async def admin_platform_stats_handler(
 
         # Get trade types
         crypto_fiat_trades = db.trades.count_documents({"trade_type": "CryptoToFiat"})
-        crypto_crypto_trades = db.trades.count_documents({"trade_type": "CryptoCrypto"})
+        crypto_crypto_trades = db.trades.count_documents(
+            {"trade_type": TradeTypeEnums.CRYPTO_CRYPTO.value}
+        )
 
         completion_rate = (
             (completed_trades / total_trades * 100) if total_trades > 0 else 0

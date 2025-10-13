@@ -101,7 +101,7 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
                 f"You have an active trade that must be completed first:\n\n"
                 f"🆔 <b>Trade:</b> #{active_trade['_id']}\n"
                 f"💰 <b>Amount:</b> {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}\n"
-                f"📊 <b>Type:</b> {active_trade.get('trade_type', 'Unknown')}\n"
+                f"📊 <b>Type:</b> {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}\n"
                 f"📅 <b>Status:</b> {active_trade.get('status', 'active')}\n"
                 f"🔍 <b>Is Active:</b> {active_trade.get('is_active', False)}\n"
                 f"❌ <b>Is Cancelled:</b> {active_trade.get('is_cancelled', False)}\n"
@@ -350,7 +350,7 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 <b>Active Trade Found</b>\n\n"
             f"You have an active trade: #{active_trade['_id']}\n"
             f"Amount: {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}\n"
-            f"Type: {active_trade.get('trade_type', 'Unknown')}\n"
+            f"Type: {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}\n"
             f"Status: {active_trade.get('status', 'active')}\n"
             f"Is Active: {active_trade.get('is_active', False)}\n"
             f"Is Cancelled: {active_trade.get('is_cancelled', False)}\n"
@@ -572,7 +572,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_parts.extend(
             [
                 f"🔄 <b>Trade Creation:</b> ✅ In Progress",
-                f"   • Type: {trade_type}",
+                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
                 f"   • Step: {step}",
                 f"   • Flow: {flow_step}\n",
             ]
@@ -600,7 +600,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"💰 <b>Active Trade:</b> ✅ Found",
                 f"   • ID: #{trade_id}",
                 f"   • Amount: {amount} {currency}",
-                f"   • Type: {trade_type}",
+                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
                 f"   • Your Role: {role}",
                 f"   • Status: {status}\n",
             ]
@@ -734,7 +734,7 @@ async def debug_user_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"   • Active Flag: {is_really_active}",
                 f"   • Status: {active_trade.get('status', 'unknown')}",
                 f"   • Amount: {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}",
-                f"   • Type: {active_trade.get('trade_type', 'Unknown')}",
+                f"   • Type: {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}",
                 f"   • Seller: {active_trade.get('seller_id', 'Unknown')}",
                 f"   • Buyer: {active_trade.get('buyer_id', 'None')}",
                 f"   • Created: {active_trade.get('created_at', 'Unknown')}\n",
@@ -861,5 +861,5 @@ def register_handlers(application):
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, dispatch_to_flow
         ),
-        group=5  # Lower priority - only handles trade creation flows
+        group=5,  # Lower priority - only handles trade creation flows
     )
