@@ -96,32 +96,3 @@ def register_handlers(application):
     """Register handlers for the start module"""
     application.add_handler(CommandHandler("start", start_handler))
     application.add_handler(CommandHandler("help", help_handler))
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Starting the escrow service bot
-    """
-    user = update.message.from_user
-    await context.bot.send_chat_action(chat_id=user.id, action="typing")
-    user_data: UserType = UserClient.get_user(update.message)
-    keyboard = await main_menu(update, context)
-
-    await update.message.reply_text(
-        text=Messages.welcome(user.first_name),
-        reply_markup=keyboard,
-        parse_mode="html",
-    )
-
-
-async def start_trade_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    This is the handler to start trade seller or buyer options
-    """
-    # keyboard = trade_menu()
-
-    await update.message.reply_text(
-        "<b>Welcome! Please select an option from the menu below?</b>",
-        # reply_markup=keyboard,
-        parse_mode="html",
-    )
