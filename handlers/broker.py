@@ -430,7 +430,7 @@ def register_broker_handlers(application):
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
             broker_message_handler,
         ),
-        group=2  # Higher priority than trade flow dispatch
+        group=2,  # Higher priority than trade flow dispatch
     )
 
     # Callback handlers for broker operations

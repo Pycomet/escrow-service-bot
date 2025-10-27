@@ -43,7 +43,9 @@ def test_market_data_fetcher_returns_structure(monkeypatch):
     data = run(fetcher.get_market_data())
 
     assert "prices" in data and "changes" in data and "market_sentiment" in data
-    assert "BTC" in data["prices"] and "ETH" in data["prices"] and "USDT" in data["prices"]
+    assert (
+        "BTC" in data["prices"] and "ETH" in data["prices"] and "USDT" in data["prices"]
+    )
 
 
 def test_ai_content_generator_returns_nonempty_without_gemini(monkeypatch):
@@ -104,5 +106,3 @@ def test_scheduler_initialization_and_status_lifecycle():
     run(scheduler.stop())
     status_stopped = scheduler.get_status()
     assert status_stopped["running"] is False
-
-

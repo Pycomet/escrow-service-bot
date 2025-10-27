@@ -112,6 +112,13 @@ async def handle_menu_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             logger.info("Showing trade history")
             await history_handler(update, context)
 
+        elif data == "my_trades":
+            # Show active trades (mytrades handler)
+            logger.info("Showing active trades")
+            from handlers.mytrades import mytrades_callback_handler
+
+            await mytrades_callback_handler(update, context)
+
         elif data == CallbackDataEnums.MY_WALLETS.value:
             # Show wallet management
             logger.info("Showing wallet management")
@@ -493,7 +500,7 @@ def register_handlers(application):
     application.add_handler(
         CallbackQueryHandler(
             handle_menu_callback,
-            pattern="^(menu|create_trade|join_trade|trade_history|my_wallets|rules|community|affiliate|support|report|faq)$",
+            pattern="^(menu|create_trade|join_trade|trade_history|my_trades|my_wallets|rules|community|affiliate|support|report|faq)$",
         )
     )
 

@@ -593,7 +593,7 @@ class TradeClient:
     @staticmethod
     def calculate_trade_fee(amount: float) -> tuple[float, float]:
         """Calculate bot fee and total deposit amount for trade (legacy method)
-        
+
         DEPRECATED: Use calculate_trade_fee_with_gas for wallet-based trades
 
         Args:
@@ -611,11 +611,11 @@ class TradeClient:
     @staticmethod
     def calculate_trade_fee_with_gas(amount: float, currency: str) -> dict:
         """Calculate comprehensive fee breakdown including gas costs
-        
+
         Args:
             amount: The amount the buyer will receive
             currency: Currency symbol (ETH, USDT, etc.)
-            
+
         Returns:
             dict: {
                 'bot_fee': float,
@@ -627,19 +627,19 @@ class TradeClient:
             }
         """
         from config import BOT_FEE_PERCENTAGE
-        
+
         # Bot fee calculation
         bot_fee = amount * (BOT_FEE_PERCENTAGE / 100)
-        
+
         # Gas fee estimation based on current network conditions
         gas_fees = TradeClient._estimate_gas_fees(currency)
-        
+
         # For ETH trades: user payout + bot payout both use ETH gas
         # For USDT trades: user payout uses ETH gas, bot payout uses ETH gas
-        gas_fee_user_payout = gas_fees['user_payout']
-        gas_fee_bot_payout = gas_fees['bot_payout']
+        gas_fee_user_payout = gas_fees["user_payout"]
+        gas_fee_bot_payout = gas_fees["bot_payout"]
         total_gas_fees = gas_fee_user_payout + gas_fee_bot_payout
-        
+
         # Total deposit calculation
         if currency == "ETH":
             # For ETH: amount + bot_fee + gas_fees (all in ETH)
@@ -648,43 +648,46 @@ class TradeClient:
             # For USDT: amount + bot_fee (in USDT) + gas_fees (in ETH, separate requirement)
             total_deposit_required = amount + bot_fee  # USDT amount
             # Note: gas fees will be required separately in ETH
-        
+
         return {
-            'bot_fee': bot_fee,
-            'gas_fee_user_payout': gas_fee_user_payout,
-            'gas_fee_bot_payout': gas_fee_bot_payout,
-            'total_gas_fees': total_gas_fees,
-            'total_deposit_required': total_deposit_required,
-            'breakdown': {
-                'amount_to_buyer': amount,
-                'bot_fee': bot_fee,
-                'bot_fee_percentage': BOT_FEE_PERCENTAGE,
-                'gas_for_buyer_payout': gas_fee_user_payout,
-                'gas_for_bot_payout': gas_fee_bot_payout,
-                'total_gas_required': total_gas_fees,
-                'currency': currency
-            }
+            "bot_fee": bot_fee,
+            "gas_fee_user_payout": gas_fee_user_payout,
+            "gas_fee_bot_payout": gas_fee_bot_payout,
+            "total_gas_fees": total_gas_fees,
+            "total_deposit_required": total_deposit_required,
+            "breakdown": {
+                "amount_to_buyer": amount,
+                "bot_fee": bot_fee,
+                "bot_fee_percentage": BOT_FEE_PERCENTAGE,
+                "gas_for_buyer_payout": gas_fee_user_payout,
+                "gas_for_bot_payout": gas_fee_bot_payout,
+                "total_gas_required": total_gas_fees,
+                "currency": currency,
+            },
         }
-    
+
     @staticmethod
     def _estimate_gas_fees(currency: str) -> dict:
         """Estimate gas fees for both user and bot payouts
-        
+
         Returns:
             dict: {'user_payout': float, 'bot_payout': float}  # Both in ETH
         """
         try:
-            from functions.wallet import WalletManager
             from web3 import Web3
-            
+
+            from functions.wallet import WalletManager
+
             # Get current gas price from network
             if currency in ["ETH", "USDT"]:
                 web3 = WalletManager._get_web3_connection(
-                    WalletManager.SUPPORTED_COINS.get(currency, WalletManager.SUPPORTED_COINS["ETH"])
+                    WalletManager.SUPPORTED_COINS.get(
+                        currency, WalletManager.SUPPORTED_COINS["ETH"]
+                    )
                 )
                 if web3:
                     current_gas_price = web3.eth.gas_price
-                    
+
                     if currency == "ETH":
                         # ETH transfers: 21,000 gas each
                         user_payout_gas = 21000
@@ -693,58 +696,58 @@ class TradeClient:
                         # USDT transfers: ~64,000 gas each
                         user_payout_gas = 65000
                         bot_payout_gas = 65000
-                    
+
                     # Convert to ETH with 20% buffer for price fluctuations
-                    user_payout_fee = float(web3.from_wei(user_payout_gas * current_gas_price * 1.2, 'ether'))
-                    bot_payout_fee = float(web3.from_wei(bot_payout_gas * current_gas_price * 1.2, 'ether'))
-                    
+                    user_payout_fee = float(
+                        web3.from_wei(
+                            user_payout_gas * current_gas_price * 1.2, "ether"
+                        )
+                    )
+                    bot_payout_fee = float(
+                        web3.from_wei(bot_payout_gas * current_gas_price * 1.2, "ether")
+                    )
+
                     return {
-                        'user_payout': user_payout_fee,
-                        'bot_payout': bot_payout_fee
+                        "user_payout": user_payout_fee,
+                        "bot_payout": bot_payout_fee,
                     }
         except Exception as e:
             logger.warning(f"Could not get real-time gas prices: {e}")
-        
+
         # Fallback to conservative estimates if network unavailable
         if currency == "ETH":
-            return {
-                'user_payout': 0.001,  # ~21k gas at 47 gwei
-                'bot_payout': 0.001
-            }
+            return {"user_payout": 0.001, "bot_payout": 0.001}  # ~21k gas at 47 gwei
         else:  # USDT and other tokens
-            return {
-                'user_payout': 0.003,  # ~65k gas at 47 gwei
-                'bot_payout': 0.003
-            }
-    
+            return {"user_payout": 0.003, "bot_payout": 0.003}  # ~65k gas at 47 gwei
+
     @staticmethod
     def get_gas_requirements_for_currency(currency: str) -> dict:
         """Get gas requirements explanation for a specific currency
-        
+
         Returns:
             dict: Information about gas requirements for user display
         """
         if currency == "ETH":
             return {
-                'requires_separate_eth': False,
-                'explanation': 'Gas fees are included in the total ETH deposit amount',
-                'gas_used_for': ['Transfer to buyer', 'Bot fee payout'],
-                'combined_deposit': True
+                "requires_separate_eth": False,
+                "explanation": "Gas fees are included in the total ETH deposit amount",
+                "gas_used_for": ["Transfer to buyer", "Bot fee payout"],
+                "combined_deposit": True,
             }
         elif currency == "USDT":
             return {
-                'requires_separate_eth': True,
-                'explanation': 'ETH is required for gas fees in addition to USDT amount',
-                'gas_used_for': ['Transfer USDT to buyer', 'Bot fee payout'],
-                'combined_deposit': False,
-                'eth_required_reason': 'USDT runs on Ethereum network and requires ETH for transaction fees'
+                "requires_separate_eth": True,
+                "explanation": "ETH is required for gas fees in addition to USDT amount",
+                "gas_used_for": ["Transfer USDT to buyer", "Bot fee payout"],
+                "combined_deposit": False,
+                "eth_required_reason": "USDT runs on Ethereum network and requires ETH for transaction fees",
             }
         else:
             return {
-                'requires_separate_eth': True,
-                'explanation': f'ETH is required for gas fees in addition to {currency} amount',
-                'gas_used_for': [f'Transfer {currency} to buyer', 'Bot fee payout'],
-                'combined_deposit': False
+                "requires_separate_eth": True,
+                "explanation": f"ETH is required for gas fees in addition to {currency} amount",
+                "gas_used_for": [f"Transfer {currency} to buyer", "Bot fee payout"],
+                "combined_deposit": False,
             }
 
     @staticmethod
@@ -785,20 +788,26 @@ class TradeClient:
             # Calculate fee and gas amounts using gas-aware calculation
             original_amount = float(trade.get("price", 0))
             currency = trade.get("currency")
-            
+
             # Use gas-inclusive calculation for wallet-based trades
             if trade.get("is_wallet_trade"):
-                fee_data = TradeClient.calculate_trade_fee_with_gas(original_amount, currency)
-                fee_amount = fee_data['bot_fee']
-                total_gas_fees = fee_data['total_gas_fees']
-                logger.info(f"Gas-aware release: Bot fee={fee_amount}, Gas fees={total_gas_fees}")
+                fee_data = TradeClient.calculate_trade_fee_with_gas(
+                    original_amount, currency
+                )
+                fee_amount = fee_data["bot_fee"]
+                total_gas_fees = fee_data["total_gas_fees"]
+                logger.info(
+                    f"Gas-aware release: Bot fee={fee_amount}, Gas fees={total_gas_fees}"
+                )
             else:
                 # Legacy calculation for BTCPay trades
                 fee_amount, _ = TradeClient.calculate_trade_fee(original_amount)
                 total_gas_fees = 0
                 logger.info(f"Legacy release: Bot fee={fee_amount}")
-            
-            available_for_bot = fee_amount  # Bot gets the full fee since gas was pre-calculated
+
+            available_for_bot = (
+                fee_amount  # Bot gets the full fee since gas was pre-calculated
+            )
 
             # For wallet-based trades (ETH/USDT), initiate transfer
             if trade.get("is_wallet_trade"):
@@ -830,18 +839,22 @@ class TradeClient:
                         "status": "crypto_released",
                         "updated_at": datetime.now(),
                     }
-                    
+
                     # Add gas fee information for wallet-based trades
                     if trade.get("is_wallet_trade"):
-                        update_data.update({
-                            "gas_fees_reserved": total_gas_fees,
-                            "total_deposit_with_gas": fee_data['total_deposit_required'],
-                            "gas_fee_breakdown": {
-                                "user_payout_gas": fee_data['gas_fee_user_payout'],
-                                "bot_payout_gas": fee_data['gas_fee_bot_payout']
+                        update_data.update(
+                            {
+                                "gas_fees_reserved": total_gas_fees,
+                                "total_deposit_with_gas": fee_data[
+                                    "total_deposit_required"
+                                ],
+                                "gas_fee_breakdown": {
+                                    "user_payout_gas": fee_data["gas_fee_user_payout"],
+                                    "bot_payout_gas": fee_data["gas_fee_bot_payout"],
+                                },
                             }
-                        })
-                    
+                        )
+
                     db.trades.update_one({"_id": trade_id}, {"$set": update_data})
                     logger.info(
                         f"Crypto released for trade {trade_id}: {original_amount} {currency} to {buyer_address}"
@@ -1134,3 +1147,283 @@ class TradeClient:
         except Exception as e:
             logger.error(f"Error completing brokered trade: {e}")
             return False
+
+    # ========== ACTIVE TRADE MANAGEMENT METHODS ==========
+
+    @staticmethod
+    def get_active_trades_for_user(user_id: str) -> list:
+        """
+        Get all active trades where user is either seller or buyer.
+
+        This method returns all trades where the user is involved and the trade
+        is currently active (is_active=True, not cancelled or completed).
+
+        Args:
+            user_id: The user's ID (as string)
+
+        Returns:
+            List of active TradeType documents sorted by creation date (newest first)
+        """
+        try:
+            active_trades_cursor = db.trades.find(
+                {
+                    "$or": [
+                        {"seller_id": str(user_id)},
+                        {"buyer_id": str(user_id)},
+                    ],
+                    "is_active": True,
+                    "is_cancelled": {"$ne": True},
+                    "is_completed": {"$ne": True},
+                }
+            ).sort([("created_at", -1)])
+
+            active_trades = list(active_trades_cursor)
+            logger.info(f"Found {len(active_trades)} active trades for user {user_id}")
+            return active_trades
+
+        except Exception as e:
+            logger.error(f"Error getting active trades for user {user_id}: {e}")
+            return []
+
+    @staticmethod
+    def cleanup_abandoned_trades() -> dict:
+        """
+        Auto-cleanup abandoned or stale trades.
+
+        This method performs two types of cleanup:
+        1. Cancel trades with no buyer after 48 hours
+        2. Expire trades stuck in 'pending' status for 7 days
+
+        Returns:
+            Dictionary with cleanup statistics:
+            {
+                'no_buyer_cancelled': int,
+                'pending_expired': int,
+                'total_cleaned': int
+            }
+        """
+        try:
+            from datetime import timedelta
+
+            now = datetime.now()
+            forty_eight_hours_ago = now - timedelta(hours=48)
+            seven_days_ago = now - timedelta(days=7)
+
+            # Cleanup 1: Cancel trades with no buyer after 48 hours
+            no_buyer_result = db.trades.update_many(
+                {
+                    "is_active": True,
+                    "buyer_id": {"$in": ["", None]},
+                    "created_at": {"$lt": forty_eight_hours_ago},
+                    "is_cancelled": {"$ne": True},
+                },
+                {
+                    "$set": {
+                        "is_active": False,
+                        "is_cancelled": True,
+                        "cancelled_by": "system",
+                        "cancelled_reason": "No buyer joined within 48 hours",
+                        "cancelled_at": now,
+                        "updated_at": now,
+                    }
+                },
+            )
+
+            no_buyer_cancelled = no_buyer_result.modified_count
+            logger.info(
+                f"Cancelled {no_buyer_cancelled} trades with no buyer after 48h"
+            )
+
+            # Cleanup 2: Expire trades stuck in pending status for 7 days
+            pending_result = db.trades.update_many(
+                {
+                    "is_active": True,
+                    "status": {
+                        "$in": ["pending", "awaiting_deposit", "awaiting_payment"]
+                    },
+                    "created_at": {"$lt": seven_days_ago},
+                    "is_completed": {"$ne": True},
+                    "is_cancelled": {"$ne": True},
+                },
+                {
+                    "$set": {
+                        "is_active": False,
+                        "is_cancelled": True,
+                        "cancelled_by": "system",
+                        "cancelled_reason": "Trade expired after 7 days in pending status",
+                        "cancelled_at": now,
+                        "updated_at": now,
+                    }
+                },
+            )
+
+            pending_expired = pending_result.modified_count
+            logger.info(
+                f"Expired {pending_expired} trades stuck in pending status for 7d"
+            )
+
+            total_cleaned = no_buyer_cancelled + pending_expired
+
+            stats = {
+                "no_buyer_cancelled": no_buyer_cancelled,
+                "pending_expired": pending_expired,
+                "total_cleaned": total_cleaned,
+                "cleanup_time": now,
+            }
+
+            logger.info(
+                f"Trade cleanup completed: {total_cleaned} trades cleaned up "
+                f"({no_buyer_cancelled} no-buyer, {pending_expired} expired-pending)"
+            )
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"Error during trade cleanup: {e}")
+            return {
+                "no_buyer_cancelled": 0,
+                "pending_expired": 0,
+                "total_cleaned": 0,
+                "error": str(e),
+            }
+
+    @staticmethod
+    async def notify_expiring_trades(bot_instance=None) -> dict:
+        """
+        Send warnings to users about trades that will expire soon.
+
+        This method notifies users 24 hours before their trades will be
+        auto-cancelled due to inactivity. It prevents duplicate notifications
+        by marking trades with 'expiration_warning_sent' field.
+
+        Args:
+            bot_instance: Telegram bot instance for sending notifications
+
+        Returns:
+            Dictionary with notification statistics:
+            {
+                'warnings_sent': int,
+                'errors': int,
+                'total_checked': int
+            }
+        """
+        try:
+            from datetime import timedelta
+
+            now = datetime.now()
+            twenty_four_hours_ago = now - timedelta(hours=24)
+            forty_eight_hours_ago = now - timedelta(hours=48)
+
+            # Find trades that:
+            # 1. Are active
+            # 2. Have no buyer
+            # 3. Were created between 24-48 hours ago (will expire in next 24h)
+            # 4. Haven't been warned yet
+            expiring_trades_cursor = db.trades.find(
+                {
+                    "is_active": True,
+                    "buyer_id": {"$in": ["", None]},
+                    "created_at": {
+                        "$gte": forty_eight_hours_ago,
+                        "$lt": twenty_four_hours_ago,
+                    },
+                    "is_cancelled": {"$ne": True},
+                    "expiration_warning_sent": {"$ne": True},
+                }
+            )
+
+            expiring_trades = list(expiring_trades_cursor)
+            total_checked = len(expiring_trades)
+            warnings_sent = 0
+            errors = 0
+
+            logger.info(f"Found {total_checked} trades that need expiration warnings")
+
+            if not bot_instance:
+                logger.warning(
+                    "No bot instance provided, cannot send expiration warnings"
+                )
+                return {
+                    "warnings_sent": 0,
+                    "errors": 0,
+                    "total_checked": total_checked,
+                    "error": "No bot instance",
+                }
+
+            for trade in expiring_trades:
+                try:
+                    seller_id = trade.get("seller_id")
+                    trade_id = trade["_id"]
+                    amount = trade.get("price", 0)
+                    currency = trade.get("currency", "USD")
+                    created_at = trade.get("created_at", now)
+                    time_remaining = timedelta(hours=48) - (now - created_at)
+                    hours_remaining = int(time_remaining.total_seconds() // 3600)
+
+                    # Build warning message
+                    message = (
+                        f"⚠️ <b>Trade Expiration Warning</b>\n\n"
+                        f"Your trade will be automatically cancelled in approximately "
+                        f"<b>{hours_remaining} hours</b> if no buyer joins.\n\n"
+                        f"<b>Trade Details:</b>\n"
+                        f"• ID: #{trade_id[:8]}\n"
+                        f"• Amount: {amount} {currency}\n"
+                        f"• Created: {created_at.strftime('%Y-%m-%d %H:%M UTC')}\n\n"
+                        f"💡 <b>What can you do?</b>\n"
+                        f"• Share your trade link to attract buyers\n"
+                        f"• Or cancel the trade manually if you no longer need it\n\n"
+                        f"Use /mytrades to view all your active trades."
+                    )
+
+                    # Send notification to seller
+                    await bot_instance.send_message(
+                        chat_id=seller_id, text=message, parse_mode="HTML"
+                    )
+
+                    # Mark trade as warned
+                    db.trades.update_one(
+                        {"_id": trade_id},
+                        {
+                            "$set": {
+                                "expiration_warning_sent": True,
+                                "expiration_warning_sent_at": now,
+                                "updated_at": now,
+                            }
+                        },
+                    )
+
+                    warnings_sent += 1
+                    logger.info(
+                        f"Sent expiration warning for trade {trade_id} "
+                        f"to user {seller_id}"
+                    )
+
+                except Exception as e:
+                    errors += 1
+                    logger.error(
+                        f"Error sending expiration warning for trade "
+                        f"{trade.get('_id')}: {e}"
+                    )
+
+            stats = {
+                "warnings_sent": warnings_sent,
+                "errors": errors,
+                "total_checked": total_checked,
+                "notification_time": now,
+            }
+
+            logger.info(
+                f"Expiration warnings completed: {warnings_sent} sent, "
+                f"{errors} errors out of {total_checked} checked"
+            )
+
+            return stats
+
+        except Exception as e:
+            logger.error(f"Error during expiration warning notification: {e}")
+            return {
+                "warnings_sent": 0,
+                "errors": 0,
+                "total_checked": 0,
+                "error": str(e),
+            }

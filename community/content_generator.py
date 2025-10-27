@@ -1,13 +1,13 @@
 import logging
-import random
 import os
+import random
 from datetime import datetime
 from typing import Dict, List, Optional
 
 import google.generativeai as genai
 import requests
 
-from config import TRADING_CHANNEL, CONTACT_SUPPORT
+from config import CONTACT_SUPPORT, TRADING_CHANNEL
 
 logger = logging.getLogger(__name__)
 
@@ -24,106 +24,100 @@ except Exception as e:
 
 class MarketDataFetcher:
     """Fetches cryptocurrency market data from CoinGecko API"""
-    
+
     def __init__(self):
         self.base_url = "https://api.coingecko.com/api/v3"
         self.supported_coins = {
-            'bitcoin': 'BTC',
-            'ethereum': 'ETH', 
-            'tether': 'USDT',
-            'litecoin': 'LTC',
-            'dogecoin': 'DOGE',
-            'binancecoin': 'BNB',
-            'solana': 'SOL',
-            'tron': 'TRX'
+            "bitcoin": "BTC",
+            "ethereum": "ETH",
+            "tether": "USDT",
+            "litecoin": "LTC",
+            "dogecoin": "DOGE",
+            "binancecoin": "BNB",
+            "solana": "SOL",
+            "tron": "TRX",
         }
-    
+
     async def get_market_data(self) -> Dict:
         """Fetch current market data for supported cryptocurrencies"""
         try:
             # Get price data for all supported coins
-            coin_ids = ','.join(self.supported_coins.keys())
+            coin_ids = ",".join(self.supported_coins.keys())
             url = f"{self.base_url}/simple/price"
             params = {
-                'ids': coin_ids,
-                'vs_currencies': 'usd',
-                'include_24hr_change': 'true',
-                'include_market_cap': 'true'
+                "ids": coin_ids,
+                "vs_currencies": "usd",
+                "include_24hr_change": "true",
+                "include_market_cap": "true",
             }
-            
+
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
             raw_data = response.json()
-            
+
             return self._format_market_data(raw_data)
-            
+
         except Exception as e:
             logger.error(f"Error fetching market data: {e}")
             return self._get_fallback_data()
-    
+
     def _format_market_data(self, raw_data: Dict) -> Dict:
         """Format raw CoinGecko data for use in content generation"""
         formatted = {
-            'timestamp': datetime.now(),
-            'date': datetime.now().strftime('%B %d, %Y'),
-            'prices': {},
-            'changes': {},
-            'market_sentiment': 'neutral'
+            "timestamp": datetime.now(),
+            "date": datetime.now().strftime("%B %d, %Y"),
+            "prices": {},
+            "changes": {},
+            "market_sentiment": "neutral",
         }
-        
+
         total_change = 0
         valid_changes = 0
-        
+
         for coin_id, symbol in self.supported_coins.items():
             if coin_id in raw_data:
-                price = raw_data[coin_id].get('usd', 0)
-                change = raw_data[coin_id].get('usd_24h_change', 0)
-                
-                formatted['prices'][symbol] = price
-                formatted['changes'][symbol] = change
-                
+                price = raw_data[coin_id].get("usd", 0)
+                change = raw_data[coin_id].get("usd_24h_change", 0)
+
+                formatted["prices"][symbol] = price
+                formatted["changes"][symbol] = change
+
                 if change is not None:
                     total_change += change
                     valid_changes += 1
-        
+
         # Calculate overall market sentiment
         if valid_changes > 0:
             avg_change = total_change / valid_changes
             if avg_change > 2:
-                formatted['market_sentiment'] = 'bullish'
+                formatted["market_sentiment"] = "bullish"
             elif avg_change < -2:
-                formatted['market_sentiment'] = 'bearish'
+                formatted["market_sentiment"] = "bearish"
             else:
-                formatted['market_sentiment'] = 'neutral'
-        
+                formatted["market_sentiment"] = "neutral"
+
         return formatted
-    
+
     def _get_fallback_data(self) -> Dict:
         """Provide fallback data when API is unavailable"""
         return {
-            'timestamp': datetime.now(),
-            'date': datetime.now().strftime('%B %d, %Y'),
-            'prices': {
-                'BTC': 43000,
-                'ETH': 2500,
-                'USDT': 1.000,
-                'LTC': 70,
-                'DOGE': 0.08
+            "timestamp": datetime.now(),
+            "date": datetime.now().strftime("%B %d, %Y"),
+            "prices": {
+                "BTC": 43000,
+                "ETH": 2500,
+                "USDT": 1.000,
+                "LTC": 70,
+                "DOGE": 0.08,
             },
-            'changes': {
-                'BTC': 0.5,
-                'ETH': -1.2,
-                'USDT': 0.0,
-                'LTC': 2.1,
-                'DOGE': 5.3
-            },
-            'market_sentiment': 'neutral'
+            "changes": {"BTC": 0.5, "ETH": -1.2, "USDT": 0.0, "LTC": 2.1, "DOGE": 5.3},
+            "market_sentiment": "neutral",
         }
 
 
 class ContentPromptTemplates:
     """Contains all prompt templates for AI content generation"""
-    
+
     EDUCATIONAL_PROMPTS = {
         "trading_basics": {
             "prompt": """Create a concise, professional educational post about {topic} for a crypto P2P trading community.
@@ -138,10 +132,9 @@ Guidelines:
 - Mention our escrow platform's security benefits naturally
 
 Topic: {topic}""",
-            
             "topics": [
                 "verifying trader reputation before starting trades",
-                "understanding escrow protection in P2P trading", 
+                "understanding escrow protection in P2P trading",
                 "recognizing common crypto trading scams",
                 "calculating fair exchange rates",
                 "timing your crypto trades effectively",
@@ -149,10 +142,9 @@ Topic: {topic}""",
                 "understanding transaction fees and gas costs",
                 "choosing the right cryptocurrency for P2P trades",
                 "secure communication during trades",
-                "best practices for first-time crypto traders"
-            ]
+                "best practices for first-time crypto traders",
+            ],
         },
-        
         "security_focus": {
             "prompt": """Generate a security-focused educational post for crypto traders.
 
@@ -166,20 +158,19 @@ Requirements:
 - Mention how our escrow service provides protection
 
 Security aspect: {security_aspect}""",
-            
             "topics": [
                 "protecting private keys and wallet security",
                 "identifying fake escrow services",
-                "secure communication during trades", 
+                "secure communication during trades",
                 "avoiding social engineering attacks",
                 "verifying payment confirmations",
                 "safe practices for large trades",
                 "recognizing phishing attempts",
-                "two-factor authentication importance"
-            ]
-        }
+                "two-factor authentication importance",
+            ],
+        },
     }
-    
+
     MARKET_ANALYSIS_PROMPTS = {
         "daily_brief": {
             "prompt": """Create a professional daily crypto market brief for P2P traders.
@@ -197,7 +188,6 @@ Structure:
 - Professional but accessible tone
 - Encourage using our secure escrow platform""",
         },
-        
         "weekly_analysis": {
             "prompt": """Generate a weekly crypto market analysis for P2P traders.
 
@@ -214,9 +204,9 @@ Include:
 - Professional analysis tone
 - End with market-focused hashtags
 - Mention our platform's security benefits"""
-        }
+        },
     }
-    
+
     PLATFORM_PROMPTS = {
         "feature_highlight": {
             "prompt": """Create a professional post highlighting a platform feature for our escrow service.
@@ -235,10 +225,9 @@ Requirements:
 - Include call-to-action to try the platform
 
 Feature: {feature}""",
-            
             "features": [
                 "multi-signature wallet security system",
-                "verified broker network", 
+                "verified broker network",
                 "automated escrow release process",
                 "real-time transaction monitoring",
                 "comprehensive dispute resolution",
@@ -246,10 +235,9 @@ Feature: {feature}""",
                 "gas fee optimization for Ethereum trades",
                 "24/7 platform availability and support",
                 "encrypted communication system",
-                "advanced fraud detection algorithms"
-            ]
+                "advanced fraud detection algorithms",
+            ],
         },
-        
         "trust_building": {
             "prompt": """Generate a trust-building post about our escrow platform's reliability.
 
@@ -267,28 +255,27 @@ Guidelines:
 - Include subtle call-to-action
 
 Trust aspect: {trust_aspect}""",
-            
             "aspects": [
                 "how our escrow system protects both buyers and sellers",
                 "the rigorous verification process for platform brokers",
                 "security measures protecting user funds",
-                "transparency in fee structure and processes", 
+                "transparency in fee structure and processes",
                 "customer support and dispute resolution efficiency",
                 "platform uptime and reliability statistics",
-                "user fund insurance and protection policies"
-            ]
-        }
+                "user fund insurance and protection policies",
+            ],
+        },
     }
 
 
 class AIContentGenerator:
     """Main class for generating AI-powered community content"""
-    
+
     def __init__(self):
         self.market_fetcher = MarketDataFetcher()
         self.templates = ContentPromptTemplates()
         self.model_name = "gemini-2.5-flash"
-    
+
     async def generate_content(self, content_type: str, **kwargs) -> Optional[str]:
         """Generate content based on type and parameters"""
         try:
@@ -305,15 +292,15 @@ class AIContentGenerator:
             else:
                 logger.error(f"Unknown content type: {content_type}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Error generating {content_type} content: {e}")
             return self._get_fallback_content(content_type)
-    
+
     async def _generate_market_brief(self) -> str:
         """Generate daily market brief"""
         market_data = await self.market_fetcher.get_market_data()
-        
+
         # Format market data for prompt
         formatted_data = f"""
         BTC: ${market_data['prices']['BTC']:,.0f} ({market_data['changes']['BTC']:+.1f}% 24h)
@@ -321,84 +308,93 @@ class AIContentGenerator:
         USDT: ${market_data['prices']['USDT']:.3f} ({market_data['changes']['USDT']:+.1f}% 24h)
         Market Sentiment: {market_data['market_sentiment']}
         """
-        
+
         prompt = self.templates.MARKET_ANALYSIS_PROMPTS["daily_brief"]["prompt"].format(
-            market_data=formatted_data,
-            date=market_data['date']
+            market_data=formatted_data, date=market_data["date"]
         )
-        
+
         return await self._call_gemini_api(prompt)
-    
+
     async def _generate_educational_content(self) -> str:
         """Generate educational content"""
         # Randomly select a category and topic
         category = random.choice(list(self.templates.EDUCATIONAL_PROMPTS.keys()))
         topic = random.choice(self.templates.EDUCATIONAL_PROMPTS[category]["topics"])
-        
-        prompt = self.templates.EDUCATIONAL_PROMPTS[category]["prompt"].format(topic=topic)
-        
+
+        prompt = self.templates.EDUCATIONAL_PROMPTS[category]["prompt"].format(
+            topic=topic
+        )
+
         return await self._call_gemini_api(prompt)
-    
+
     async def _generate_platform_content(self) -> str:
         """Generate platform feature highlight"""
-        feature = random.choice(self.templates.PLATFORM_PROMPTS["feature_highlight"]["features"])
-        
-        prompt = self.templates.PLATFORM_PROMPTS["feature_highlight"]["prompt"].format(feature=feature)
-        
+        feature = random.choice(
+            self.templates.PLATFORM_PROMPTS["feature_highlight"]["features"]
+        )
+
+        prompt = self.templates.PLATFORM_PROMPTS["feature_highlight"]["prompt"].format(
+            feature=feature
+        )
+
         return await self._call_gemini_api(prompt)
-    
+
     async def _generate_security_content(self) -> str:
         """Generate security-focused content"""
-        topic = random.choice(self.templates.EDUCATIONAL_PROMPTS["security_focus"]["topics"])
-        
+        topic = random.choice(
+            self.templates.EDUCATIONAL_PROMPTS["security_focus"]["topics"]
+        )
+
         prompt = self.templates.EDUCATIONAL_PROMPTS["security_focus"]["prompt"].format(
             security_aspect=topic
         )
-        
+
         return await self._call_gemini_api(prompt)
-    
+
     async def _generate_weekly_analysis(self) -> str:
         """Generate weekly market analysis"""
         market_data = await self.market_fetcher.get_market_data()
-        
+
         # Create date range for the week
         from datetime import timedelta
+
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
-        date_range = f"{start_date.strftime('%B %d')} - {end_date.strftime('%B %d, %Y')}"
-        
+        date_range = (
+            f"{start_date.strftime('%B %d')} - {end_date.strftime('%B %d, %Y')}"
+        )
+
         formatted_data = f"""
         Weekly Performance:
         BTC: ${market_data['prices']['BTC']:,.0f} ({market_data['changes']['BTC']:+.1f}% 24h)
         ETH: ${market_data['prices']['ETH']:,.0f} ({market_data['changes']['ETH']:+.1f}% 24h)
         Overall Sentiment: {market_data['market_sentiment']}
         """
-        
-        prompt = self.templates.MARKET_ANALYSIS_PROMPTS["weekly_analysis"]["prompt"].format(
-            market_data=formatted_data,
-            date_range=date_range
-        )
-        
+
+        prompt = self.templates.MARKET_ANALYSIS_PROMPTS["weekly_analysis"][
+            "prompt"
+        ].format(market_data=formatted_data, date_range=date_range)
+
         return await self._call_gemini_api(prompt)
-    
+
     async def _call_gemini_api(self, prompt: str) -> str:
         """Make API call to Gemini"""
         try:
             if not GEMINI_API_KEY:
                 raise ValueError("Gemini API key not configured")
-            
+
             model = genai.GenerativeModel(self.model_name)
             response = await model.generate_content_async(prompt)
-            
+
             if response and response.text:
                 return response.text.strip()
             else:
                 raise ValueError("Empty response from Gemini API")
-                
+
         except Exception as e:
             logger.error(f"Gemini API call failed: {e}")
             raise
-    
+
     def _get_fallback_content(self, content_type: str) -> str:
         """Provide fallback content when AI generation fails"""
         fallback_content = {
@@ -412,7 +408,6 @@ class AIContentGenerator:
 Use our escrow service for safe transactions.
 
 #CryptoMarket #P2PTrading #EscrowSafety""",
-
             "educational": """💡 **Trading Tip**
 
 Always verify your trading partner's reputation:
@@ -423,7 +418,6 @@ Always verify your trading partner's reputation:
 Our escrow system protects both parties throughout the entire process.
 
 #TradingSafety #CryptoTips #EscrowProtection""",
-
             "platform_update": """🔧 **Platform Update**
 
 Our security systems continue to protect your trades:
@@ -434,7 +428,6 @@ Our security systems continue to protect your trades:
 Trade with confidence on our secure platform.
 
 #PlatformSecurity #EscrowSafety""",
-
             "security_tip": """🔐 **Security Reminder**
 
 Protect your crypto assets:
@@ -444,7 +437,7 @@ Protect your crypto assets:
 
 Our platform provides bank-level security for all trades.
 
-#CryptoSecurity #SafeTrading"""
+#CryptoSecurity #SafeTrading""",
         }
-        
+
         return fallback_content.get(content_type, "Content temporarily unavailable.")

@@ -100,15 +100,17 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the trade ID input and buyer address input"""
     try:
         user_id = str(update.effective_user.id)
-        
+
         # Check if this is buyer address input (after payment approval)
         try:
-            awaiting_address_trade = db.trades.find_one({
-                "buyer_id": user_id,
-                "status": "awaiting_buyer_address", 
-                "fiat_payment_approved": True
-            })
-            
+            awaiting_address_trade = db.trades.find_one(
+                {
+                    "buyer_id": user_id,
+                    "status": "awaiting_buyer_address",
+                    "fiat_payment_approved": True,
+                }
+            )
+
             if awaiting_address_trade:
                 logger.info(f"Processing buyer address input for user {user_id}")
                 await handle_buyer_address_input(update, context)
@@ -116,7 +118,7 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.warning(f"Could not check for awaiting address trade: {e}")
             # Continue with normal trade ID processing
-        
+
         # Otherwise handle trade ID input
         if context.user_data.get("state") != "waiting_for_trade_id":
             logger.info(
@@ -569,17 +571,17 @@ async def handle_join_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                     ]
                 ),
             )
-            
+
         elif data.startswith("payment_status_"):
             # Handle payment status check
             trade_id = data.replace("payment_status_", "")
             await handle_payment_status_callback(query, context, trade_id)
-            
+
         elif data.startswith("help_address_"):
             # Handle address help request
             trade_id = data.replace("help_address_", "")
             await handle_address_help_callback(query, context, trade_id)
-            
+
     except Exception as e:
         logger.error(f"Error in handle_join_callback: {e}")
         try:
@@ -935,7 +937,7 @@ async def handle_buyer_address_input(
                             f"{EmojiEnums.BACK_ARROW.value} Back to Menu",
                             callback_data="menu",
                         )
-                    ]
+                    ],
                 ]
             ),
         )
@@ -964,8 +966,8 @@ async def handle_buyer_address_input(
                     [
                         [
                             InlineKeyboardButton(
-                                "📊 Check Payment Status", 
-                                callback_data=f"payment_status_{trade_id}"
+                                "📊 Check Payment Status",
+                                callback_data=f"payment_status_{trade_id}",
                             )
                         ],
                         [
@@ -1136,17 +1138,17 @@ async def handle_payment_status_callback(query, context, trade_id):
         if not trade:
             await query.message.edit_text(
                 "❌ Trade not found.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-                ])
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+                ),
             )
             return
-            
+
         # Get transaction status
         currency = trade.get("currency", "")
         buyer_address = trade.get("buyer_address", "")
         amount = trade.get("price", 0)
-        
+
         if buyer_address:
             # Payment has been sent
             status_message = (
@@ -1169,23 +1171,30 @@ async def handle_payment_status_callback(query, context, trade_id):
                 f"⏳ <b>Status:</b> Waiting for your {currency} address\n"
                 f"💬 Please send your {currency} address to receive the payment."
             )
-            
+
         await query.message.edit_text(
             status_message,
             parse_mode="html",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔄 Refresh Status", callback_data=f"payment_status_{trade_id}")],
-                [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔄 Refresh Status",
+                            callback_data=f"payment_status_{trade_id}",
+                        )
+                    ],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")],
+                ]
+            ),
         )
-        
+
     except Exception as e:
         logger.error(f"Error in payment status callback: {e}")
         await query.message.edit_text(
             "❌ Error checking payment status. Please try again.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+            ),
         )
 
 
@@ -1196,14 +1205,14 @@ async def handle_address_help_callback(query, context, trade_id):
         if not trade:
             await query.message.edit_text(
                 "❌ Trade not found.",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-                ])
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+                ),
             )
             return
-            
+
         currency = trade.get("currency", "")
-        
+
         help_messages = {
             "USDT": (
                 f"🔰 <b>USDT Address Help</b>\n\n"
@@ -1246,35 +1255,42 @@ async def handle_address_help_callback(query, context, trade_id):
                 f"💡 <b>Examples:</b>\n"
                 f"• 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa\n"
                 f"• bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
-            )
+            ),
         }
-        
-        help_message = help_messages.get(currency, 
+
+        help_message = help_messages.get(
+            currency,
             f"🔰 <b>{currency} Address Help</b>\n\n"
             f"Please provide a valid {currency} address where you want to receive your crypto.\n\n"
             f"📱 <b>Where to find your address:</b>\n"
             f"• Open your {currency} wallet\n"
             f"• Look for 'Receive' or 'Deposit'\n"
             f"• Copy the address\n\n"
-            f"⚠️ <b>Important:</b> Double-check the address before sending!"
+            f"⚠️ <b>Important:</b> Double-check the address before sending!",
         )
-        
+
         await query.message.edit_text(
             help_message,
             parse_mode="html",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("💬 Send Address Now", callback_data="menu")],
-                [InlineKeyboardButton("🔙 Back", callback_data=f"payment_status_{trade_id}")]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("💬 Send Address Now", callback_data="menu")],
+                    [
+                        InlineKeyboardButton(
+                            "🔙 Back", callback_data=f"payment_status_{trade_id}"
+                        )
+                    ],
+                ]
+            ),
         )
-        
+
     except Exception as e:
         logger.error(f"Error in address help callback: {e}")
         await query.message.edit_text(
             "❌ Error loading help information. Please try again.",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]
-            ])
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+            ),
         )
 
 
@@ -1286,7 +1302,7 @@ def register_handlers(application):
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_trade_id
         ),
-        group=1  # Higher priority than trade flow dispatch
+        group=1,  # Higher priority than trade flow dispatch
     )
     # Handle photo uploads for payment proof
     application.add_handler(

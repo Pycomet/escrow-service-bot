@@ -273,19 +273,19 @@ If you encounter any issues, please contact support.
         trade_id: str,
     ) -> str:
         """Generates the message for wallet-based crypto deposit instructions (ETH/USDT)."""
-        from functions.trade import TradeClient
         from functions.scripts.utils import get_eth_price
+        from functions.trade import TradeClient
 
         # Use new gas-inclusive fee calculation
         fee_data = TradeClient.calculate_trade_fee_with_gas(amount, currency)
         gas_info = TradeClient.get_gas_requirements_for_currency(currency)
-        
-        breakdown = fee_data['breakdown']
-        
+
+        breakdown = fee_data["breakdown"]
+
         # Get ETH price for USD equivalent and format gas fees properly
         eth_price = get_eth_price()
         gas_fees_usd = ""
-        
+
         # Format ETH gas fees to avoid scientific notation
         def format_eth_amount(amount):
             """Format small ETH amounts to avoid scientific notation"""
@@ -295,18 +295,20 @@ If you encounter any issues, please contact support.
                 return f"{amount:.6f}"  # Show 6 decimal places for small amounts
             else:
                 return f"{amount:.4f}"  # Show 4 decimal places for larger amounts
-        
-        formatted_gas_fees = format_eth_amount(fee_data['total_gas_fees'])
-        
-        if eth_price and fee_data['total_gas_fees']:
-            usd_value = fee_data['total_gas_fees'] * eth_price
+
+        formatted_gas_fees = format_eth_amount(fee_data["total_gas_fees"])
+
+        if eth_price and fee_data["total_gas_fees"]:
+            usd_value = fee_data["total_gas_fees"] * eth_price
             gas_fees_usd = f" (~${usd_value:.2f} USD)"
-        
+
         if currency == "ETH":
             # ETH trades: all costs combined
-            formatted_gas_fees_eth = format_eth_amount(fee_data['total_gas_fees'])
-            formatted_total_deposit = format_eth_amount(fee_data['total_deposit_required'])
-            
+            formatted_gas_fees_eth = format_eth_amount(fee_data["total_gas_fees"])
+            formatted_total_deposit = format_eth_amount(
+                fee_data["total_deposit_required"]
+            )
+
             return f"""
 🔒 <b>ETH Deposit Required for Trade ID: {trade_id}</b> 🔒
 --------------------------------------------------
@@ -335,7 +337,7 @@ If you encounter any issues, please contact support.
 
 After you have successfully made the deposit, click "✅ I've Made Deposit" to confirm.
         """
-        
+
         else:  # USDT and other tokens
             return f"""
 🔒 <b>{currency} Deposit Required for Trade ID: {trade_id}</b> 🔒
