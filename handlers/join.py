@@ -14,7 +14,7 @@ from functions import *
 from functions.trade import TradeClient
 from functions.user import UserClient
 from utils import *
-from utils.enums import CallbackDataEnums, EmojiEnums
+from utils.enums import CallbackDataEnums, EmojiEnums, TradeTypeEnums
 from utils.messages import Messages
 
 logger = logging.getLogger(__name__)
@@ -241,7 +241,7 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             terms = str(trade.get("terms", ""))
 
             details = (
-                f"💰 <b>Crypto → Fiat Trade Details</b>\n\n"
+                f"<b>{TradeTypeEnums.get_display_name(trade_type)} Details</b>\n\n"
                 f"🆔 <b>Trade ID:</b> <code>{trade_id}</code>\n"
                 f"💎 <b>Crypto Amount:</b> {amount} {currency}\n"
                 f"📅 <b>Created:</b> {created_at}\n"
@@ -272,7 +272,7 @@ async def handle_trade_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
             terms = str(trade.get("terms", ""))
 
             details = (
-                f"📋 <b>Trade Details</b>\n\n"
+                f"<b>{TradeTypeEnums.get_display_name(trade_type)} Details</b>\n\n"
                 f"ID: <code>{trade_id}</code>\n"
                 f"Amount: {amount} {currency}\n"
                 f"Created: {created_at}\n"

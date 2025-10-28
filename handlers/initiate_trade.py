@@ -109,12 +109,18 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
             # Show concise user-friendly message
             await update.message.reply_text(
                 f"⚠️ <b>Active Trade Exists</b>\n\n"
-                f"You currently have <b>{trade_count}</b> active trade(s).\n\n"
-                f"Please complete or cancel your existing trade(s) before creating a new one.\n\n"
-                f"<b>What you can do:</b>\n"
-                f"• View all your active trades\n"
-                f"• Complete ongoing trades\n"
-                f"• Cancel trades if no longer needed",
+                f"You have an active trade that must be completed first:\n\n"
+                f"🆔 <b>Trade:</b> #{active_trade['_id']}\n"
+                f"💰 <b>Amount:</b> {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}\n"
+                f"📊 <b>Type:</b> {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}\n"
+                f"📅 <b>Status:</b> {active_trade.get('status', 'active')}\n"
+                f"🔍 <b>Is Active:</b> {active_trade.get('is_active', False)}\n"
+                f"❌ <b>Is Cancelled:</b> {active_trade.get('is_cancelled', False)}\n"
+                f"✅ <b>Is Completed:</b> {active_trade.get('is_completed', False)}\n\n"
+                f"<b>Options:</b>\n"
+                f"• Complete your current trade\n"
+                f"• Cancel it if no longer needed\n"
+                f"• Use /status for detailed info",
                 parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(
                     [
@@ -349,7 +355,7 @@ async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📊 <b>Active Trade Found</b>\n\n"
             f"You have an active trade: #{active_trade['_id']}\n"
             f"Amount: {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}\n"
-            f"Type: {active_trade.get('trade_type', 'Unknown')}\n"
+            f"Type: {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}\n"
             f"Status: {active_trade.get('status', 'active')}\n"
             f"Is Active: {active_trade.get('is_active', False)}\n"
             f"Is Cancelled: {active_trade.get('is_cancelled', False)}\n"
@@ -570,7 +576,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status_parts.extend(
             [
                 f"🔄 <b>Trade Creation:</b> ✅ In Progress",
-                f"   • Type: {trade_type}",
+                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
                 f"   • Step: {step}",
                 f"   • Flow: {flow_step}\n",
             ]
@@ -585,21 +591,16 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💰 <b>Active Trades:</b> ✅ {num_trades} trade{'s' if num_trades != 1 else ''}\n"
         )
 
-        # Show details for up to 3 trades
-        for i, trade in enumerate(active_trades[:3], 1):
-            trade_id = trade["_id"]
-            amount = trade.get("price", "Unknown")
-            currency = trade.get("currency", "")
-            trade_type = trade.get("trade_type", "Unknown")
-            status = trade.get("status", "active")
-            seller_id = str(trade.get("seller_id", ""))
-            buyer_id = str(trade.get("buyer_id", ""))
-
-            role = (
-                "Seller"
-                if seller_id == user_id
-                else ("Buyer" if buyer_id == user_id else "Unknown")
-            )
+        status_parts.extend(
+            [
+                f"💰 <b>Active Trade:</b> ✅ Found",
+                f"   • ID: #{trade_id}",
+                f"   • Amount: {amount} {currency}",
+                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
+                f"   • Your Role: {role}",
+                f"   • Status: {status}\n",
+            ]
+        )
 
             status_parts.extend(
                 [
@@ -737,7 +738,7 @@ async def debug_user_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"   • Active Flag: {is_really_active}",
                 f"   • Status: {active_trade.get('status', 'unknown')}",
                 f"   • Amount: {active_trade.get('price', 'Unknown')} {active_trade.get('currency', '')}",
-                f"   • Type: {active_trade.get('trade_type', 'Unknown')}",
+                f"   • Type: {TradeTypeEnums.get_display_name(active_trade.get('trade_type', 'Unknown'))}",
                 f"   • Seller: {active_trade.get('seller_id', 'Unknown')}",
                 f"   • Buyer: {active_trade.get('buyer_id', 'None')}",
                 f"   • Created: {active_trade.get('created_at', 'Unknown')}\n",
