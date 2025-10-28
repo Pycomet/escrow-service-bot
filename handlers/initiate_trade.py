@@ -591,23 +591,27 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💰 <b>Active Trades:</b> ✅ {num_trades} trade{'s' if num_trades != 1 else ''}\n"
         )
 
-        status_parts.extend(
-            [
-                f"💰 <b>Active Trade:</b> ✅ Found",
-                f"   • ID: #{trade_id}",
-                f"   • Amount: {amount} {currency}",
-                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
-                f"   • Your Role: {role}",
-                f"   • Status: {status}\n",
-            ]
-        )
+        for i, trade in enumerate(active_trades[:3], 1):
+            trade_id = trade["_id"]
+            amount = trade.get("price", "Unknown")
+            currency = trade.get("currency", "")
+            trade_type = trade.get("trade_type", "Unknown")
+            status = trade.get("status", "active")
+            seller_id = trade.get("seller_id", "")
+            buyer_id = trade.get("buyer_id", "")
+
+            role = (
+                "Seller"
+                if str(seller_id) == user_id
+                else ("Buyer" if str(buyer_id) == user_id else "Unknown")
+            )
 
             status_parts.extend(
                 [
                     f"\n<b>Trade #{i}:</b>",
                     f"   • ID: #{trade_id[:8]}...",
                     f"   • Amount: {amount} {currency}",
-                    f"   • Type: {trade_type}",
+                    f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
                     f"   • Your Role: {role}",
                     f"   • Status: {status}",
                 ]
