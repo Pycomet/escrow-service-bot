@@ -35,29 +35,35 @@ async def main_menu(update=None, context=None):
         ],
         [
             InlineKeyboardButton(
+                "📊 My Trades",
+                callback_data="my_trades",
+            ),
+            InlineKeyboardButton(
                 f"{EmojiEnums.SCROLL.value} Trade History",
                 callback_data=CallbackDataEnums.TRADE_HISTORY.value,
             ),
+        ],
+        [
             InlineKeyboardButton(
                 f"{EmojiEnums.LOCK.value} My Wallets",
                 callback_data=CallbackDataEnums.MY_WALLETS.value,
             ),
-        ],
-        [
             InlineKeyboardButton(
                 f"{EmojiEnums.RULES.value} Rules",
                 callback_data=CallbackDataEnums.RULES.value,
             ),
+        ],
+        [
             InlineKeyboardButton(
                 f"{EmojiEnums.COMMUNITY.value} Community",
                 callback_data=CallbackDataEnums.COMMUNITY.value,
             ),
-        ],
-        [
             InlineKeyboardButton(
                 f"{EmojiEnums.TARGET.value} Affiliate",
                 callback_data=CallbackDataEnums.AFFILIATE.value,
             ),
+        ],
+        [
             InlineKeyboardButton(
                 f"{EmojiEnums.QUESTION.value} Support",
                 callback_data=CallbackDataEnums.SUPPORT.value,

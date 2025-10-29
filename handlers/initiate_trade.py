@@ -96,6 +96,17 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
             logging.info(f"DEBUG: User {user_id} has no recent trades")
 
         if active_trade and active_trade.get("is_active", False):
+            # Get all active trades for this user
+            all_active_trades = TradeClient.get_active_trades_for_user(str(user_id))
+            trade_count = len(all_active_trades)
+
+            # Log detailed debug info (not shown to user)
+            logging.info(f"DEBUG: User {user_id} has {trade_count} active trade(s)")
+            logging.info(f"DEBUG: Most recent trade: {active_trade.get('_id')}")
+            logging.info(f"DEBUG: Trade is_active: {active_trade.get('is_active')}")
+            logging.info(f"DEBUG: Trade status: {active_trade.get('status')}")
+
+            # Show concise user-friendly message
             await update.message.reply_text(
                 f"⚠️ <b>Active Trade Exists</b>\n\n"
                 f"You have an active trade that must be completed first:\n\n"
@@ -115,14 +126,8 @@ async def initiate_trade_handler(update: Update, context: ContextTypes.DEFAULT_T
                     [
                         [
                             InlineKeyboardButton(
-                                "🗑️ Cancel This Trade",
-                                callback_data=f"cancel_trade_{active_trade['_id']}",
-                            )
-                        ],
-                        [
-                            InlineKeyboardButton(
-                                "📊 View Trade Details",
-                                callback_data=f"view_trade_{active_trade['_id']}",
+                                "📊 View My Trades",
+                                callback_data="my_trades",
                             )
                         ],
                         [
@@ -554,16 +559,15 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check trade creation process
     trade_creation = context.user_data.get("trade_creation")
 
-    # Check active trades
-    active_trade = None
+    # Check active trades - get all instead of just one
+    active_trades = []
     if user_obj:
-        active_trade = TradeClient.get_most_recent_trade(user_obj)
-        if active_trade and not active_trade.get("is_active", False):
-            active_trade = None
+        active_trades = TradeClient.get_active_trades_for_user(user_id)
 
     # Build status message
     status_parts = [f"📊 <b>Your Current Status</b>\n"]
 
+    # Trade creation status
     if trade_creation:
         step = trade_creation.get("step", "unknown")
         trade_type = trade_creation.get("trade_type", "Unknown")
@@ -580,48 +584,62 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         status_parts.append(f"🔄 <b>Trade Creation:</b> ❌ None\n")
 
-    if active_trade:
-        trade_id = active_trade["_id"]
-        amount = active_trade.get("price", "Unknown")
-        currency = active_trade.get("currency", "")
-        trade_type = active_trade.get("trade_type", "Unknown")
-        status = active_trade.get("status", "active")
-        seller_id = active_trade.get("seller_id", "")
-        buyer_id = active_trade.get("buyer_id", "")
-
-        role = (
-            "Seller"
-            if str(seller_id) == user_id
-            else ("Buyer" if str(buyer_id) == user_id else "Unknown")
+    # Active trades status - show up to 3 trades with details
+    if active_trades:
+        num_trades = len(active_trades)
+        status_parts.append(
+            f"💰 <b>Active Trades:</b> ✅ {num_trades} trade{'s' if num_trades != 1 else ''}\n"
         )
 
-        status_parts.extend(
-            [
-                f"💰 <b>Active Trade:</b> ✅ Found",
-                f"   • ID: #{trade_id}",
-                f"   • Amount: {amount} {currency}",
-                f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
-                f"   • Your Role: {role}",
-                f"   • Status: {status}\n",
-            ]
-        )
+        for i, trade in enumerate(active_trades[:3], 1):
+            trade_id = trade["_id"]
+            amount = trade.get("price", "Unknown")
+            currency = trade.get("currency", "")
+            trade_type = trade.get("trade_type", "Unknown")
+            status = trade.get("status", "active")
+            seller_id = trade.get("seller_id", "")
+            buyer_id = trade.get("buyer_id", "")
 
-        # Add broker info if present
-        if active_trade.get("broker_enabled"):
-            broker_id = active_trade.get("broker_id", "")
-            status_parts.append(
-                f"   • Broker: {'Yes' if broker_id else 'Enabled but not assigned'}\n"
+            role = (
+                "Seller"
+                if str(seller_id) == user_id
+                else ("Buyer" if str(buyer_id) == user_id else "Unknown")
             )
-    else:
-        status_parts.append(f"💰 <b>Active Trade:</b> ❌ None\n")
 
-    # Recommendations
-    if trade_creation and active_trade:
+            status_parts.extend(
+                [
+                    f"\n<b>Trade #{i}:</b>",
+                    f"   • ID: #{trade_id[:8]}...",
+                    f"   • Amount: {amount} {currency}",
+                    f"   • Type: {TradeTypeEnums.get_display_name(trade_type)}",
+                    f"   • Your Role: {role}",
+                    f"   • Status: {status}",
+                ]
+            )
+
+            # Add broker info if present
+            if trade.get("broker_enabled"):
+                broker_id = trade.get("broker_id", "")
+                status_parts.append(
+                    f"   • Broker: {'Yes' if broker_id else 'Enabled but not assigned'}"
+                )
+
+        # If more than 3 trades, show count
+        if num_trades > 3:
+            status_parts.append(
+                f"\n<i>...and {num_trades - 3} more trade{'s' if num_trades - 3 != 1 else ''}</i>"
+            )
+        status_parts.append("")  # Add empty line
+    else:
+        status_parts.append(f"💰 <b>Active Trades:</b> ❌ None\n")
+
+    # Recommendations and buttons
+    if trade_creation and active_trades:
         status_parts.extend(
             [
                 f"⚠️ <b>Issue Detected:</b>",
-                f"You have both a creation process AND an active trade.",
-                f"This shouldn't happen. Consider cancelling one of them.",
+                f"You have both a creation process AND active trade(s).",
+                f"Consider completing or cancelling the creation process first.",
             ]
         )
         buttons = [
@@ -630,12 +648,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "❌ Cancel Creation Process", callback_data="cancel_creation"
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    "🗑️ Cancel Active Trade",
-                    callback_data=f"cancel_trade_{active_trade['_id']}",
-                )
-            ],
+            [InlineKeyboardButton("📋 View My Trades", callback_data="my_trades")],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")],
         ]
     elif trade_creation:
@@ -650,22 +663,17 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")],
         ]
-    elif active_trade:
-        status_parts.append(
-            f"💡 <b>Tip:</b> Complete your active trade or cancel it to create a new one."
-        )
+    elif active_trades:
+        if len(active_trades) == 1:
+            status_parts.append(
+                f"💡 <b>Tip:</b> Use /mytrades to view and manage your active trade."
+            )
+        else:
+            status_parts.append(
+                f"💡 <b>Tip:</b> Use /mytrades to view and manage all your active trades."
+            )
         buttons = [
-            [
-                InlineKeyboardButton(
-                    "📊 View Trade", callback_data=f"view_trade_{active_trade['_id']}"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "🗑️ Cancel Trade",
-                    callback_data=f"cancel_trade_{active_trade['_id']}",
-                )
-            ],
+            [InlineKeyboardButton("📋 View My Trades", callback_data="my_trades")],
             [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")],
         ]
     else:

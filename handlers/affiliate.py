@@ -270,6 +270,7 @@ register_handler_later(
     MessageHandler(filters.Regex("^Add Bot To Your Group"), start_affiliate)
 )
 
+
 def register_handlers(application):
     """Register affiliate handlers with the application (for main.py compatibility)"""
     try:

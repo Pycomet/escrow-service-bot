@@ -36,6 +36,7 @@ def register_handlers():
         from handlers.history import register_handlers as register_history
         from handlers.initiate_trade import register_handlers as register_initiate_trade
         from handlers.join import register_handlers as register_join
+        from handlers.mytrades import register_handlers as register_mytrades
         from handlers.report import register_handlers as register_report
         from handlers.review import register_handlers as register_review
         from handlers.rules import register_handlers as register_rules
@@ -49,6 +50,7 @@ def register_handlers():
         )  # Register first to ensure cancel_creation has priority
         register_callbacks(application)
         register_join(application)
+        register_mytrades(application)  # Register before admin
         register_rules(application)
         register_history(application)
         register_delete_trade(application)
@@ -96,14 +98,68 @@ async def initialize_bot():
         await application.initialize()
         await application.start()
         register_handlers()
-        
+
         # Initialize community content scheduler
         try:
             from community.scheduler import start_community_scheduler
+
             await start_community_scheduler()
             logger.info("Community content scheduler initialized")
         except Exception as scheduler_error:
             logger.error(f"Failed to initialize community scheduler: {scheduler_error}")
+
+        # Initialize trade cleanup scheduler (runs every 6 hours)
+        try:
+            from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+            from functions.trade import TradeClient
+
+            async def scheduled_trade_cleanup():
+                """Scheduled task to cleanup abandoned trades"""
+                logger.info("Running scheduled trade cleanup...")
+                stats = TradeClient.cleanup_abandoned_trades()
+                logger.info(f"Trade cleanup completed: {stats}")
+
+            async def scheduled_expiration_warnings():
+                """Scheduled task to send trade expiration warnings"""
+                logger.info("Running scheduled expiration warnings...")
+                try:
+                    bot_instance = application.bot if application else None
+                    stats = await TradeClient.notify_expiring_trades(bot_instance)
+                    logger.info(f"Expiration warnings completed: {stats}")
+                except Exception as e:
+                    logger.error(f"Error in scheduled expiration warnings: {e}")
+
+            scheduler = AsyncIOScheduler()
+
+            # Cleanup job: runs every 6 hours
+            scheduler.add_job(
+                scheduled_trade_cleanup,
+                "interval",
+                hours=6,
+                id="trade_cleanup",
+                replace_existing=True,
+            )
+
+            # Expiration warnings: runs every hour
+            scheduler.add_job(
+                scheduled_expiration_warnings,
+                "interval",
+                hours=1,
+                id="trade_expiration_warnings",
+                replace_existing=True,
+            )
+
+            scheduler.start()
+            logger.info(
+                "Trade management schedulers initialized:\n"
+                "  - Cleanup (every 6 hours)\n"
+                "  - Expiration warnings (every hour)"
+            )
+        except Exception as cleanup_error:
+            logger.error(
+                f"Failed to initialize trade management schedulers: {cleanup_error}"
+            )
 
         # Set webhook if in webhook mode
         if WEBHOOK_MODE and WEBHOOK_URL:

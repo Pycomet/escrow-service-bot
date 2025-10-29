@@ -144,6 +144,7 @@ class EmojiEnums(Enum):
     STAR = "⭐"
     BELL = "🔔"
     ROBOT = "🤖"
+    INFO = "ℹ️"
 
 
 class MessageTypeEnums(Enum):

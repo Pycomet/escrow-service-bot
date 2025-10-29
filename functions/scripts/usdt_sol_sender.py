@@ -25,9 +25,7 @@ from spl.token.instructions import (
 from spl.token.instructions import (
     get_associated_token_address as sol_get_associated_token_address,
 )
-from spl.token.instructions import (
-    transfer_checked,
-)
+from spl.token.instructions import transfer_checked
 
 
 def get_latest_blockhash(log_file):

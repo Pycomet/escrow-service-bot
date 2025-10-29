@@ -131,7 +131,7 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
     """Handle community guidelines display"""
     try:
         query = update.callback_query
-        
+
         # Handle both callback queries and direct commands
         if query:
             await query.answer()
@@ -184,7 +184,7 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
 
     except Exception as e:
         logger.error(f"Error in community rules handler: {e}")
-        
+
         # Handle error response based on context
         error_text = f"{EmojiEnums.CROSS_MARK.value} Error loading community information. Please try again."
         error_keyboard = InlineKeyboardMarkup(
@@ -197,7 +197,7 @@ async def community_rules_handler(update: Update, context: ContextTypes.DEFAULT_
                 ]
             ]
         )
-        
+
         if query:
             await query.edit_message_text(
                 error_text,
