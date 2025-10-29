@@ -572,3 +572,157 @@ def trade_actions_menu(trade_id: str, user_role: str):
     )
 
     return InlineKeyboardMarkup(keyboard)
+
+
+# ========== BROKER-INITIATED TRADE KEYBOARDS ==========
+
+
+def broker_trade_creation_menu():
+    """Main menu for starting broker trade creation"""
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.MONEY_BAG.value} Create Broker Trade",
+                callback_data="broker_create_trade_start",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.BACK_ARROW.value} Back",
+                callback_data="/broker_register",
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def broker_trade_currency_selection():
+    """Select cryptocurrency for broker trade"""
+    from utils.enums import CryptoCurrencyEnums
+
+    keyboard = []
+
+    # Only show supported currencies for broker-initiated trades (crypto-to-fiat)
+    supported_currencies = [
+        (CryptoCurrencyEnums.USDT, "USDT"),
+        (CryptoCurrencyEnums.BTC, "BTC"),
+        (CryptoCurrencyEnums.ETH, "ETH"),
+    ]
+
+    for crypto_enum, symbol in supported_currencies:
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{symbol}",
+                    callback_data=f"broker_trade_currency_{symbol}",
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CROSS_MARK.value} Cancel",
+                callback_data="broker_create_trade_cancel",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def broker_trade_fiat_currency_selection():
+    """Select fiat currency for broker trade"""
+    from utils.enums import FiatCurrencyEnums
+
+    keyboard = []
+
+    # Common fiat currencies for broker trades
+    common_fiats = [
+        (FiatCurrencyEnums.AED, "AED - UAE Dirham"),
+        (FiatCurrencyEnums.USD, "USD - US Dollar"),
+        (FiatCurrencyEnums.SAR, "SAR - Saudi Riyal"),
+        (FiatCurrencyEnums.EGP, "EGP - Egyptian Pound"),
+        (FiatCurrencyEnums.EUR, "EUR - Euro"),
+        (FiatCurrencyEnums.GBP, "GBP - British Pound"),
+    ]
+
+    for fiat_enum, display_name in common_fiats:
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    display_name,
+                    callback_data=f"broker_trade_fiat_{fiat_enum.value}",
+                )
+            ]
+        )
+
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CROSS_MARK.value} Cancel",
+                callback_data="broker_create_trade_cancel",
+            )
+        ]
+    )
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def broker_trade_payment_method_menu():
+    """Select payment method for broker trade"""
+    from utils.enums import PaymentMethodEnums
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                PaymentMethodEnums.get_display_name("BANK_TRANSFER"),
+                callback_data="broker_trade_payment_BANK_TRANSFER",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                PaymentMethodEnums.get_display_name("CASH_IN_PERSON"),
+                callback_data="broker_trade_payment_CASH_IN_PERSON",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CROSS_MARK.value} Cancel",
+                callback_data="broker_create_trade_cancel",
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def broker_trade_preview_menu():
+    """Confirmation menu for broker trade preview"""
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CHECK_MARK.value} Confirm & Create Trade",
+                callback_data="broker_trade_confirm_create",
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CROSS_MARK.value} Cancel",
+                callback_data="broker_create_trade_cancel",
+            )
+        ],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def broker_trade_step_cancel_menu():
+    """Cancel button for each step in broker trade creation"""
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"{EmojiEnums.CROSS_MARK.value} Cancel Trade Creation",
+                callback_data="broker_create_trade_cancel",
+            )
+        ]
+    ]
+    return InlineKeyboardMarkup(keyboard)

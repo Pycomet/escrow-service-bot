@@ -982,6 +982,231 @@ class TradeClient:
             logger.error(f"Error joining trade {trade_id}: {e}")
             return False
 
+    # ========== BROKER-INITIATED TRADE METHODS ==========
+
+    @staticmethod
+    def create_broker_initiated_trade(
+        broker_id: str,
+        crypto_amount: float,
+        crypto_currency: str,
+        seller_rate: float,
+        buyer_rate: float,
+        market_rate: float,
+        fiat_currency: str,
+        payment_method: str,
+        seller_instructions: str = "",
+        buyer_instructions: str = "",
+    ) -> TradeType:
+        """Create a broker-initiated trade with custom rates
+
+        Args:
+            broker_id: ID of the broker creating the trade
+            crypto_amount: Amount of crypto to be escrowed (e.g., 1000 USDT)
+            crypto_currency: Cryptocurrency symbol (e.g., "USDT")
+            seller_rate: Rate seller will receive (e.g., 3.65 AED/USDT)
+            buyer_rate: Rate buyer will pay (e.g., 3.69 AED/USDT)
+            market_rate: Current market rate for profit conversion (e.g., 3.67 AED/USDT)
+            fiat_currency: Fiat currency code (e.g., "AED")
+            payment_method: "BANK_TRANSFER" or "CASH_IN_PERSON"
+            seller_instructions: Custom instructions for seller
+            buyer_instructions: Custom instructions for buyer
+
+        Returns:
+            TradeType: The created trade document
+
+        Raises:
+            ValueError: If validation fails
+        """
+        from config import BOT_FEE_PERCENTAGE
+
+        from .broker import BrokerClient
+
+        # Validate broker
+        broker = BrokerClient.get_broker(broker_id)
+        if not broker or not broker.get("is_verified") or not broker.get("is_active"):
+            raise ValueError("Broker is not verified or active")
+
+        # Validate rates
+        if buyer_rate <= seller_rate:
+            raise ValueError("Buyer rate must be higher than seller rate")
+
+        if seller_rate <= 0 or buyer_rate <= 0 or market_rate <= 0:
+            raise ValueError("All rates must be positive")
+
+        if crypto_amount <= 0:
+            raise ValueError("Crypto amount must be positive")
+
+        # Calculate profit and buyer amount
+        profit_data = TradeClient._calculate_broker_profit(
+            crypto_amount=crypto_amount,
+            seller_rate=seller_rate,
+            buyer_rate=buyer_rate,
+            market_rate=market_rate,
+            bot_fee_percentage=BOT_FEE_PERCENTAGE,
+        )
+
+        # Ensure buyer receives a positive amount
+        if profit_data["buyer_receive_amount"] <= 0:
+            raise ValueError(
+                f"Calculated buyer amount ({profit_data['buyer_receive_amount']}) must be positive. "
+                "Check your rates and amounts."
+            )
+
+        # Create the trade
+        trade: TradeType = {
+            "_id": generate_id(),
+            "seller_id": "",  # Will be filled when seller joins
+            "buyer_id": "",  # Will be filled when buyer joins
+            "currency": crypto_currency,
+            "is_active": True,  # Active immediately, waiting for participants
+            "is_paid": False,
+            "price": crypto_amount,
+            "invoice_id": None,
+            "is_completed": False,
+            "chat": None,
+            "trade_type": "BrokerInitiated",
+            "terms": f"Broker-initiated {crypto_currency} to {fiat_currency} trade. "
+            f"Seller rate: {seller_rate}, Buyer rate: {buyer_rate}",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now(),
+            # Wallet fields
+            "receiving_address": "",
+            "seller_wallet_id": "",
+            "is_wallet_trade": crypto_currency in ["ETH", "USDT"],
+            # Broker fields
+            "broker_id": broker_id,
+            "broker_enabled": True,
+            "broker_commission": profit_data["broker_profit_crypto"],
+            "broker_approved_seller": False,
+            "broker_approved_buyer": False,
+            "seller_broker_rating": 0,
+            "buyer_broker_rating": 0,
+            "broker_notes": "",
+            # Broker-initiated trade specific fields
+            "is_broker_initiated": True,
+            "seller_rate": seller_rate,
+            "buyer_rate": buyer_rate,
+            "market_rate": market_rate,
+            "fiat_currency": fiat_currency,
+            "payment_method": payment_method,
+            "broker_profit_fiat": profit_data["broker_profit_fiat"],
+            "broker_profit_crypto": profit_data["broker_profit_crypto"],
+            "buyer_receive_amount": profit_data["buyer_receive_amount"],
+            "seller_instructions": seller_instructions,
+            "buyer_instructions": buyer_instructions,
+        }
+
+        db.trades.insert_one(trade)
+        logger.info(
+            f"Broker-initiated trade created: {trade['_id']} by broker {broker_id}"
+        )
+        return trade
+
+    @staticmethod
+    def _calculate_broker_profit(
+        crypto_amount: float,
+        seller_rate: float,
+        buyer_rate: float,
+        market_rate: float,
+        bot_fee_percentage: float,
+    ) -> dict:
+        """Calculate broker profit distribution for a broker-initiated trade
+
+        Args:
+            crypto_amount: Amount of crypto escrowed (e.g., 1000 USDT)
+            seller_rate: Rate seller gets (e.g., 3.65 AED/USDT)
+            buyer_rate: Rate buyer pays (e.g., 3.69 AED/USDT)
+            market_rate: Market rate for conversion (e.g., 3.67 AED/USDT)
+            bot_fee_percentage: Bot fee percentage (e.g., 2.5 for 2.5%)
+
+        Returns:
+            dict: {
+                'broker_profit_fiat': float,      # Profit in fiat
+                'broker_profit_crypto': float,    # Profit in crypto
+                'bot_fee_crypto': float,          # Bot fee in crypto
+                'buyer_receive_amount': float,    # Net amount buyer receives
+                'seller_receives_fiat': float,    # Fiat seller gets
+                'buyer_pays_fiat': float          # Fiat buyer pays
+            }
+
+        Example:
+            Escrowed: 1,000 USDT
+            Seller rate: 3.65 AED/USDT → Seller gets 3,650 AED
+            Buyer rate: 3.69 AED/USDT → Buyer pays 3,690 AED
+            Market rate: 3.67 AED/USDT
+            Profit in fiat: 40 AED
+            Profit in crypto: 40 / 3.67 = 10.90 USDT
+            Bot fee: 1000 * 0.025 = 25 USDT
+            Buyer receives: 1000 - 10.90 - 25 = 964.10 USDT
+        """
+        # Calculate fiat amounts
+        seller_receives_fiat = crypto_amount * seller_rate
+        buyer_pays_fiat = crypto_amount * buyer_rate
+
+        # Broker profit in fiat
+        broker_profit_fiat = buyer_pays_fiat - seller_receives_fiat
+
+        # Convert broker profit to crypto using market rate
+        broker_profit_crypto = (
+            broker_profit_fiat / market_rate if market_rate > 0 else 0
+        )
+
+        # Calculate bot fee
+        bot_fee_crypto = crypto_amount * (bot_fee_percentage / 100)
+
+        # Calculate buyer receive amount
+        buyer_receive_amount = crypto_amount - broker_profit_crypto - bot_fee_crypto
+
+        return {
+            "broker_profit_fiat": broker_profit_fiat,
+            "broker_profit_crypto": broker_profit_crypto,
+            "bot_fee_crypto": bot_fee_crypto,
+            "buyer_receive_amount": buyer_receive_amount,
+            "seller_receives_fiat": seller_receives_fiat,
+            "buyer_pays_fiat": buyer_pays_fiat,
+        }
+
+    @staticmethod
+    def get_broker_initiated_trade_summary(trade_id: str) -> dict:
+        """Get a formatted summary of a broker-initiated trade
+
+        Args:
+            trade_id: The trade ID
+
+        Returns:
+            dict: Formatted trade summary with all relevant details
+        """
+        trade = TradeClient.get_trade(trade_id)
+        if not trade or not trade.get("is_broker_initiated"):
+            return None
+
+        from .broker import BrokerClient
+
+        broker = BrokerClient.get_broker_by_id(trade.get("broker_id"))
+        broker_name = broker.get("broker_name", "Unknown") if broker else "Unknown"
+
+        return {
+            "trade_id": trade["_id"],
+            "broker_name": broker_name,
+            "crypto_amount": trade.get("price"),
+            "crypto_currency": trade.get("currency"),
+            "seller_rate": trade.get("seller_rate"),
+            "buyer_rate": trade.get("buyer_rate"),
+            "market_rate": trade.get("market_rate"),
+            "fiat_currency": trade.get("fiat_currency"),
+            "payment_method": trade.get("payment_method"),
+            "broker_profit_fiat": trade.get("broker_profit_fiat"),
+            "broker_profit_crypto": trade.get("broker_profit_crypto"),
+            "buyer_receive_amount": trade.get("buyer_receive_amount"),
+            "seller_receives_fiat": trade.get("price") * trade.get("seller_rate"),
+            "buyer_pays_fiat": trade.get("price") * trade.get("buyer_rate"),
+            "seller_instructions": trade.get("seller_instructions", ""),
+            "buyer_instructions": trade.get("buyer_instructions", ""),
+            "is_active": trade.get("is_active"),
+            "has_seller": bool(trade.get("seller_id")),
+            "has_buyer": bool(trade.get("buyer_id")),
+        }
+
     # ========== BROKER-RELATED METHODS ==========
 
     @staticmethod

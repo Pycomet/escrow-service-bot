@@ -696,3 +696,220 @@ You have rejected the buyer's payment proof.
 The buyer has been notified and can submit new proof.
 You will be notified if they submit additional proof.
         """
+
+    # ========== BROKER-INITIATED TRADE MESSAGES ==========
+
+    @staticmethod
+    def broker_trade_creation_start() -> str:
+        """Message shown when broker starts creating a trade"""
+        return (
+            f"{EmojiEnums.HANDSHAKE.value} <b>Create Broker-Initiated Trade</b>\n\n"
+            "As a verified broker, you can create trades with custom seller and buyer rates.\n\n"
+            "<b>How it works:</b>\n"
+            "1. You set rates for both seller and buyer\n"
+            "2. Your profit comes from the rate spread\n"
+            "3. Seller deposits crypto to escrow\n"
+            "4. Buyer pays fiat at your specified rate\n"
+            "5. Crypto released to buyer minus your profit and bot fee\n\n"
+            f"{EmojiEnums.WARNING.value} <b>Note:</b> Only Crypto-to-Fiat trades are supported.\n"
+            "Crypto-to-Crypto coming soon!\n\n"
+            "Let's get started..."
+        )
+
+    @staticmethod
+    def broker_trade_ask_crypto_amount() -> str:
+        """Ask broker for crypto amount"""
+        return (
+            "💰 <b>Step 1: Crypto Amount</b>\n\n"
+            "How much cryptocurrency will be escrowed?\n\n"
+            "<b>Example:</b> <code>1000</code> (for 1000 USDT)\n\n"
+            "Send the amount (numbers only):"
+        )
+
+    @staticmethod
+    def broker_trade_ask_seller_rate() -> str:
+        """Ask broker for seller rate"""
+        return (
+            "📊 <b>Step 2: Seller Rate</b>\n\n"
+            "What rate will the SELLER receive?\n\n"
+            "<b>Example:</b> <code>3.65</code> (seller gets 3.65 AED per USDT)\n\n"
+            "Send the seller rate:"
+        )
+
+    @staticmethod
+    def broker_trade_ask_buyer_rate(seller_rate: float) -> str:
+        """Ask broker for buyer rate"""
+        return (
+            "📊 <b>Step 3: Buyer Rate</b>\n\n"
+            "What rate will the BUYER pay?\n\n"
+            f"<b>Seller rate:</b> {seller_rate}\n"
+            f"<b>Buyer rate must be HIGHER than seller rate</b>\n\n"
+            "<b>Example:</b> <code>3.69</code> (buyer pays 3.69 AED per USDT)\n\n"
+            "Send the buyer rate:"
+        )
+
+    @staticmethod
+    def broker_trade_ask_market_rate() -> str:
+        """Ask broker for market rate"""
+        return (
+            "📊 <b>Step 4: Market Rate</b>\n\n"
+            "What is the current market rate?\n"
+            "(Used to convert your profit from fiat to crypto)\n\n"
+            "<b>Example:</b> <code>3.67</code>\n\n"
+            "Send the market rate:"
+        )
+
+    @staticmethod
+    def broker_trade_ask_seller_instructions() -> str:
+        """Ask broker for seller instructions"""
+        return (
+            "📝 <b>Step 5: Seller Instructions</b>\n\n"
+            "Provide instructions for the SELLER.\n"
+            "This will be shown to them when they join.\n\n"
+            "<b>Example:</b>\n"
+            "<i>Please deposit the USDT to the escrow address. "
+            "After confirmation, wait for buyer payment before release.</i>\n\n"
+            "Send seller instructions (or /skip):"
+        )
+
+    @staticmethod
+    def broker_trade_ask_buyer_instructions() -> str:
+        """Ask broker for buyer instructions"""
+        return (
+            "📝 <b>Step 6: Buyer Instructions</b>\n\n"
+            "Provide instructions for the BUYER.\n"
+            "This will be shown to them when they join.\n\n"
+            "<b>Example:</b>\n"
+            "<i>Transfer the fiat amount to the seller's bank account. "
+            "Submit proof of payment, then wait for seller confirmation.</i>\n\n"
+            "Send buyer instructions (or /skip):"
+        )
+
+    @staticmethod
+    def broker_trade_preview(summary: dict) -> str:
+        """Show trade preview before creation"""
+        from utils.enums import PaymentMethodEnums
+
+        payment_method_display = PaymentMethodEnums.get_display_name(
+            summary.get("payment_method", "BANK_TRANSFER")
+        )
+
+        return f"""
+🤝 <b>Broker Trade Preview</b>
+
+<b>Crypto Details:</b>
+💰 Amount: {summary['crypto_amount']} {summary['crypto_currency']}
+📊 Type: Crypto → Fiat ({summary['fiat_currency']})
+
+<b>Rates:</b>
+📉 Seller Rate: {summary['seller_rate']} {summary['fiat_currency']}/{summary['crypto_currency']}
+📈 Buyer Rate: {summary['buyer_rate']} {summary['fiat_currency']}/{summary['crypto_currency']}
+📊 Market Rate: {summary['market_rate']} {summary['fiat_currency']}/{summary['crypto_currency']}
+
+<b>Financial Breakdown:</b>
+💵 Seller Receives: {summary['seller_receives_fiat']:.2f} {summary['fiat_currency']}
+💰 Buyer Pays: {summary['buyer_pays_fiat']:.2f} {summary['fiat_currency']}
+💎 Your Profit: {summary['broker_profit_fiat']:.2f} {summary['fiat_currency']} ({summary['broker_profit_crypto']:.2f} {summary['crypto_currency']})
+🤖 Bot Fee: {summary['bot_fee_crypto']:.2f} {summary['crypto_currency']}
+📦 Buyer Receives: {summary['buyer_receive_amount']:.2f} {summary['crypto_currency']}
+
+<b>Payment Method:</b>
+{payment_method_display}
+
+<b>Instructions:</b>
+📝 Seller: {summary.get('seller_instructions', 'None')}
+📝 Buyer: {summary.get('buyer_instructions', 'None')}
+
+{EmojiEnums.WARNING.value} <b>Confirm trade creation?</b>
+        """
+
+    @staticmethod
+    def broker_trade_created_notification(trade_id: str, summary: dict) -> str:
+        """Notify broker that trade was created"""
+        return f"""
+{EmojiEnums.CHECK_MARK.value} <b>Broker Trade Created Successfully!</b>
+
+🆔 <b>Trade ID:</b> <code>{trade_id}</code>
+💰 <b>Amount:</b> {summary['crypto_amount']} {summary['crypto_currency']}
+💎 <b>Your Profit:</b> {summary['broker_profit_fiat']:.2f} {summary['fiat_currency']}
+
+<b>Next Steps:</b>
+1. Share this trade with a seller who has crypto
+2. Share this trade with a buyer who wants to buy crypto
+3. Both parties must join for the trade to proceed
+4. You'll receive your profit when the trade completes
+
+<b>Trade Link:</b> /join_{trade_id}
+
+{EmojiEnums.INFO.value} The trade is now active and waiting for participants.
+        """
+
+    @staticmethod
+    def broker_trade_seller_instructions(trade_summary: dict) -> str:
+        """Instructions shown to seller when they join"""
+        return f"""
+{EmojiEnums.HANDSHAKE.value} <b>Broker-Initiated Trade</b>
+
+You're joining as the <b>SELLER</b> in this broker-facilitated trade.
+
+<b>Trade Details:</b>
+💰 You provide: {trade_summary['crypto_amount']} {trade_summary['crypto_currency']}
+💵 You receive: {trade_summary['seller_receives_fiat']:.2f} {trade_summary['fiat_currency']}
+📊 Your rate: {trade_summary['seller_rate']} {trade_summary['fiat_currency']}/{trade_summary['crypto_currency']}
+
+<b>Broker Instructions:</b>
+{trade_summary.get('seller_instructions', 'Follow standard trade procedures.')}
+
+<b>Your Responsibilities:</b>
+1. Deposit crypto to the escrow address
+2. Wait for buyer to pay fiat
+3. Verify payment receipt
+4. Confirm release of crypto to buyer
+
+{EmojiEnums.WARNING.value} This trade is mediated by broker: {trade_summary['broker_name']}
+        """
+
+    @staticmethod
+    def broker_trade_buyer_instructions(trade_summary: dict) -> str:
+        """Instructions shown to buyer when they join"""
+        return f"""
+{EmojiEnums.HANDSHAKE.value} <b>Broker-Initiated Trade</b>
+
+You're joining as the <b>BUYER</b> in this broker-facilitated trade.
+
+<b>Trade Details:</b>
+💰 You receive: {trade_summary['buyer_receive_amount']:.2f} {trade_summary['crypto_currency']}
+💵 You pay: {trade_summary['buyer_pays_fiat']:.2f} {trade_summary['fiat_currency']}
+📊 Your rate: {trade_summary['buyer_rate']} {trade_summary['fiat_currency']}/{trade_summary['crypto_currency']}
+
+<b>Broker Instructions:</b>
+{trade_summary.get('buyer_instructions', 'Follow standard trade procedures.')}
+
+<b>Your Responsibilities:</b>
+1. Wait for seller to deposit crypto to escrow
+2. Pay fiat to seller using agreed method
+3. Submit proof of payment
+4. Wait for seller confirmation
+5. Receive crypto to your address
+
+{EmojiEnums.WARNING.value} This trade is mediated by broker: {trade_summary['broker_name']}
+        """
+
+    @staticmethod
+    def broker_trade_profit_notification(
+        trade_id: str, profit_fiat: float, profit_crypto: float, currency: str
+    ) -> str:
+        """Notify broker of profit payout"""
+        return f"""
+{EmojiEnums.MONEY_BAG.value} <b>Broker Profit Received!</b>
+
+Trade #{trade_id[:8]}... has been completed.
+
+<b>Your Earnings:</b>
+💎 {profit_fiat:.2f} {currency}
+💰 {profit_crypto:.2f} crypto
+
+The profit has been credited to your broker account.
+
+Great job facilitating this trade! {EmojiEnums.STAR.value}
+        """

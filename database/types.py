@@ -61,6 +61,19 @@ class TradeType:
     buyer_broker_rating: int  # Buyer's rating of broker (1-5)
     broker_notes: str  # Broker's notes on the trade
 
+    # Broker-Initiated Trade fields
+    is_broker_initiated: bool  # Whether this is a broker-initiated trade
+    seller_rate: float  # Rate seller gets (e.g., 3.65 AED/USDT)
+    buyer_rate: float  # Rate buyer pays (e.g., 3.69 AED/USDT)
+    market_rate: float  # Market rate at creation for profit conversion
+    fiat_currency: str  # Fiat currency used (e.g., "AED", "USD")
+    payment_method: str  # Payment method: "BANK_TRANSFER" or "CASH_IN_PERSON"
+    broker_profit_fiat: float  # Broker profit in fiat currency
+    broker_profit_crypto: float  # Broker profit in crypto
+    buyer_receive_amount: float  # Amount buyer will receive after broker profit deduction
+    seller_instructions: str  # Instructions for the seller
+    buyer_instructions: str  # Instructions for the buyer
+
 
 class DisputeType:
     _id: str

@@ -6,6 +6,7 @@ class TradeTypeEnums(Enum):
     CRYPTO_CRYPTO = "CryptoToCrypto"
     CRYPTO_PRODUCT = "CryptoToProduct"
     MARKET_SHOP = "MarketShop"
+    BROKER_INITIATED = "BrokerInitiated"
 
     @staticmethod
     def get_display_name(trade_type: str) -> str:
@@ -22,6 +23,7 @@ class TradeTypeEnums(Enum):
             "CryptoToCrypto": "🔄 Crypto Swap",
             "CryptoToProduct": "🛍️ Buy Goods with Crypto",
             "MarketShop": "🏪 Marketplace Listing",
+            "BrokerInitiated": "🤝 Broker-Initiated Trade",
         }
         return display_names.get(trade_type, trade_type)
 
@@ -40,6 +42,7 @@ class TradeTypeEnums(Enum):
             "CryptoToCrypto": "Crypto Swap",
             "CryptoToProduct": "Buy Goods",
             "MarketShop": "Marketplace",
+            "BrokerInitiated": "Broker Trade",
         }
         return short_names.get(trade_type, trade_type)
 
@@ -72,6 +75,31 @@ class FiatCurrencyEnums(Enum):
     EUR = "EUR"
     GBP = "GBP"
     JPY = "JPY"
+    AED = "AED"
+    SAR = "SAR"
+    EGP = "EGP"
+    NGN = "NGN"
+
+
+class PaymentMethodEnums(Enum):
+    BANK_TRANSFER = "BANK_TRANSFER"
+    CASH_IN_PERSON = "CASH_IN_PERSON"
+
+    @staticmethod
+    def get_display_name(method: str) -> str:
+        """Get display name for payment method
+
+        Args:
+            method: Raw payment method value
+
+        Returns:
+            Display name with emoji
+        """
+        display_names = {
+            "BANK_TRANSFER": "🏦 Bank Transfer",
+            "CASH_IN_PERSON": "💵 Cash in Person",
+        }
+        return display_names.get(method, method)
 
 
 class CallbackDataEnums(Enum):

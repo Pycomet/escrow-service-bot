@@ -281,6 +281,8 @@ async def broker_callback_handler(update: Update, context: ContextTypes.DEFAULT_
 
     elif data == "broker_my_trades":
         # Show trades where user is the broker
+        from config import db
+
         brokered_trades = list(db.trades.find({"broker_id": user_id}))
 
         if not brokered_trades:
@@ -412,6 +414,384 @@ async def broker_callback_handler(update: Update, context: ContextTypes.DEFAULT_
             )
 
 
+# ========== BROKER-INITIATED TRADE HANDLERS ==========
+
+
+async def broker_create_trade_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Handle /broker_create_trade command"""
+    user_id = str(update.effective_user.id)
+
+    # Check if user is a verified broker
+    broker = BrokerClient.get_broker(user_id)
+    if not broker or not broker.get("is_verified") or not broker.get("is_active"):
+        await update.message.reply_text(
+            "❌ Only verified brokers can create broker-initiated trades.\n\n"
+            "Use /broker to register as a broker.",
+            parse_mode="HTML",
+        )
+        return
+
+    # Show introduction and start trade creation
+    from utils.keyboard import broker_trade_creation_menu
+    from utils.messages import Messages
+
+    await update.message.reply_text(
+        Messages.broker_trade_creation_start(),
+        parse_mode="HTML",
+        reply_markup=broker_trade_creation_menu(),
+    )
+
+
+async def broker_trade_message_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Handle text input during broker trade creation flow"""
+    broker_trade_data = context.user_data.get("broker_trade_creation")
+    if not broker_trade_data:
+        return
+
+    step = broker_trade_data.get("step")
+    user_id = str(update.effective_user.id)
+    text = update.message.text.strip()
+
+    # Validate broker is still verified
+    broker = BrokerClient.get_broker(user_id)
+    if not broker or not broker.get("is_verified") or not broker.get("is_active"):
+        context.user_data.pop("broker_trade_creation", None)
+        await update.message.reply_text(
+            "❌ Broker verification lost. Please contact admin.",
+            parse_mode="HTML",
+        )
+        return
+
+    from utils.keyboard import broker_trade_step_cancel_menu
+    from utils.messages import Messages
+
+    try:
+        if step == "crypto_amount":
+            # Parse crypto amount
+            try:
+                amount = float(text)
+                if amount <= 0:
+                    raise ValueError("Amount must be positive")
+                broker_trade_data["crypto_amount"] = amount
+                broker_trade_data["step"] = "seller_rate"
+                await update.message.reply_text(
+                    Messages.broker_trade_ask_seller_rate(),
+                    parse_mode="HTML",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Invalid amount. Please enter a positive number:",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+
+        elif step == "seller_rate":
+            # Parse seller rate
+            try:
+                rate = float(text)
+                if rate <= 0:
+                    raise ValueError("Rate must be positive")
+                broker_trade_data["seller_rate"] = rate
+                broker_trade_data["step"] = "buyer_rate"
+                await update.message.reply_text(
+                    Messages.broker_trade_ask_buyer_rate(rate),
+                    parse_mode="HTML",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Invalid rate. Please enter a positive number:",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+
+        elif step == "buyer_rate":
+            # Parse buyer rate
+            try:
+                rate = float(text)
+                seller_rate = broker_trade_data.get("seller_rate")
+                if rate <= seller_rate:
+                    await update.message.reply_text(
+                        f"❌ Buyer rate ({rate}) must be HIGHER than seller rate ({seller_rate}).\n"
+                        "Please try again:",
+                        reply_markup=broker_trade_step_cancel_menu(),
+                    )
+                    return
+                broker_trade_data["buyer_rate"] = rate
+                broker_trade_data["step"] = "market_rate"
+                await update.message.reply_text(
+                    Messages.broker_trade_ask_market_rate(),
+                    parse_mode="HTML",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Invalid rate. Please enter a positive number:",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+
+        elif step == "market_rate":
+            # Parse market rate
+            try:
+                rate = float(text)
+                if rate <= 0:
+                    raise ValueError("Rate must be positive")
+                broker_trade_data["market_rate"] = rate
+                broker_trade_data["step"] = "seller_instructions"
+                await update.message.reply_text(
+                    Messages.broker_trade_ask_seller_instructions(),
+                    parse_mode="HTML",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Invalid rate. Please enter a positive number:",
+                    reply_markup=broker_trade_step_cancel_menu(),
+                )
+
+        elif step == "seller_instructions":
+            # Handle /skip command
+            if text.lower() == "/skip":
+                broker_trade_data["seller_instructions"] = ""
+            else:
+                broker_trade_data["seller_instructions"] = text
+            broker_trade_data["step"] = "buyer_instructions"
+            await update.message.reply_text(
+                Messages.broker_trade_ask_buyer_instructions(),
+                parse_mode="HTML",
+                reply_markup=broker_trade_step_cancel_menu(),
+            )
+
+        elif step == "buyer_instructions":
+            # Handle /skip command
+            if text.lower() == "/skip":
+                broker_trade_data["buyer_instructions"] = ""
+            else:
+                broker_trade_data["buyer_instructions"] = text
+
+            # Show preview
+            await show_broker_trade_preview(update, context, broker_trade_data)
+
+    except Exception as e:
+        logger.error(f"Error in broker trade message handler: {e}")
+        await update.message.reply_text(
+            f"❌ An error occurred: {str(e)}\n\nPlease try again or /cancel",
+            parse_mode="HTML",
+        )
+
+
+async def show_broker_trade_preview(update, context, broker_trade_data):
+    """Show preview of broker trade before creation"""
+    from config import BOT_FEE_PERCENTAGE
+    from functions.trade import TradeClient
+    from utils.keyboard import broker_trade_preview_menu
+    from utils.messages import Messages
+
+    # Calculate profit breakdown
+    profit_data = TradeClient._calculate_broker_profit(
+        crypto_amount=broker_trade_data["crypto_amount"],
+        seller_rate=broker_trade_data["seller_rate"],
+        buyer_rate=broker_trade_data["buyer_rate"],
+        market_rate=broker_trade_data["market_rate"],
+        bot_fee_percentage=BOT_FEE_PERCENTAGE,
+    )
+
+    # Build summary for preview
+    summary = {
+        "crypto_amount": broker_trade_data["crypto_amount"],
+        "crypto_currency": broker_trade_data["crypto_currency"],
+        "seller_rate": broker_trade_data["seller_rate"],
+        "buyer_rate": broker_trade_data["buyer_rate"],
+        "market_rate": broker_trade_data["market_rate"],
+        "fiat_currency": broker_trade_data["fiat_currency"],
+        "payment_method": broker_trade_data["payment_method"],
+        "seller_receives_fiat": profit_data["seller_receives_fiat"],
+        "buyer_pays_fiat": profit_data["buyer_pays_fiat"],
+        "broker_profit_fiat": profit_data["broker_profit_fiat"],
+        "broker_profit_crypto": profit_data["broker_profit_crypto"],
+        "bot_fee_crypto": profit_data["bot_fee_crypto"],
+        "buyer_receive_amount": profit_data["buyer_receive_amount"],
+        "seller_instructions": broker_trade_data.get("seller_instructions", ""),
+        "buyer_instructions": broker_trade_data.get("buyer_instructions", ""),
+    }
+
+    # Store summary for finalization
+    broker_trade_data["preview_summary"] = summary
+
+    await update.message.reply_text(
+        Messages.broker_trade_preview(summary),
+        parse_mode="HTML",
+        reply_markup=broker_trade_preview_menu(),
+    )
+
+
+async def finalize_broker_trade_creation(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Finalize and create the broker-initiated trade"""
+    query = update.callback_query
+    await query.answer()
+
+    user_id = str(query.from_user.id)
+    broker_trade_data = context.user_data.get("broker_trade_creation")
+
+    if not broker_trade_data:
+        await query.edit_message_text("❌ Trade creation data not found.")
+        return
+
+    try:
+        # Create the trade
+        trade = TradeClient.create_broker_initiated_trade(
+            broker_id=user_id,
+            crypto_amount=broker_trade_data["crypto_amount"],
+            crypto_currency=broker_trade_data["crypto_currency"],
+            seller_rate=broker_trade_data["seller_rate"],
+            buyer_rate=broker_trade_data["buyer_rate"],
+            market_rate=broker_trade_data["market_rate"],
+            fiat_currency=broker_trade_data["fiat_currency"],
+            payment_method=broker_trade_data["payment_method"],
+            seller_instructions=broker_trade_data.get("seller_instructions", ""),
+            buyer_instructions=broker_trade_data.get("buyer_instructions", ""),
+        )
+
+        # Clear user data
+        context.user_data.pop("broker_trade_creation", None)
+
+        # Send success notification
+        from utils.messages import Messages
+
+        summary = broker_trade_data["preview_summary"]
+        await query.edit_message_text(
+            Messages.broker_trade_created_notification(trade["_id"], summary),
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+            ),
+        )
+
+        logger.info(f"Broker {user_id} created broker-initiated trade {trade['_id']}")
+
+    except ValueError as e:
+        await query.edit_message_text(
+            f"❌ <b>Trade Creation Failed</b>\n\n{str(e)}\n\n"
+            "Please try again or contact support.",
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔄 Try Again", callback_data="broker_create_trade_start"
+                        )
+                    ],
+                    [InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")],
+                ]
+            ),
+        )
+    except Exception as e:
+        logger.error(f"Error creating broker-initiated trade: {e}")
+        await query.edit_message_text(
+            f"❌ <b>Error Creating Trade</b>\n\n"
+            "An unexpected error occurred. Please try again later.",
+            parse_mode="HTML",
+        )
+
+
+async def broker_trade_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Handle callback queries for broker trade creation"""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data
+    user_id = str(query.from_user.id)
+
+    from utils.keyboard import (
+        broker_trade_currency_selection,
+        broker_trade_fiat_currency_selection,
+        broker_trade_payment_method_menu,
+        broker_trade_step_cancel_menu,
+    )
+    from utils.messages import Messages
+
+    if data == "broker_create_trade_start":
+        # Validate broker
+        broker = BrokerClient.get_broker(user_id)
+        if not broker or not broker.get("is_verified") or not broker.get("is_active"):
+            await query.edit_message_text(
+                "❌ Only verified brokers can create trades.",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 Back", callback_data="menu")]]
+                ),
+            )
+            return
+
+        # Initialize broker trade creation flow
+        context.user_data["broker_trade_creation"] = {"step": "crypto_currency"}
+
+        await query.edit_message_text(
+            "💰 <b>Select Cryptocurrency</b>\n\n"
+            "Which cryptocurrency will be used in this trade?",
+            parse_mode="HTML",
+            reply_markup=broker_trade_currency_selection(),
+        )
+
+    elif data.startswith("broker_trade_currency_"):
+        crypto_currency = data.replace("broker_trade_currency_", "")
+        broker_trade_data = context.user_data.get("broker_trade_creation", {})
+        broker_trade_data["crypto_currency"] = crypto_currency
+        broker_trade_data["step"] = "fiat_currency"
+        context.user_data["broker_trade_creation"] = broker_trade_data
+
+        await query.edit_message_text(
+            "💵 <b>Select Fiat Currency</b>\n\n"
+            "Which fiat currency will be used for payment?",
+            parse_mode="HTML",
+            reply_markup=broker_trade_fiat_currency_selection(),
+        )
+
+    elif data.startswith("broker_trade_fiat_"):
+        fiat_currency = data.replace("broker_trade_fiat_", "")
+        broker_trade_data = context.user_data.get("broker_trade_creation", {})
+        broker_trade_data["fiat_currency"] = fiat_currency
+        broker_trade_data["step"] = "payment_method"
+        context.user_data["broker_trade_creation"] = broker_trade_data
+
+        await query.edit_message_text(
+            "💳 <b>Select Payment Method</b>\n\n" "How will the fiat payment be made?",
+            parse_mode="HTML",
+            reply_markup=broker_trade_payment_method_menu(),
+        )
+
+    elif data.startswith("broker_trade_payment_"):
+        payment_method = data.replace("broker_trade_payment_", "")
+        broker_trade_data = context.user_data.get("broker_trade_creation", {})
+        broker_trade_data["payment_method"] = payment_method
+        broker_trade_data["step"] = "crypto_amount"
+        context.user_data["broker_trade_creation"] = broker_trade_data
+
+        await query.edit_message_text(
+            Messages.broker_trade_ask_crypto_amount(),
+            parse_mode="HTML",
+            reply_markup=broker_trade_step_cancel_menu(),
+        )
+
+    elif data == "broker_trade_confirm_create":
+        await finalize_broker_trade_creation(update, context)
+
+    elif data == "broker_create_trade_cancel":
+        context.user_data.pop("broker_trade_creation", None)
+        await query.edit_message_text(
+            "❌ Broker trade creation cancelled.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 Back to Menu", callback_data="menu")]]
+            ),
+        )
+
+
 def register_broker_handlers(application):
     """Register broker-related handlers"""
     from telegram.ext import (
@@ -423,8 +803,11 @@ def register_broker_handlers(application):
 
     # Command handlers
     application.add_handler(CommandHandler("broker", broker_registration_handler))
+    application.add_handler(
+        CommandHandler("broker_create_trade", broker_create_trade_handler)
+    )
 
-    # Message handler for broker registration
+    # Message handler for broker registration and trade creation
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
@@ -433,10 +816,27 @@ def register_broker_handlers(application):
         group=2,  # Higher priority than trade flow dispatch
     )
 
+    # Additional message handler for broker trade creation (same group)
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE,
+            broker_trade_message_handler,
+        ),
+        group=2,
+    )
+
     # Callback handlers for broker operations
     application.add_handler(
         CallbackQueryHandler(
             broker_callback_handler,
             pattern="^(cancel_broker_registration|skip_broker_bio|broker_my_trades|broker_settings|verify_broker_|reject_broker_)",
+        )
+    )
+
+    # Callback handlers for broker trade creation
+    application.add_handler(
+        CallbackQueryHandler(
+            broker_trade_callback_handler,
+            pattern="^(broker_create_trade_|broker_trade_)",
         )
     )
