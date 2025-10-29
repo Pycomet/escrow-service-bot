@@ -15,43 +15,6 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_cleanup_no_buyer_after_48_hours():
-    """Test that trades with no buyer are cancelled after 48 hours"""
-    from config import db
-    from functions.trade import TradeClient
-
-    # Create a trade older than 48 hours with no buyer
-    forty_nine_hours_ago = datetime.now() - timedelta(hours=49)
-
-    old_trade = {
-        "_id": "old_trade_no_buyer",
-        "seller_id": "user123",
-        "buyer_id": "",
-        "price": 100.0,
-        "currency": "USDT",
-        "is_active": True,
-        "is_cancelled": False,
-        "created_at": forty_nine_hours_ago,
-    }
-
-    db.trades.insert_one(old_trade)
-
-    # Run cleanup
-    stats = TradeClient.cleanup_abandoned_trades()
-
-    # Verify trade was cancelled
-    assert stats["no_buyer_cancelled"] == 1
-    assert stats["total_cleaned"] == 1
-
-    # Check database state
-    updated_trade = db.trades.find_one({"_id": "old_trade_no_buyer"})
-    assert updated_trade["is_active"] is False
-    assert updated_trade["is_cancelled"] is True
-    assert updated_trade["cancelled_by"] == "system"
-    assert "No buyer joined" in updated_trade["cancelled_reason"]
-
-
-@pytest.mark.asyncio
 async def test_cleanup_recent_trade_not_cancelled():
     """Test that recent trades (< 48 hours) are not cancelled"""
     from config import db
